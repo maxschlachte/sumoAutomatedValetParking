@@ -7,6 +7,9 @@ set(microsim_trigger_STAT_SRCS
    MSTrigger.cpp
    MSChargingStation.h
    MSChargingStation.cpp
+   # (chs): Add new MSChargingSpace class to cmake file
+   MSChargingSpace.h
+   MSChargingSpace.cpp
    MSTriggeredRerouter.cpp
    MSTriggeredRerouter.h
    MSOverheadWire.cpp

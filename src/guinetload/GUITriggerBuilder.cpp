@@ -58,9 +58,12 @@ GUITriggerBuilder::buildLaneSpeedTrigger(MSNet& net,
 
 MSTriggeredRerouter*
 GUITriggerBuilder::buildRerouter(MSNet& net, const std::string& id,
-                                 MSEdgeVector& edges, double prob, bool off,
+                                 MSEdgeVector& edges, double prob,
+                                 // (cre): add prio parameter
+                                 double prio, bool off,
                                  SUMOTime timeThreshold, const std::string& vTypes) {
-    GUITriggeredRerouter* rr = new GUITriggeredRerouter(id, edges, prob, off, timeThreshold, vTypes,
+    // (cre): pass prio parameter
+    GUITriggeredRerouter* rr = new GUITriggeredRerouter(id, edges, prob, prio, off, timeThreshold, vTypes,
             dynamic_cast<GUINet&>(net).getVisualisationSpeedUp());
     return rr;
 }
@@ -87,9 +90,14 @@ GUITriggerBuilder::beginParkingArea(MSNet& net, const std::string& id,
                                     unsigned int capacity,
                                     double width, double length, double angle, const std::string& name,
                                     bool onRoad,
-                                    const std::string& departPos) {
+                                    const std::string& departPos,
+                                    // (qpk): add parameter for exit lane
+                                    MSLane* exitLane,
+                                    // (chs): add parameters for charging space (power, efficiency and charge delay)
+                                    double power, double efficiency, SUMOTime chargeDelay) {
     assert(myParkingArea == 0);
-    GUIParkingArea* stop = new GUIParkingArea(id, lines, *lane, frompos, topos, capacity, width, length, angle, name, onRoad, departPos);
+    // (qpk): pass parameters to new GUIParkingArea-Objekt
+    GUIParkingArea* stop = new GUIParkingArea(id, lines, *lane, frompos, topos, capacity, width, length, angle, name, onRoad, departPos, exitLane, power, efficiency, chargeDelay);
     if (!net.addStoppingPlace(SUMO_TAG_PARKING_AREA, stop)) {
         delete stop;
         throw InvalidArgument("Could not build parking area '" + id + "'; probably declared twice.");

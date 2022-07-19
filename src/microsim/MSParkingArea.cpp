@@ -29,6 +29,8 @@
 #include <microsim/MSNet.h>
 #include <microsim/MSVehicleType.h>
 #include "MSLane.h"
+// (utl): include edge header (needed for distance measurements when creating the lots)
+#include "MSEdge.h"
 #include <microsim/transportables/MSTransportable.h>
 #include "MSParkingArea.h"
 #include "MSGlobals.h"
@@ -45,7 +47,11 @@
 MSParkingArea::MSParkingArea(const std::string& id, const std::vector<std::string>& lines,
                              MSLane& lane, double begPos, double endPos, int capacity, double width, double length,
                              double angle, const std::string& name, bool onRoad,
-                             const std::string& departPos) :
+                             const std::string& departPos,
+                             // (qpk): add parameter for exit lane
+                             MSLane* exitLane,
+                             // (chs): add parameters for charging space (power, efficiency and charge delay)
+                             double power, double efficiency, SUMOTime chargeDelay) :
     MSStoppingPlace(id, SUMO_TAG_PARKING_AREA, lines, lane, begPos, endPos, name),
     myRoadSideCapacity(capacity),
     myCapacity(0),
@@ -61,7 +67,15 @@ MSParkingArea::MSParkingArea(const std::string& id, const std::vector<std::strin
     myLastStepOccupancy(0),
     myDepartPos(-1),
     myDepartPosDefinition(DepartPosDefinition::DEFAULT),
-    myUpdateEvent(nullptr) {
+    myUpdateEvent(nullptr),
+    // (qpk): set exit lane
+    myExitLane(exitLane),
+    // (chs): set variables for charging spaces in this parking area
+    myChargingPower(power),
+    myChargingEfficiency(efficiency),
+    myChargeDelay(chargeDelay),
+    // (qpk): init myFirstRowCapacity
+    myFirstRowCapacity(0) {
     // initialize unspecified defaults
     if (myWidth == 0) {
         myWidth = SUMO_const_laneWidth;
@@ -97,8 +111,16 @@ MSParkingArea::MSParkingArea(const std::string& id, const std::vector<std::strin
         const Position pos = GeomHelper::calculateLotSpacePosition(myShape, i, spaceDim, myAngle, myWidth, myLength);
         double spaceAngle = GeomHelper::calculateLotSpaceAngle(myShape, i, spaceDim, myAngle);
         double spaceSlope = GeomHelper::calculateLotSpaceSlope(myShape, i, spaceDim);
+        // (chs): declare chargingSpace
+        MSChargingSpace* chargingSpace = nullptr;
+        // (chs): if the area was declared as a charging area (has a positive power value) create every lot as a charging space
+        if(power > 0) {
+            std::string id_cs = id + "_cs_" + toString(i) + "_0";
+            chargingSpace = new MSChargingSpace(id_cs, power, efficiency, chargeDelay);
+        }
         // add lotEntry
-        addLotEntry(pos.x(), pos.y(), pos.z(), myWidth, myLength, spaceAngle, spaceSlope);
+        // (chs): pass chargingSpace
+        addLotEntry(pos.x(), pos.y(), pos.z(), myWidth, myLength, spaceAngle, spaceSlope, chargingSpace);
         // update endPos
         mySpaceOccupancies.back().endPos = MIN2(myEndPos, myBegPos + MAX2(POSITION_EPS, spaceDim * (i + 1)));
     }
@@ -110,16 +132,27 @@ MSParkingArea::~MSParkingArea() {}
 
 
 void
-MSParkingArea::addLotEntry(double x, double y, double z, double width, double length, double angle, double slope) {
+MSParkingArea::addLotEntry(double x, double y, double z, double width, double length, double angle, double slope,
+    // (chs): add paramter for charging space
+    MSChargingSpace* chargingSpace) {
     // create LotSpaceDefinition
-    LotSpaceDefinition lsd((int)mySpaceOccupancies.size(), nullptr, x, y, z, angle, slope, width, length);
+    // (chs): pass charging space to new lsd
+    LotSpaceDefinition lsd((int)mySpaceOccupancies.size(), nullptr, x, y, z, angle, slope, width, length, chargingSpace);
     // If we are modelling parking set the end position to the lot position relative to the lane
     // rather than the end of the parking area - this results in vehicles stopping nearer the space
     // and re-entering the lane nearer the space. (If we are not modelling parking the vehicle will usually
     // enter the space and re-enter at the end of the parking area.)
     if (MSGlobals::gModelParkingManoeuver) {
         const double offset = this->getLane().getShape().nearest_offset_to_point2D(lsd.position);
-        if (offset <  getBeginLanePosition()) {
+        // (utl): handle invalid offset
+        if (offset == GeomHelper::INVALID_OFFSET) {
+            // (utl): measures distance to lot and decides whether it is at the end or at the front of the parking area
+            if (this->getLane().getEdge().getFromJunction()->getShape().getPolygonCenter().distanceTo(lsd.position) < this->getLane().getEdge().getToJunction()->getShape().getPolygonCenter().distanceTo(lsd.position)) {
+                lsd.endPos = getBeginLanePosition() + POSITION_EPS;
+            } else {
+                lsd.endPos = this->getLane().getLength() - POSITION_EPS;
+            }
+        } else if (offset <  getBeginLanePosition()) {
             lsd.endPos =  getBeginLanePosition() + POSITION_EPS;
         } else {
             if (this->getLane().getLength() > offset) {
@@ -150,7 +183,110 @@ MSParkingArea::addLotEntry(double x, double y, double z, double width, double le
     }
     mySpaceOccupancies.push_back(lsd);
     myCapacity++;
+    // (qpk): increase first row capacity as well
+    myFirstRowCapacity++;
     computeLastFreePos();
+}
+
+// (utl): sorting method for spaces
+void
+MSParkingArea::sortSpaceOccupancies() {
+    if (MSGlobals::gModelParkingManoeuver) {
+        // (utl): sort the mySpaceOccupancies by endPos - this is needed especially for custom spaces if they are not ordered correctly in the additional file
+        std::sort(mySpaceOccupancies.begin(), mySpaceOccupancies.end(), compareEndPos);
+        // (utl): renumerate index since we sorted the spaces
+        for(auto it = mySpaceOccupancies.begin(); it != mySpaceOccupancies.end(); ++it) {
+            it->index = std::distance(mySpaceOccupancies.begin(), it);
+        }
+        computeLastFreePos();
+    }
+}
+
+// (utl): define sorting condition for rearranging the space occupancies
+bool
+MSParkingArea::compareEndPos(LotSpaceDefinition csd1, LotSpaceDefinition csd2) {
+    return csd1.endPos < csd2.endPos;
+}
+
+// (qpk): definition for addSubspace method. The method adds a subspace with the specified parameters to the most recently created space
+void
+MSParkingArea::addSubspace(double x, double y, double z, double width, double length, double angle, double slope, MSChargingSpace* chargingSpace) {
+    LotSpaceDefinition ssd((int)mySpaceOccupancies.back().subspaces.size(), nullptr, x, y, z, angle, slope, width, length, chargingSpace);
+    if (MSGlobals::gModelParkingManoeuver) {
+        // Work out the angle of the lot relative to the lane  (-90 adjusts for the way the bay is drawn )
+        double relativeAngle = fmod(ssd.rotation - 90., 360) - fmod(RAD2DEG(this->getExitLane()->getShape().rotationAtOffset(ssd.endPos)), 360) + 0.5;
+        if (relativeAngle < 0.) {
+            relativeAngle += 360.;
+        }
+        ssd.manoeuverAngle = relativeAngle;
+
+        // if p2.y is -ve the lot is on LHS of lane relative to lane direction
+        // we need to know this because it inverts the complexity of the parking manoeuver
+        Position p2 = this->getExitLane()->getShape().transformToVectorCoordinates(ssd.position);
+        if (p2.y() < (0. + POSITION_EPS)) {
+            ssd.sideIsLHS = true;
+        } else {
+            ssd.sideIsLHS = false;
+        }
+    }
+    //mySpaceOccupancies.at(lsdIdx).subspaces.push_back(ssd);
+    mySpaceOccupancies.back().subspaces.push_back(ssd);
+    myCapacity++;
+}
+
+// (qpk): definition for method that is pushing vehicles forward in a queue
+void
+MSParkingArea::pushVehicleForward(SUMOVehicle* veh) {
+    // iterate through all normal spaces
+    for(auto& lsd : mySpaceOccupancies) {
+        // if the current space has subspaces
+        for(int i = 0; i < (int)lsd.subspaces.size(); i++) {
+            // if passed veh equals the one from the subspace and if it is not on the last subspace
+            if(lsd.subspaces.at(i).vehicle == veh && i != (int)lsd.subspaces.size()-1 && lsd.subspaces.at(i+1).vehicle == nullptr) {
+                lsd.subspaces.at(i+1).vehicle = veh;
+                lsd.subspaces.at(i).vehicle = nullptr;
+                break;
+            // if the vehicle is on the current normal space and the first subspace is empty
+            } else if(lsd.vehicle == veh && lsd.subspaces.at(0).vehicle == nullptr) {
+                //std::cout << "push veh " << veh.getID() << " from normal parking space " << lsd.index << " to subspace at pos 0" << std::endl;
+                // push vehicle from normal space on first subspace
+                lsd.subspaces.at(0).vehicle = veh;
+                lsd.vehicle = nullptr;
+                //std::cout << "veh " << lsd.subspaces.at(0).vehicle.getID() << " on subspace" << lsd.subspaces.at(0).index << std::endl;
+                break;
+            }
+        }
+    }
+    computeLastFreePos();
+}
+
+// (qpk): forces vehicles in front of given vehicle to leave the parking area and loop back to the entry lane of the parking area
+void
+MSParkingArea::forceLeadersForward(SUMOVehicle* veh) {
+    bool vehicleFoundInColumn = false;
+    // iterate through all normal spaces
+    for(auto& lsd : mySpaceOccupancies) {
+        if(lsd.vehicle == veh) {
+            vehicleFoundInColumn = true;
+        }
+        // if the current space has subspaces
+        for(int i = 0; i < (int)lsd.subspaces.size(); i++) {
+            if (vehicleFoundInColumn) {
+                // if the next subspace holds a vehicle
+                if(lsd.subspaces.at(i).vehicle != nullptr) {
+                    // force the vehicle forward
+                    lsd.subspaces.at(i).vehicle->forceLeave();
+                }
+            } else {
+                if(lsd.subspaces.at(i).vehicle == veh) {
+                    vehicleFoundInColumn = true;
+                }
+            }
+        }
+        if (vehicleFoundInColumn) {
+            break;
+        }
+    }
 }
 
 int
@@ -202,7 +338,7 @@ MSParkingArea::getLastFreePos(const SUMOVehicle& forVehicle, double brakePos) co
         } else {
             // find free pos after minPos
             for (const auto& lsd : mySpaceOccupancies) {
-                if (lsd.vehicle == nullptr && lsd.endPos >= minPos) {
+                if ((lsd.vehicle == nullptr && lsd.endPos >= minPos) || (lsd.subspaces.size() > 0 && lsd.subspaces.at(0).vehicle == nullptr)) {
 #ifdef DEBUG_GET_LAST_FREE_POS
                     if (DEBUG_COND2(forVehicle)) {
                         std::cout << SIMTIME << " getLastFreePos veh=" << forVehicle.getID() << " brakePos=" << brakePos << " myEndPos=" << myEndPos << " nextFreePos=" << lsd.endPos << "\n";
@@ -228,6 +364,12 @@ MSParkingArea::getVehiclePosition(const SUMOVehicle& forVehicle) const {
         if (lsd.vehicle == &forVehicle) {
             return lsd.position;
         }
+        // (qpk): return position on subspaces
+        for(const auto& ssd : lsd.subspaces) {
+            if (ssd.vehicle == &forVehicle) {
+                return ssd.position;
+            }
+        }
     }
     return Position::INVALID;
 }
@@ -240,7 +382,20 @@ MSParkingArea::getInsertionPosition(const SUMOVehicle& forVehicle) const {
     }
     for (const auto& lsd : mySpaceOccupancies) {
         if (lsd.vehicle == &forVehicle) {
+            // (qpk): return the pos of a vehicle on a space extrapolated to the exit lane
+            if (myExitLane != nullptr) {
+                return myExitLane->getShape().nearest_offset_to_point2D(getVehiclePosition(forVehicle)) > 0 ? myExitLane->getShape().nearest_offset_to_point2D(getVehiclePosition(forVehicle)) : myExitLane->getLength();
+            }
             return lsd.endPos;
+        }
+        // (qpk): return the pos of a vehicle on a subspace  extrapolated to the exit lane
+        for (const auto& ssd : lsd.subspaces) {
+            if (ssd.vehicle == &forVehicle) {
+                if (myExitLane != nullptr) {
+                    return myExitLane->getShape().nearest_offset_to_point2D(getVehiclePosition(forVehicle)) > 0 ? myExitLane->getShape().nearest_offset_to_point2D(getVehiclePosition(forVehicle)) : myExitLane->getLength();
+                }
+                return ssd.endPos;
+            }
         }
     }
     return -1;
@@ -253,6 +408,12 @@ MSParkingArea::getVehicleAngle(const SUMOVehicle& forVehicle) const {
         if (lsd.vehicle == &forVehicle) {
             return (lsd.rotation - 90.) * (double) M_PI / (double) 180.0;
         }
+        // (qpk): return the angle if the vehicle is on a subspace
+        for (const auto& ssd : lsd.subspaces) {
+            if (ssd.vehicle == &forVehicle) {
+                return (ssd.rotation - 90.) * (double) M_PI / (double) 180.0;
+            }
+        }
     }
     return 0;
 }
@@ -263,8 +424,55 @@ MSParkingArea::getVehicleSlope(const SUMOVehicle& forVehicle) const {
         if (lsd.vehicle == &forVehicle) {
             return lsd.slope;
         }
+        // (qpk): return the slope if the vehicle is on a subspace
+        for (const auto& ssd : lsd.subspaces) {
+            if (ssd.vehicle == &forVehicle) {
+                return ssd.slope;
+            }
+        }
     }
     return 0;
+}
+
+// (qpk): check if a vehicle is on the last space of a queue and if so return true
+bool
+MSParkingArea::vehicleIsOnValidExitSpace(const SUMOVehicle& forVehicle) const {
+    for (const auto& lsd : mySpaceOccupancies) {
+        if (lsd.subspaces.size() > 0) {
+            if (lsd.subspaces.at(lsd.subspaces.size()-1).vehicle == &forVehicle) return true;
+        } else {
+            if (lsd.vehicle == &forVehicle) return true;
+        }
+    }
+    return false;
+}
+
+// (utl): checks if the next parking space on the right side of the lane (main use is for one way roads with spaces defined on the left of the road. Do not use for opposite lane with opposite direction lane - this method is bound to the lane the parking area is on and compares the position of the defined spaces to the position of the parking area relative to the lane)
+bool
+MSParkingArea::nextSpaceIsOnRightSide() {
+    // (utl): parking area center projected on position on lane
+    double lanePosOfParkingArea = myLane.interpolateGeometryPosToLanePos(myLane.getShape().nearest_offset_to_point2D(myShape.getPolygonCenter()));
+    // (utl): substract x and y coordinates of the parking area center from the respective x and y of the geometry position of the parking area center on the lane
+    double xDelta = myLane.geometryPositionAtOffset(lanePosOfParkingArea).x() - myShape.getPolygonCenter().x();
+    double yDelta = myLane.geometryPositionAtOffset(lanePosOfParkingArea).y() - myShape.getPolygonCenter().y();
+    // (utl): If there were no spaces defined return the standard value (true, the space is on the right side)
+    if (mySpaceOccupancies.size() < myLastFreeLot) {
+        return true;
+    }
+    // (utl): substract x and y coordinates of the next parking space from the respective x and y of the geometry position of the space position on the lane
+    double xSpace = myLane.geometryPositionAtOffset(myLastFreePos).x() - mySpaceOccupancies[myLastFreeLot].position.x();
+    double ySpace = myLane.geometryPositionAtOffset(myLastFreePos).y() - mySpaceOccupancies[myLastFreeLot].position.y();
+    // (utl): reduce calculated values to 1, 0 or -1 to make the direction of the positions comparable
+    double xDeltaVal = xDelta != 0 ? xDelta / abs(xDelta) : 0;
+    double yDeltaVal = yDelta != 0 ? yDelta / abs(yDelta) : 0;
+    double xSpaceVal = xSpace != 0 ? xSpace / abs(xSpace) : 0;
+    double ySpaceVal = ySpace != 0 ? ySpace / abs(ySpace) : 0;
+    // (utl): if calculated values of space and parking area match the space must be on the side of the parking area - which means it is on the right side
+    if(xDeltaVal == xSpaceVal && yDeltaVal == ySpaceVal) {
+        return true;
+    }
+    // (utl): if the values do not match the space is on the left side
+    return false;
 }
 
 double
@@ -275,6 +483,16 @@ MSParkingArea::getGUIAngle(const SUMOVehicle& forVehicle) const {
                 return DEG2RAD(lsd.manoeuverAngle - 360.);
             } else {
                 return DEG2RAD(lsd.manoeuverAngle);
+            }
+        }
+        // (qpk): iterate through subspaces to get angle (GUI) of vehicle
+        for (const auto& ssd : lsd.subspaces) {
+            if (ssd.vehicle == &forVehicle) {
+                if (ssd.manoeuverAngle > 180.) {
+                    return DEG2RAD(ssd.manoeuverAngle - 360.);
+                } else {
+                    return DEG2RAD(ssd.manoeuverAngle);
+                }
             }
         }
     }
@@ -289,6 +507,16 @@ MSParkingArea::getManoeuverAngle(const SUMOVehicle& forVehicle) const {
                 return abs(int(lsd.manoeuverAngle)) % 180;
             } else {
                 return abs(abs(int(lsd.manoeuverAngle)) % 180 - 180) % 180;
+            }
+        }
+        // (qpk): iterate through subspaces to get angle (normal) of vehicle
+        for (const auto& ssd : lsd.subspaces) {
+            if (ssd.vehicle == &forVehicle) {
+                if (ssd.sideIsLHS) {
+                    return abs(int(ssd.manoeuverAngle)) % 180;
+                } else {
+                    return abs(abs(int(ssd.manoeuverAngle)) % 180 - 180) % 180;
+                }
             }
         }
     }
@@ -353,6 +581,13 @@ MSParkingArea::leaveFrom(SUMOVehicle* what) {
         MSNet::getInstance()->getEndOfTimestepEvents()->addEvent(myUpdateEvent);
     }
     for (auto& lsd : mySpaceOccupancies) {
+        // (qpk): leave from subspace
+        if(lsd.subspaces.size() > 0) {
+            if(lsd.subspaces.at(lsd.subspaces.size()-1).vehicle == what) {
+                lsd.subspaces.at(lsd.subspaces.size()-1).vehicle = nullptr;
+                break;
+            }
+        }
         if (lsd.vehicle == what) {
             lsd.vehicle = nullptr;
             break;
@@ -397,6 +632,21 @@ MSParkingArea::LotSpaceDefinition::LotSpaceDefinition(int index_, SUMOVehicle* v
     sideIsLHS(false) {
 }
 
+// (chs): charging space constructor
+MSParkingArea::LotSpaceDefinition::LotSpaceDefinition(int index_, SUMOVehicle* vehicle_, double x, double y, double z, double rotation_, double slope_, double width_, double length_, MSChargingSpace* chargingSpace_) :
+    index(index_),
+    vehicle(vehicle_),
+    position(Position(x, y, z)),
+    rotation(rotation_),
+    slope(slope_),
+    width(width_),
+    length(length_),
+    endPos(0),
+    manoeuverAngle(0),
+    sideIsLHS(false),
+    chargingSpace(chargingSpace_) {
+}
+
 
 void
 MSParkingArea::computeLastFreePos() {
@@ -405,7 +655,9 @@ MSParkingArea::computeLastFreePos() {
     myEgressBlocked = false;
     for (auto& lsd : mySpaceOccupancies) {
         if (lsd.vehicle == nullptr
-                || (getOccupancy() == getCapacity()
+                || (//getOccupancy() == getCapacity()
+                    // (qpk): check for first capacity row rather than whole capacity
+                    getFirstRowOccupancy() == getFirstRowCapacity()
                     && lsd.vehicle->remainingStopDuration() <= 0
                     && !lsd.vehicle->isStoppedTriggered())) {
             if (lsd.vehicle == nullptr) {
@@ -421,6 +673,14 @@ MSParkingArea::computeLastFreePos() {
         } else {
             myLastFreePos = MIN2(myLastFreePos,
                                  lsd.endPos - lsd.vehicle->getVehicleType().getLength() - NUMERICAL_EPS);
+            // (qpk): if there is a free lot in the queue we want to take the lsd at the start of the queue
+            for (auto& ssd : lsd.subspaces) {
+                if (ssd.vehicle == nullptr) {
+                    myLastFreeLot = lsd.index;
+                    myLastFreePos = lsd.endPos;
+                    break;
+                }
+            }
         }
     }
 }
@@ -548,6 +808,43 @@ MSParkingArea::getNumAlternatives() const {
 void
 MSParkingArea::setNumAlternatives(int alternatives) {
     myNumAlternatives = MAX2(myNumAlternatives, alternatives);
+}
+
+
+// (qpk): getter for myFirstRowCapacity
+int
+MSParkingArea::getFirstRowCapacity() const {
+    return myFirstRowCapacity;
+}
+
+
+// (qpk): method for getting the occupancy of the first row
+int
+MSParkingArea::getFirstRowOccupancy(bool includingBlocked) const {
+    int firstRowVehicleCount = 0;
+    for(auto& lsd : mySpaceOccupancies) {
+        if(lsd.vehicle != nullptr) firstRowVehicleCount++;
+    }
+    if (includingBlocked) {
+        return firstRowVehicleCount;
+    }
+    return firstRowVehicleCount - (myEgressBlocked ? 1 : 0);
+}
+
+// (chs): method for getting the charging space a vehicle is on or nullptr
+MSChargingSpace*
+MSParkingArea::getChargingSpace(const SUMOVehicle& forVehicle) const {
+    for(auto it = mySpaceOccupancies.begin(); it != mySpaceOccupancies.end(); ++it) {
+        if((*it).vehicle == &forVehicle) {
+            return (*it).chargingSpace;
+        }
+        for(auto it_sub = (*it).subspaces.begin(); it_sub != (*it).subspaces.end(); ++it_sub) {
+            if((*it_sub).vehicle == &forVehicle) {
+                return (*it_sub).chargingSpace;
+            }
+        }
+    }
+    return nullptr;
 }
 
 /****************************************************************************/

@@ -383,6 +383,11 @@ public:
     static void drawSpaceOccupancies(const double exaggeration, const Position& pos, const double rotation,
                                      const double width, const double length, const bool vehicle);
 
+    // (chs): draw method for charging spaces
+    /// @brief draw charging spaces
+    static void drawChargingSpaceOccupancies(const double exaggeration, const Position& pos, const double rotation,
+                                         const double width, const double length, const bool vehicle, const GUIVisualizationSettings& s);
+
 private:
     /// @brief whether the road makes a right turn (or goes straight)
     static bool rightTurn(double angle1, double angle2);

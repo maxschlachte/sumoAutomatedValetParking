@@ -129,7 +129,8 @@ MSVehicleTransfer::checkInsertions(SUMOTime time) {
             const double departPos = pa != nullptr ? pa->getInsertionPosition(*desc.myVeh) : desc.myVeh->getPositionOnLane();
             // handle parking vehicles
             desc.myVeh->setIdling(true);
-            if (desc.myVeh->getMutableLane()->isInsertionSuccess(desc.myVeh, 0, departPos, desc.myVeh->getLateralPositionOnLane(),
+            // (qpk): check if vehicle is on valid exit space in order to only check those vehicles for successful insertion
+            if (pa->vehicleIsOnValidExitSpace(*((const SUMOVehicle*)desc.myVeh)) && desc.myVeh->getMutableLane()->isInsertionSuccess(desc.myVeh, 0, departPos, desc.myVeh->getLateralPositionOnLane(),
                     false, MSMoveReminder::NOTIFICATION_PARKING)) {
                 MSNet::getInstance()->informVehicleStateListener(desc.myVeh, MSNet::VehicleState::ENDING_PARKING);
                 desc.myVeh->getMutableLane()->removeParking(desc.myVeh);

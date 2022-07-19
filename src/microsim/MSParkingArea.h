@@ -27,6 +27,8 @@
 #include <utils/geom/PositionVector.h>
 #include <utils/common/Named.h>
 #include <utils/vehicle/SUMOVehicleParameter.h>
+// (chs): include charging space header
+#include <microsim/trigger/MSChargingSpace.h>
 #include "MSStoppingPlace.h"
 
 
@@ -76,7 +78,11 @@ public:
                   double begPos, double endPos, int capacity,
                   double width, double length, double angle, const std::string& name,
                   bool onRoad,
-                  const std::string& departPos);
+                  const std::string& departPos,
+                  // (qpk): add parameter for exit lane
+                  MSLane* exitLane,
+                  // (chs): add parameters for charging space (power, efficiency and charge delay)
+                  double power, double efficiency, SUMOTime chargeDelay);
 
     /// @brief Destructor
     virtual ~MSParkingArea();
@@ -135,6 +141,11 @@ public:
      */
     SUMOTime updateOccupancy(SUMOTime currentTime);
 
+    // (utl): just return myLastFreePos
+    double getMyLastFreePos() const {
+        return myLastFreePos;
+    }
+
     /// @brief Returns the last free position on this stop
     double getLastFreePos(const SUMOVehicle& forVehicle, double brakePos = 0) const;
 
@@ -190,7 +201,88 @@ public:
      */
     virtual void addLotEntry(double x, double y, double z,
                              double width, double length,
-                             double angle, double slope);
+                             double angle, double slope,
+                             // (chs): charging space parameter in space
+                             MSChargingSpace* chargingSpace);
+
+
+    // (qpk): method for adding subspaces to space
+    /** @brief setter for adding a subspace to the most recent space
+     *
+     * @param[in] x X position of the lot center
+     * @param[in] y Y position of the lot center
+     * @param[in] z Z position of the lot center
+     * @param[in] width Width of the lot rectangle
+     * @param[in] length Length of the lot rectangle
+     * @param[in] angle Angle of the lot rectangle
+     * @param[in] slope Slope of the lot rectangle
+     * @param[in] charging space object if the space is a space for charging or nullpointer
+     */
+    virtual void addSubspace(double x, double y, double z,
+                             double width, double length,
+                             double angle, double slope,
+                             // (chs): charging space parameter in addSubspace
+                             MSChargingSpace* chargingSpace);
+
+    // (qpk): declaration for method that pushes vehicles in a queue forward
+    /** @brief pushes vehicles in a queue forward
+     *
+     * @param[in] veh Vehicle that should be pushed forward
+     */
+    void pushVehicleForward(SUMOVehicle* veh);
+
+    // (qpk): forces leaders of a given vehicle forward in the queue
+    /** @brief forces leaders of a vehicle in a queue forward
+     *
+     * @param[in] veh Vehicle whose leaders should be forced out of the queue
+     */
+    void forceLeadersForward(SUMOVehicle* veh);
+
+    // (qpk): sorts the space occupancies by endPos
+    void sortSpaceOccupancies();
+
+    // (qpk): declaration for method that checks if a vehicle is on the last space of a queue
+    /** @brief checks if a given vehicle is on a valid exit space of a queue. Valid exit spaces are the last spaces in a queue.
+     *
+     * @param[in] veh Vehicle that should be searched for
+     */
+    bool vehicleIsOnValidExitSpace(const SUMOVehicle& forVehicle) const;
+
+    // (qpk): declare getter for first row capacity
+    /// @brief Returns the first row capacity
+    int getFirstRowCapacity() const;
+
+    // (qpk): declare getter for first row occupancy
+    /// @brief Returns occupancy for first row of parking spaces. Holds relevancy for queue parking, otherwise it will return the same results as getOccupancy().
+    int getFirstRowOccupancy(bool includingBlocked = false) const;
+
+    // (qpk): declare and implement getter for exit lane
+    /// @brief getter for opposite lane
+    MSLane* getExitLane() {
+        return myExitLane;
+    }
+
+    // (chs): declare and implement getter for charging power
+    /// @brief getter for charging power
+    double getChargingPower() const {
+        return myChargingPower;
+    }
+
+    // (chs): declare and implement getter for charging efficiency
+    /// @brief getter for charging efficiency
+    double getChargingEfficiency() const {
+        return myChargingEfficiency;
+    }
+
+    // (chs): declare method for getting the charging space a vehicle is on.
+    /// @brief return the charging space the vehicle is on, if it is on no charging space it returns nullptr
+    MSChargingSpace* getChargingSpace(const SUMOVehicle& forVehicle) const;
+
+    // (chs): declare and implement getter for charge delay
+    /// @brief getter for charge delay
+    double getChargeDelay() const {
+        return myChargeDelay;
+    }
 
     /// @brief Returns the lot rectangle width
     double getWidth() const;
@@ -210,6 +302,10 @@ public:
     /// @brief set number alternatives
     void setNumAlternatives(int alternatives);
 
+    // (utl): returns whether the next parking space is on the right side of the lane
+    /// @brief checks whether the next parking space is on the right side of the lane
+    bool nextSpaceIsOnRightSide();
+
 protected:
     /** @struct LotSpaceDefinition
      * @brief Representation of a single lot space
@@ -221,26 +317,32 @@ protected:
         /// @brief parameter constructor
         LotSpaceDefinition(int index, SUMOVehicle* vehicle, double x, double y, double z, double rotation, double slope, double width, double length);
 
+        // (chs): constructor for spaces with charging ability
+        /// @brief parameter constructor
+        LotSpaceDefinition(int index, SUMOVehicle* vehicle, double x, double y, double z, double rotation, double slope, double width, double length, MSChargingSpace* chargingSpace);
+
+        // (utl): remove all const identifiers to make sorting possible
         /// @brief the running index
-        const int index;
+        //const int index;
+        int index;
 
         /// @brief The last parked vehicle or 0
-        const SUMOVehicle* vehicle;
+        SUMOVehicle* vehicle;
 
         /// @brief The position of the vehicle when parking in this space
-        const Position position;
+        Position position;
 
         /// @brief The rotation
-        const double rotation;
+        double rotation;
 
         /// @brief The slope
-        const double slope;
+        double slope;
 
         /// @brief The width
-        const double width;
+        double width;
 
         /// @brief The length
-        const double length;
+        double length;
 
         /// @brief The position along the lane that the vehicle needs to reach for entering this lot
         double endPos;
@@ -250,7 +352,18 @@ protected:
 
         ///@brief Whether the lot is on the LHS of the lane relative to the lane direction
         bool sideIsLHS;
+
+        // (chs): holds an charging space object if the space is a charging space
+        /// @brief Charging Space if the Lot is one, otherwise nullptr
+        MSChargingSpace* chargingSpace;
+
+        // (qpk): vector list of subspaces
+        /// @brief All the spaces in this parking area
+        std::vector<LotSpaceDefinition> subspaces;
     };
+
+    // (qpk): sorting condition
+    static bool compareEndPos(LotSpaceDefinition csd1, LotSpaceDefinition csd2);
 
     /** @brief Computes the last free position on this stop
      *
@@ -311,6 +424,26 @@ protected:
 
     /// @brief Event for updating the occupancy
     Command* myUpdateEvent;
+
+    // (qpk): add object for storing reference to exit lane
+    /// @brief exit lane to which a vehicle exits, if none is given the vehicle should exit to the lane it came from
+    MSLane* myExitLane;
+
+    // (chs): charging power variable declaration for parking area
+    /// @brief the charging power of this parking areas lots, mainly used during NLTriggerBuilder when retrieving the power from the parking area last created
+    double myChargingPower;
+
+    // (chs): charging efficiency variable declaration for parking area
+    /// @brief the charging efficiency of this parking areas lots
+    double myChargingEfficiency;
+
+    // (chs): charge delay variable declaration for parking area
+    /// @brief the charge delay of this parking areas lots
+    double myChargeDelay;
+
+    // (qpk): declare variable for capacity of first row of a queue parking area
+    /// @brief Queue parking area capacity (if the stop is no queue parking area myFirstRowCapacity == myCapacity)
+    int myFirstRowCapacity;
 
 private:
     /// @brief Invalidated copy constructor.

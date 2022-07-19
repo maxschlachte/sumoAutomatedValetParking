@@ -68,9 +68,12 @@ public:
      * @param[in] id The id of the rerouter
      * @param[in] edges The edges the rerouter is placed at
      * @param[in] prob The probability the rerouter reoutes vehicles with
+     * @param[in] prio The priority the rerouter reroutes vehicles with (utl)
      */
     MSTriggeredRerouter(const std::string& id, const MSEdgeVector& edges,
-                        double prob, bool off, SUMOTime timeThreshold,
+                        double prob,
+                        // (utl): add prio parameter
+                        double prio, bool off, SUMOTime timeThreshold,
                         const std::string& vTypes);
 
 
@@ -219,6 +222,8 @@ protected:
     /// determine attributes of candiate parking area for scoring
     bool addParkValues(SUMOVehicle& veh, double brakeGap, bool newDestination,
                        MSParkingArea* pa, double paOccupancy, double prob,
+                       // (utl): add prio parameter
+                       double prio,
                        SUMOAbstractRouter<MSEdge, SUMOVehicle>& router,
                        MSParkingAreaMap_t& parkAreas,
                        std::map<MSParkingArea*, ConstMSEdgeVector>& newRoutes,
@@ -234,6 +239,10 @@ protected:
 
     /// The probability and the user-given probability
     double myProbability, myUserProbability;
+
+    // (utl): the priority of the reroute
+    /// @brief the priority of the reroute
+    double myPriority;
 
     /// Information whether the current rerouting probability is the user-given
     bool myAmInUserMode;
@@ -261,6 +270,8 @@ protected:
     RandomDistributor<MSEdge*> myCurrentEdgeProb;
     /// new routes with probabilities
     RandomDistributor<const MSRoute*> myCurrentRouteProb;
+    // (utl): the priorities mapped to the parking areas
+    std::map<MSParkingArea*, double> myPriorities;
     //@}
 
 

@@ -265,6 +265,8 @@ NLBuilder::build() {
     if (myOptions.getBool("tls.all-off")) {
         myNet.getTLSControl().switchOffAll();
     }
+    // (qpk): sort LotSpaceDefinitions in parking areas
+    myNet.sortParkingLots();
     WRITE_MESSAGE("Loading done.");
     return true;
 }

@@ -980,7 +980,13 @@ MSVehicle::MSVehicle(SUMOVehicleParameter* pars, const MSRoute* route,
     myJunctionEntryTimeNeverYield(SUMOTime_MAX),
     myJunctionConflictEntryTime(SUMOTime_MAX),
     myTimeSinceStartup(TIME2STEPS(3600 * 24)),
-    myInfluencer(nullptr) {
+    myInfluencer(nullptr),
+    // (cre): init was called flag
+    myWasCalledForCharging(false),
+    // (cre): init reset call flag
+    myResetCallFlag(false),
+    // (cre): init reparking time
+    myReparkTimeStamp(-1) {
     myCFVariables = type->getCarFollowModel().createVehicleVariables();
     myNextDriveItem = myLFLinkLanes.begin();
 }
@@ -1626,6 +1632,150 @@ MSVehicle::processNextStop(double currentVelocity) {
                 }
             }
         } else {
+            if (isParking()) {
+              // (qpk): when the vehicle reaches the exit space change the lane and route to exit lane and exit route
+              if(stop.parkingarea->getExitLane() != nullptr && stop.parkingarea->getExitLane() != myLane) {
+                  myLane->getVehiclesSecure();
+                  myLane->removeParking(this);
+                  myLane->getEdge().removeWaiting(this);
+                  myLane->releaseVehicles();
+                  myLane = stop.parkingarea->getExitLane();
+                  myLane->getVehiclesSecure();
+                  myLane->getEdge().addWaiting(this);
+                  myLane->addParking(this);
+
+                  // compute a new route from the exit lane to the next stop after this one
+                  SUMOAbstractRouter<MSEdge, SUMOVehicle>& router = getInfluencer().getRouterTT(getRNGIndex(), getVClass());
+                  ConstMSEdgeVector edgesToNextStop;
+                  const MSEdge* nextEdge = std::next(myStops.begin()) != myStops.end() ? &(*std::next(myStops.begin())).lane->getEdge() : (*std::prev(myRoute->end()));
+                  router.compute(&stop.parkingarea->getExitLane()->getEdge(),
+                                 nextEdge,
+                                 this,
+                                 MSNet::getInstance()->getCurrentTimeStep(),
+                                 edgesToNextStop);
+                  ConstMSEdgeVector edges;
+                  if (std::next(myStops.begin()) != myStops.end()) {
+                      ConstMSEdgeVector edgesFromNextStop((*std::next(myStops.begin())).edge, myRoute->end());
+                      edges.reserve( edgesToNextStop.size() + edgesFromNextStop.size() );
+                      for (auto it = edgesToNextStop.begin(); it != edgesToNextStop.end(); ++it) {
+                          edges.push_back(*it);
+                      }
+                      for (auto it = edgesFromNextStop.begin()+1; it != edgesFromNextStop.end(); ++it) {
+                          edges.push_back(*it);
+                      }
+                  } else {
+                      edges.reserve( edgesToNextStop.size() );
+                      for (auto it = edgesToNextStop.begin(); it != edgesToNextStop.end(); ++it) {
+                          edges.push_back(*it);
+                      }
+                  }
+
+                  const double routeCost = router.recomputeCosts(edgesToNextStop, this, MSNet::getInstance()->getCurrentTimeStep());
+                  ConstMSEdgeVector prevEdges(myCurrEdge, myRoute->end());
+                  const double savings = router.recomputeCosts(prevEdges, this, MSNet::getInstance()->getCurrentTimeStep());
+
+                  stop.lane = stop.parkingarea->getExitLane();
+                  stop.edge = edges.begin();
+                  myCurrEdge = edges.begin();
+
+                  std::string errorMsg = "";
+                  if (!replaceRouteEdges(edges, routeCost, savings, "Reroute for queue parking: " + toString(SUMO_TAG_PARKING_AREA_REROUTE), false, true, true, &errorMsg, true)) {
+                      WRITE_ERROR("replaceRouteEdges: " + errorMsg);
+                  }
+
+                  myCurrEdge = myRoute->begin();
+                  stop.edge = myCurrEdge;
+
+                  // (qpk): set the position on the new lane
+                  double newPos = stop.parkingarea->getInsertionPosition(*this);
+                  if(newPos > getLane()->getLength()) {
+                      newPos = getLane()->getLength();
+                  }
+                  // (qpk): the "invisible" vehicle must not protrude into the preceeding intersection, otherwise vehicles won't cross it
+                  myState.myPos = MAX2(newPos, getLength() + getVehicleType().getMinGap());
+                  myState.myBackPos = newPos - getLength();
+                  myLane->releaseVehicles();
+
+                  computeFurtherLanes(myLane, myState.myPos, true);
+                  updateBestLanes(true, myLane);
+              }
+
+              // (qpk): force exit of vehicle if it is not on a valid exit space
+              if (!stop.parkingarea->vehicleIsOnValidExitSpace(*this) && !keepStopping() && !myForcedMyLeaders) {
+#ifdef DEBUG_STOPS
+                  if (DEBUG_COND) {
+                      std::cout << SIMTIME << " veh=" << getID() << " wants to leave the queue" << std::endl;
+                  }
+#endif
+                  stop.parkingarea->forceLeadersForward(this);
+                  myForcedMyLeaders = true;
+                  // if the vehicle is leaving anyways - do not return to the beginning of the stop
+                  myIsForcedOut = false;
+              }
+
+              // if the vehicle is forced out and on a valid exit space it should loop around back to the beginning of the queue
+              if (stop.parkingarea->vehicleIsOnValidExitSpace(*this) && myIsForcedOut && stop.duration > 3) {
+                  SUMOVehicleParameter::Stop pars;
+                  pars.index = 1;
+                  pars.busstop = "";
+                  pars.containerstop = "";
+                  pars.parkingarea = stop.parkingarea->getID();
+                  pars.chargingStation = "";
+                  pars.overheadWireSegment = "";
+                  pars.triggered = stop.triggered;
+                  pars.containerTriggered = false;
+                  pars.joinTriggered = false;
+                  pars.parking = true;
+                  pars.lane = stop.parkingarea->getLane().getID();
+                  pars.edge = stop.parkingarea->getLane().getEdge().getID();
+                  pars.duration = stop.duration;
+                  // let vehicle leave the space
+                  if (stop.triggered) {
+                      stop.triggered = false;
+                  } else {
+                      stop.duration = 0;
+                  }
+#ifdef DEBUG_STOPS
+                  if (DEBUG_COND) {
+                      std::cout << "veh=" << getID() << " is forced out and loops back to stop; remaining duration: " << pars.duration << std::endl
+                      << "calc edges from edge=" << myLane->getEdge().getID()
+                      << " to stop=" << stop.getDescription()
+                      << " on edge=" << stop.lane->getEdge().getID()
+                      << "\n  edges so far:" << std::endl;
+                      for (auto e : myRoute->getEdges()) {
+                          std::cout << "  " << e->getID() << std::endl;
+                      }
+                  }
+#endif
+                  std::string errorMsg = "";
+                  if (!rerouteNewStop(pars, errorMsg)) {
+                     WRITE_ERROR(errorMsg);
+                  }
+                  myReparkTimeStamp = MSNet::getInstance()->getCurrentTimeStep();
+#ifdef DEBUG_STOPS
+                  if (DEBUG_COND) {
+                      if (std::next(myStops.begin()) != myStops.end()) std::cout << "veh=" << getID() << " next stop: " << (*std::next(myStops.begin())).parkingarea->getID() << std::endl;
+                      else std::cout << "veh=" << getID() << " next stop: end of the route" << std::endl;
+                  }
+#endif
+                  myIsForcedOut = false;
+              }
+
+              // (qpk): move vehicle forward if it is on a queue parking space
+              const double ADVANCE_SPEED = 5;
+              if ((int)(MSNet::getInstance()->getCurrentTimeStep() / DELTA_T) % (int)std::ceil(stop.parkingarea->getLength() / (ADVANCE_SPEED / 3.6)) == 0) {
+                  stop.parkingarea->pushVehicleForward(this);
+              }
+              // called via MSVehicleTransfer
+              for (MSVehicleDevice* const dev : myDevices) {
+                  dev->notifyParking();
+              }
+              // (chs): we have to wait until this point to reset the call flag
+              if (myResetCallFlag) {
+                  myResetCallFlag = false;
+                  myWasCalledForCharging = false;
+              }
+          }
             boardTransportables(stop);
 
             if (stop.triggered && !myAmRegisteredAsWaiting) {
@@ -1708,7 +1858,9 @@ MSVehicle::processNextStop(double currentVelocity) {
             // if the stop is a parking area we check if there is a free position on the area
             if (stop.parkingarea != nullptr) {
                 fitsOnStoppingPlace &= myState.myPos > stop.parkingarea->getBeginLanePosition();
-                if (stop.parkingarea->getOccupancy() >= stop.parkingarea->getCapacity()) {
+                if (stop.parkingarea->getOccupancy() >= stop.parkingarea->getCapacity()
+                  // (utl) (rem): if the leader waited too long, is past the entry position and vehicles try to leave activate possible rerouters
+                  || (getWaitingSeconds() > 3 && stop.parkingarea->getOccupancy() != stop.parkingarea->getOccupancyIncludingBlocked() && stop.parkingarea->getOccupancyIncludingBlocked() >= stop.parkingarea->getCapacity() && getLeader().first == nullptr)) {
                     fitsOnStoppingPlace = false;
                     // trigger potential parkingZoneReroute
                     for (std::vector< MSMoveReminder* >::const_iterator rem = myLane->getMoveReminders().begin(); rem != myLane->getMoveReminders().end(); ++rem) {
@@ -1738,9 +1890,19 @@ MSVehicle::processNextStop(double currentVelocity) {
             }
 #endif
             if (myState.pos() >= reachedThreshold && fitsOnStoppingPlace && currentVelocity <= stop.getSpeed() + SUMO_const_haltingSpeed && myLane == stop.lane
+                    // (utl): check if vehicle is in front of free lot to avoid two vehicles trying to enter at the same time
+                    && (stop.parkingarea != nullptr ? myState.pos() >= (stop.parkingarea->getMyLastFreePos() - POSITION_EPS) : true)
                     && (!MSGlobals::gModelParkingManoeuver || myManoeuvre.entryManoeuvreIsComplete(this))) {
                 // ok, we may stop (have reached the stop)  and either we are not modelling manoeuvering or have completed entry
                 stop.reached = true;
+                // (qpk): reset myIsForcedOut and myForcedMyLeaders
+                myIsForcedOut = false;
+                myForcedMyLeaders = false;
+                if (myReparkTimeStamp > 0) {
+                    // (qpk): calculate the new stop duration considering the reparking time of the vehicle
+                    stop.duration = stop.duration - (MSNet::getInstance()->getCurrentTimeStep() - myReparkTimeStamp);
+                    myReparkTimeStamp = -1;
+                }
                 if (stop.pars.started == -1) { // if not we are probably loading a state
                     stop.pars.started = time;
                 }
@@ -2314,6 +2476,15 @@ MSVehicle::planMoveInternal(const SUMOTime t, MSLeaderInfo ahead, DriveItemVecto
                 // leave enough space so parking vehicles can exit
                 const double brakePos = getBrakeGap() + lane->getLength() - seen;
                 endPos = stop.parkingarea->getLastFreePosWithReservation(t, *this, brakePos);
+                // (utl) (rem): a vehicle approaches a fully occupied parking area and wants to go by to trigger the rerouter,
+                // but before reaching that point a vehicle wants to leave and the endPos is set to a position before the
+                // current one the vehicle on the lane cannot move on nor can the vehicle on the lot leave since the gaps
+                // are not sufficient. In this case move the vehicle on the lane past to trigger a possible rerouter.
+                if (getWaitingSeconds() > 3 && stop.parkingarea->getOccupancy() != stop.parkingarea->getOccupancyIncludingBlocked() && getLeader().first == nullptr) {
+                    // (utl): the vehicle is ordered to move to the end pos of the parking area
+                    // might be better to find another metric?
+                    endPos = MIN2(stop.lane->getLength(), stop.parkingarea->getEndLanePosition());
+                }
             } else if (isWaypoint && !stop.reached) {
                 endPos = stop.pars.startPos;
             }
@@ -6108,7 +6279,13 @@ MSVehicle::setBlinkerInformation() {
             switchOnSignal(VEH_SIGNAL_BLINKER_LEFT | VEH_SIGNAL_BLINKER_RIGHT);
         } else if (!myStops.begin()->reached && myStops.begin()->pars.parking) {
             // signal upcoming parking stop on the current lane when within braking distance (~2 seconds before braking)
-            switchOnSignal(MSGlobals::gLefthand ? VEH_SIGNAL_BLINKER_LEFT : VEH_SIGNAL_BLINKER_RIGHT);
+            //switchOnSignal(MSGlobals::gLefthand ? VEH_SIGNAL_BLINKER_LEFT : VEH_SIGNAL_BLINKER_RIGHT);
+            // (utl): check where the next parking space is located
+            if (myStops.front().parkingarea->nextSpaceIsOnRightSide()) {
+                switchOnSignal(MSGlobals::gLefthand ? VEH_SIGNAL_BLINKER_LEFT : VEH_SIGNAL_BLINKER_RIGHT);
+            } else {
+                switchOnSignal(MSGlobals::gLefthand ? VEH_SIGNAL_BLINKER_RIGHT : VEH_SIGNAL_BLINKER_LEFT);
+            }
         }
     }
     if (myInfluencer != nullptr && myInfluencer->getSignals() >= 0) {
@@ -6503,7 +6680,9 @@ MSVehicle::rerouteParkingArea(const std::string& parkingAreaID, std::string& err
     // get vehicle params
     MSParkingArea* destParkArea = getNextParkingArea();
     const MSRoute& route = getRoute();
-    const MSEdge* lastEdge = route.getLastEdge();
+    // (cre): consider other upcoming stops
+    //const MSEdge* lastEdge = route.getLastEdge();
+    const MSEdge* lastEdge = std::next(myStops.begin()) != myStops.end() ? &(*std::next(myStops.begin())).lane->getEdge() : route.getLastEdge();
 
     if (destParkArea == nullptr) {
         // not driving towards a parking area
@@ -6530,10 +6709,12 @@ MSVehicle::rerouteParkingArea(const std::string& parkingAreaID, std::string& err
 
     // Compute the route from the current edge to the parking area edge
     ConstMSEdgeVector edgesToPark;
-    router.compute(getEdge(), newEdge, this, MSNet::getInstance()->getCurrentTimeStep(), edgesToPark);
+    // (utl): Use the compute-Method considering the position
+    //router.compute(getEdge(), newEdge, this, MSNet::getInstance()->getCurrentTimeStep(), edgesToPark);
+    router.compute(getEdge(), getPositionOnLane(), newEdge, newParkingArea->getLastFreePos(*this), this, MSNet::getInstance()->getCurrentTimeStep(), edgesToPark, true);
 
     // Compute the route from the parking area edge to the end of the route
-    ConstMSEdgeVector edgesFromPark;
+    /*ConstMSEdgeVector edgesFromPark;
     if (!newDestination) {
         router.compute(newEdge, lastEdge, this, MSNet::getInstance()->getCurrentTimeStep(), edgesFromPark);
     } else {
@@ -6541,12 +6722,29 @@ MSVehicle::rerouteParkingArea(const std::string& parkingAreaID, std::string& err
         for (MSTransportable* p : getPersons()) {
             p->rerouteParkingArea(getNextParkingArea(), newParkingArea);
         }
+    }*/
+    // (utl): calculate edge to possible further stops and from further stops to end of route
+    // Always compute the route from the parking area edge to the end of the route
+    ConstMSEdgeVector edgesFromPark;
+    router.compute(newEdge, lastEdge, this, MSNet::getInstance()->getCurrentTimeStep(), edgesFromPark);
+    if (newDestination) {
+        // adapt plans of any riders
+        for (MSTransportable* p : getPersons()) {
+            p->rerouteParkingArea(getNextParkingArea(), newParkingArea);
+        }
     }
 
     // we have a new destination, let's replace the vehicle route
-    ConstMSEdgeVector edges = edgesToPark;
+    /*ConstMSEdgeVector edges = edgesToPark;
     if (edgesFromPark.size() > 0) {
         edges.insert(edges.end(), edgesFromPark.begin() + 1, edgesFromPark.end());
+    }*/
+    ConstMSEdgeVector edges = edgesToPark;
+    edges.insert(edges.end(), edgesFromPark.begin() + 1, edgesFromPark.end());
+    // (utl): join with remaining edges if there are further stops
+    if (std::next(myStops.begin()) != myStops.end()) {
+        ConstMSEdgeVector furtherEdges((*std::next(myStops.begin())).edge, myRoute->end());
+        edges.insert(edges.end(), furtherEdges.begin() + 1, furtherEdges.end());
     }
 
     if (newDestination) {
@@ -6564,6 +6762,61 @@ MSVehicle::rerouteParkingArea(const std::string& parkingAreaID, std::string& err
         replaceRouteEdges(edges, routeCost, savings, "TraCI:" + toString(SUMO_TAG_PARKING_AREA_REROUTE), onInit, false, false);
     } else {
         WRITE_WARNING("Vehicle '" + getID() + "' could not reroute to new parkingArea '" + newParkingArea->getID()
+                      + "' reason=" + errorMsg + ", time=" + time2string(MSNet::getInstance()->getCurrentTimeStep()) + ".");
+        return false;
+    }
+    return true;
+}
+
+
+// (cre) (qpk): reroute to new stop method (rerouteNewStop)
+bool
+MSVehicle::rerouteNewStop(const SUMOVehicleParameter::Stop& stopPar, std::string& errorMsg) {
+    // this function is based on MSTriggeredRerouter::rerouteParkingArea in order to keep
+    // consistency in the behaviour.
+
+    // get vehicle params
+    const MSRoute& route = getRoute();
+    const MSEdge* lastEdge = std::next(myStops.begin()) != myStops.end() ? &(*std::next(myStops.begin())).lane->getEdge() : route.getLastEdge();
+
+    // retrieve info on the new parking area
+    MSParkingArea* newParkingArea = (MSParkingArea*) MSNet::getInstance()->getStoppingPlace(
+                                        stopPar.parkingarea, SumoXMLTag::SUMO_TAG_PARKING_AREA);
+
+    if (newParkingArea == nullptr) {
+        errorMsg = "Parking area ID " + toString(stopPar.parkingarea) + " not found in the network.";
+        return false;
+    }
+
+    MSLane* newLane = MSLane::dictionary(stopPar.lane);
+    const MSEdge* newEdge = &(newLane->getEdge());
+    SUMOAbstractRouter<MSEdge, SUMOVehicle>& router = getInfluencer().getRouterTT(getRNGIndex(), getVClass());
+
+    // Compute the route from the current edge to the parking area edge
+    ConstMSEdgeVector edgesToPark;
+    // reroute to new stop considering position on current and new edge if the stop is prior on the same edge
+    router.compute(getEdge(), getPositionOnLane(), newEdge, newParkingArea->getLastFreePos(*this), this, MSNet::getInstance()->getCurrentTimeStep(), edgesToPark, true);
+
+    // Compute the route from the parking area edge to the end of the route
+    ConstMSEdgeVector edgesFromPark;
+    router.compute(newEdge, lastEdge, this, MSNet::getInstance()->getCurrentTimeStep(), edgesFromPark);
+
+    // we have a new destination, let's replace the vehicle route
+    ConstMSEdgeVector edges = edgesToPark;
+    edges.insert(edges.end(), edgesFromPark.begin() + 1, edgesFromPark.end());
+    // join with remaining edges if there are further stops
+    if (std::next(myStops.begin()) != myStops.end()) {
+        ConstMSEdgeVector furtherEdges((*std::next(myStops.begin())).edge, myRoute->end());
+        edges.insert(edges.end(), furtherEdges.begin() + 1, furtherEdges.end());
+    }
+
+    const double routeCost = router.recomputeCosts(edges, this, MSNet::getInstance()->getCurrentTimeStep());
+    ConstMSEdgeVector prevEdges(myCurrEdge, myRoute->end());
+    const double savings = router.recomputeCosts(prevEdges, this, MSNet::getInstance()->getCurrentTimeStep());
+    const bool onInit = myLane == nullptr;
+    replaceRouteEdges(edges, routeCost, savings, "Reroute to new stop:" + toString(SUMO_TAG_PARKING_AREA_REROUTE), onInit, false, false);
+    if (!addStop(stopPar, errorMsg, 0, false, nullptr, true)) {
+        WRITE_WARNING("Vehicle '" + getID() + "' on edge '" + getLane()->getEdge().getID() + "' could not reroute to new stop '" + newParkingArea->getID()
                       + "' reason=" + errorMsg + ", time=" + time2string(MSNet::getInstance()->getCurrentTimeStep()) + ".");
         return false;
     }
@@ -6606,6 +6859,27 @@ MSVehicle::handleCollisionStop(MSStop& stop, const double distToStop) {
         }
     }
     return true;
+}
+
+
+// (cre): sets a call flag indicating that the vehicle was already called by another vehicle for rerouting to a free charging lot
+void
+MSVehicle::setChargeCallFlag(bool val) {
+    myWasCalledForCharging = val;
+}
+
+// (cre): Returns whether the vehicle was called to a charging lot.
+bool
+MSVehicle::wasCalledForCharging() {
+    return myWasCalledForCharging;
+}
+
+// (cre): Returns whether the vehicle was called to a charging lot.
+void
+MSVehicle::setReparkTimeStamp() {
+    if (myReparkTimeStamp < 0) {
+        myReparkTimeStamp = MSNet::getInstance()->getCurrentTimeStep();
+    }
 }
 
 

@@ -25,6 +25,8 @@
 #include <microsim/MSVehicle.h>
 #include <microsim/trigger/MSChargingStation.h>
 #include <utils/common/SUMOTime.h>
+// (chs): include charging space header
+#include <microsim/trigger/MSChargingSpace.h>
 
 
 // ===========================================================================
@@ -32,7 +34,6 @@
 // ===========================================================================
 class SUMOVehicle;
 class MSDevice_Emissions;
-
 
 // ===========================================================================
 // class definitions
@@ -167,6 +168,18 @@ public:
     /// @brief Increase myVehicleStopped
     void increaseVehicleStoppedTimer();
 
+    // (pki): getter for myTotalChargingTime
+    /// @brief getter for myTotalChargingTime
+    SUMOTime getTotalChargingTime() const;
+
+    // (pki): getter for myTotalBlockingTime
+    /// @brief getter for myTotalBlockingTime
+    SUMOTime getTotalBlockingTime() const;
+
+    // (pki): getter for myTotalEnergyCharged
+    /// @brief getter for myTotalEnergyCharged
+    double getTotalEnergyCharged() const;
+
 protected:
     /// @brief Parameter, The actual vehicles's Battery Capacity in Wh, [myActualBatteryCapacity <= myMaximumBatteryCapacity]
     double myActualBatteryCapacity;
@@ -216,6 +229,26 @@ protected:
     /// @brief whether to track fuel consumption instead of electricity
     bool myTrackFuel;
 
+    // (chs): declare a reference for storing the current charging space
+    /// @brief Parameter, Pointer to current charging station in which vehicle is placed (by default is NULL)
+    MSChargingSpace* myActChargingSpace;
+
+    // (chs): declare a string for storing the current charging space id
+    /// @brief string for storing the current charging space id
+    std::string myActChargingSpaceID;
+
+    // (pki): accumulated charging time
+    /// @brief Accumulated time the vehicle spend charging
+    SUMOTime myTotalChargingTime;
+
+    // (pki): accumulated time the vehicle is standing on a charging space but is not charging
+    /// @brief Accumulated time the vehicle spend on a charging space without charging
+    SUMOTime myTotalBlockingTime;
+
+    // (pki): accumulated charge deltas
+    /// @brief Accumulated charged power
+    double myTotalEnergyCharged;
+
 private:
     /// @brief Invalidated copy constructor.
     MSDevice_Battery(const MSDevice_Battery&);
@@ -223,5 +256,3 @@ private:
     /// @brief Invalidated assignment operator.
     MSDevice_Battery& operator=(const MSDevice_Battery&);
 };
-
-

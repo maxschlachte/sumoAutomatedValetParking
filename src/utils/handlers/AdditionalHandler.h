@@ -599,6 +599,10 @@ private:
     /// @brief parse parking space attributes
     void parseParkingSpaceAttributes(const SUMOSAXAttributes& attrs);
 
+    // (qpk): subspace parse method declaration
+    /// @brief parse parking space attributes
+    void parseParkingSubspaceAttributes(const SUMOSAXAttributes& attrs);
+
     /// @brief parse E1 attributes
     void parseE1Attributes(const SUMOSAXAttributes& attrs);
 

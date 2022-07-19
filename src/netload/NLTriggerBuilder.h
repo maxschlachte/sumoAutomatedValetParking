@@ -27,6 +27,8 @@
 #include <string>
 #include <vector>
 #include <utils/common/RGBColor.h>
+// (chs): include charging space header
+#include <microsim/trigger/MSChargingSpace.h>
 
 
 // ===========================================================================
@@ -151,7 +153,11 @@ public:
                                   unsigned int capacity,
                                   double width, double length, double angle, const std::string& name,
                                   bool onRoad,
-                                  const std::string& departPos);
+                                  const std::string& departPos,
+                                  // (qpk): add parameter for exit lane
+                                  MSLane* exitLane,
+                                  // (chs): add parameters for charging space (power, efficiency and charge delay)
+                                  double power, double efficiency, SUMOTime chargeDelay);
 
 
     /** @brief Add a lot entry to current parking area
@@ -169,7 +175,9 @@ public:
      */
     void addLotEntry(double x, double y, double z,
                      double width, double length,
-                     double angle, double slope);
+                     double angle, double slope,
+                     // (chs): charging space parameter in space
+                     MSChargingSpace* chargingSpace);
 
 
 
@@ -196,6 +204,14 @@ public:
      * @param[in] attrs SAX-attributes which define the lot entry
      */
     void parseAndAddLotEntry(const SUMOSAXAttributes& attrs);
+
+
+    // (qpk): method for parsing subspace tags to subspaces
+    /** @brief Parses its values and adds a sub lot entry to current parking area
+     *
+     * @param[in] attrs SAX-attributes which define the lot entry
+     */
+    void parseAndAddSubspace(const SUMOSAXAttributes& attrs);
 
 
     /** @brief End a parking area
@@ -418,10 +434,13 @@ protected:
      * @param[in] id The id of the rerouter
      * @param[in] edges The edges the rerouter is placed at
      * @param[in] prob The probability the rerouter reoutes vehicles with
+     * @param[in] prio The priority the rerouter reroutes vehicles with (utl)
      */
     virtual MSTriggeredRerouter* buildRerouter(MSNet& net,
             const std::string& id, MSEdgeVector& edges,
-            double prob, bool off, SUMOTime timeThreshold,
+            double prob,
+            // (utl): add prio parameter
+            double prio, bool off, SUMOTime timeThreshold,
             const std::string& vTypes);
     //@}
 
@@ -486,6 +505,19 @@ protected:
     MSParkingArea* myParkingArea;
     /// @brief The currently parsed stop to add access points to
     MSStoppingPlace* myCurrentStop;
+
+    // (qpk): last coordiantes used for spaces
+    /// @brief The last x and y coordinates
+    double myLastX;
+    double myLastY;
+    double myLastZ;
+
+    // (qpk): last width used for spaces
+    /// @brief The last width that was assigned (useful for spaces with subspaces in queues)
+    double myLastWidth;
+
+    // (qpk): for determining the id of a subspace's charging space
+    int myLastSubChargeIdx;
 
     bool myHaveWarnedAboutEigen = false;
 };

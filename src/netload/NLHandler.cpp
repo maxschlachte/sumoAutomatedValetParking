@@ -181,6 +181,10 @@ NLHandler::myStartElement(int element,
             case SUMO_TAG_PARKING_SPACE:
                 myTriggerBuilder.parseAndAddLotEntry(attrs);
                 break;
+            // (qpk): case definition for start element subspace
+            case SUMO_TAG_PARKING_SUBSPACE:
+                myTriggerBuilder.parseAndAddSubspace(attrs);
+                break;
             case SUMO_TAG_PARKING_AREA:
                 myTriggerBuilder.parseAndBeginParkingArea(myNet, attrs);
                 myLastParameterised.push_back(myTriggerBuilder.getCurrentStop());

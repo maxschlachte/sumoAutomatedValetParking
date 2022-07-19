@@ -74,13 +74,17 @@ std::map<std::string, MSTriggeredRerouter*> MSTriggeredRerouter::myInstances;
 // method definitions
 // ===========================================================================
 MSTriggeredRerouter::MSTriggeredRerouter(const std::string& id,
-        const MSEdgeVector& edges, double prob, bool off,
+        const MSEdgeVector& edges, double prob,
+        // (utl): add prio parameter
+        double prio, bool off,
         SUMOTime timeThreshold, const std::string& vTypes) :
     MSTrigger(id),
     MSMoveReminder(id),
     myEdges(edges),
     myProbability(prob),
     myUserProbability(prob),
+    // (utl) set the priority to member variable
+    myPriority(prio),
     myAmInUserMode(false),
     myTimeThreshold(timeThreshold) {
     myInstances[id] = this;
@@ -233,6 +237,16 @@ MSTriggeredRerouter::myStartElement(int element,
         myCurrentParkProb.add(std::make_pair(pa, visible), prob);
         //MSEdge* to = &(pa->getLane().getEdge());
         //myCurrentEdgeProb.add(prob, to);
+        // (utl): get the priority for rerouting
+        const double prio = attrs.getOpt<double>(SUMO_ATTR_PRIORITY, getID().c_str(), ok, 0.);
+        if (!ok) {
+            throw ProcessError();
+        }
+        if (prio < 0) {
+            throw ProcessError("MSTriggeredRerouter " + getID() + ": Attribute 'priority' for destination '" + parkingarea + "' is negative (must not).");
+        }
+        // (utl): add the pair of parking area and priority to the map
+        myPriorities.insert(std::pair<MSParkingArea*,double>(pa,prio));
     }
 }
 
@@ -752,6 +766,12 @@ MSTriggeredRerouter::rerouteParkingArea(const MSTriggeredRerouter::RerouteInterv
         // The time to reach the end from this area
         weights["timefrom"] = getWeight(veh, "parking.timefrom.weight", 0.0);
 
+        // (utl): Priority value for stops
+        weights["priority"] = getWeight(veh, "parking.priority.weight", 0.0);
+
+        // (utl): the vehicles on the route
+        weights["vehsonroute"] = getWeight(veh, "parking.vehsonroute.weight", 0.0);
+
         // a map stores maximum values to normalize parking values
         ParkingParamMap_t maxValues;
 
@@ -763,6 +783,10 @@ MSTriggeredRerouter::rerouteParkingArea(const MSTriggeredRerouter::RerouteInterv
         maxValues["timeto"] = 0.0;
         maxValues["distancefrom"] = 0.0;
         maxValues["timefrom"] = 0.0;
+        // (utl): init max value of priority
+        maxValues["priority"] = 0.0;
+        // (utl): init vehicles on route max value
+        maxValues["vehsonroute"] = 0.0;
 
         // a map stores elegible parking areas
         MSParkingAreaMap_t parkAreas;
@@ -778,7 +802,8 @@ MSTriggeredRerouter::rerouteParkingArea(const MSTriggeredRerouter::RerouteInterv
             if (newDestination) {
                 newRoute.push_back(veh.getEdge());
             } else {
-                bool valid = addParkValues(veh, brakeGap, newDestination, onTheWay, onTheWay->getLastStepOccupancy(), 1, router, parkAreas, newRoutes, parkApproaches, maxValues);
+                // (utl): pass prio as 0
+                bool valid = addParkValues(veh, brakeGap, newDestination, onTheWay, onTheWay->getLastStepOccupancy(), 1, 0, router, parkAreas, newRoutes, parkApproaches, maxValues);
                 if (!valid) {
                     WRITE_WARNING("Parkingarea '" + onTheWay->getID() + "' along the way cannot be used by vehicle '" + veh.getID() + "' for unknown reason");
                     return nullptr;
@@ -821,7 +846,10 @@ MSTriggeredRerouter::rerouteParkingArea(const MSTriggeredRerouter::RerouteInterv
                 }
             }
             if (paOccupancy < pa->getCapacity()) {
-                if (addParkValues(veh, brakeGap, newDestination, pa, paOccupancy, probs[i], router, parkAreas, newRoutes, parkApproaches, maxValues)) {
+                // (utl): get prio from map
+                double prio = (*myPriorities.find(pa)).second;
+                // (utl): pass prio
+                if (addParkValues(veh, brakeGap, newDestination, pa, paOccupancy, probs[i], prio, router, parkAreas, newRoutes, parkApproaches, maxValues)) {
                     numAlternatives++;
                 }
             } else if (visible) {
@@ -851,10 +879,13 @@ MSTriggeredRerouter::rerouteParkingArea(const MSTriggeredRerouter::RerouteInterv
             for (auto item : blockedTimes) {
                 MSParkingArea* pa = std::get<1>(item);
                 double prob = probs[std::get<2>(item)];
+                // (utl): get priority from map
+                double prio = (*myPriorities.find(pa)).second;
                 // all parking areas are occupied. We have no good basis for
                 // prefering one or the other based on estimated occupancy
                 double paOccupancy = RandHelper::rand((double)pa->getCapacity());
-                if (addParkValues(veh, brakeGap, newDestination, pa, paOccupancy, prob, router, parkAreas, newRoutes, parkApproaches, maxValues)) {
+                // (utl): pass prio
+                if (addParkValues(veh, brakeGap, newDestination, pa, paOccupancy, prob, prio, router, parkAreas, newRoutes, parkApproaches, maxValues)) {
 #ifdef DEBUG_PARKING
                     if (DEBUGCOND) {
                         std::cout << "    altPA=" << pa->getID() << " targeting occupied pa based on blockTime " << STEPS2TIME(std::get<0>(item)) << " among " << blockedTimes.size() << " alternatives\n";
@@ -886,7 +917,9 @@ MSTriggeredRerouter::rerouteParkingArea(const MSTriggeredRerouter::RerouteInterv
                          );
                 for (auto item : candidates) {
                     MSParkingArea* pa = item.second;
-                    if (addParkValues(veh, brakeGap, newDestination, pa, 0, 1, router, parkAreas, newRoutes, parkApproaches, maxValues)) {
+                    // (cre): pass prio
+                    double prio = (*myPriorities.find(pa)).second;
+                    if (addParkValues(veh, brakeGap, newDestination, pa, 0, 1, prio, router, parkAreas, newRoutes, parkApproaches, maxValues)) {
 #ifdef DEBUG_PARKING
                         if (DEBUGCOND) {
                             std::cout << "    altPA=" << pa->getID() << " targeting occupied pa (based on pure randomness) among " << candidates.size() << " alternatives\n";
@@ -963,6 +996,11 @@ MSTriggeredRerouter::rerouteParkingArea(const MSTriggeredRerouter::RerouteInterv
             parkValues["distancefrom"] = maxValues["distancefrom"] > 0.0 ? parkValues["distancefrom"] / maxValues["distancefrom"] : 0.0;
             parkValues["timefrom"] = maxValues["timefrom"] > 0.0 ? parkValues["timefrom"] / maxValues["timefrom"] : 0.0;
 
+            // (utl): determine partial cost for priority
+            parkValues["priority"] = maxValues["priority"] > 0.0 ? 1.0 - parkValues["priority"] / maxValues["priority"] : 0.0;
+            // (utl): determine partial cost  for vehicles on route
+            parkValues["vehsonroute"] = maxValues["vehsonroute"] > 0.0 ? parkValues["vehsonroute"] / maxValues["vehsonroute"] : 0.0;
+
             // get the parking area cost
             double parkingCost = 0.0;
 
@@ -1011,6 +1049,8 @@ MSTriggeredRerouter::rerouteParkingArea(const MSTriggeredRerouter::RerouteInterv
 bool
 MSTriggeredRerouter::addParkValues(SUMOVehicle& veh, double brakeGap, bool newDestination,
                                    MSParkingArea* pa, double paOccupancy, double prob,
+                                   // (utl): add prio parameter
+                                   double prio,
                                    SUMOAbstractRouter<MSEdge, SUMOVehicle>& router,
                                    MSParkingAreaMap_t& parkAreas,
                                    std::map<MSParkingArea*, ConstMSEdgeVector>& newRoutes,
@@ -1029,7 +1069,9 @@ MSTriggeredRerouter::addParkValues(SUMOVehicle& veh, double brakeGap, bool newDe
     ConstMSEdgeVector edgesToPark;
     const double parkPos = pa->getLastFreePos(veh);
     const MSEdge* rerouteOrigin = veh.getRerouteOrigin();
-    router.compute(rerouteOrigin, veh.getPositionOnLane(), parkEdge, parkPos, &veh, MSNet::getInstance()->getCurrentTimeStep(), edgesToPark, true);
+    // (utl): consider brakeGap, since it is considered when creating the stop, otherwise the reroute might not loop around when it should
+    //router.compute(rerouteOrigin, veh.getPositionOnLane(), parkEdge, parkPos, &veh, MSNet::getInstance()->getCurrentTimeStep(), edgesToPark, true);
+    router.compute(rerouteOrigin, veh.getPositionOnLane() + veh.getBrakeGap(), parkEdge, parkPos, &veh, MSNet::getInstance()->getCurrentTimeStep(), edgesToPark, true);
 
 #ifdef DEBUG_PARKING
     if (DEBUGCOND) {
@@ -1071,6 +1113,9 @@ MSTriggeredRerouter::addParkValues(SUMOVehicle& veh, double brakeGap, bool newDe
             if (parkValues["probability"] > maxValues["probability"]) {
                 maxValues["probability"] = parkValues["probability"];
             }
+
+            // (utl): set parkvalue "priority" to prio
+            parkValues["priority"] = prio;
 
             parkValues["capacity"] = (double)(pa->getCapacity());
             parkValues["absfreespace"] = (double)(pa->getCapacity() - paOccupancy);
@@ -1135,6 +1180,15 @@ MSTriggeredRerouter::addParkValues(SUMOVehicle& veh, double brakeGap, bool newDe
 
             // The time to reach the new parking area
             parkValues["timeto"] = router.recomputeCosts(edgesToPark, &veh, MSNet::getInstance()->getCurrentTimeStep());
+
+            // (utl): Count the vehicles on the route, fewer are better!
+            for (auto e : edgesToPark) {
+                parkValues["vehsonroute"] += e->getVehicleNumber();
+            }
+            // (utl): Assign the vehicle count 
+            if (parkValues["vehsonroute"] > maxValues["vehsonroute"]) {
+                maxValues["vehsonroute"] = parkValues["vehsonroute"];
+            }
 
             if (parkValues["distanceto"] > maxValues["distanceto"]) {
                 maxValues["distanceto"] = parkValues["distanceto"];

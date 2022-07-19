@@ -287,10 +287,13 @@ public:
      * @param[in] onInit Whether the vehicle starts with this route
      * @param[in] check Whether the route should be checked for validity
      * @param[in] removeStops Whether stops should be removed if they do not fit onto the new route
+     * @param[in] pseudoInit Works like onInit in replaceRouteEdges but is not passed on to replaceRoute (cre)
      * @return Whether the new route was accepted
      */
     bool replaceRouteEdges(ConstMSEdgeVector& edges, double cost, double savings, const std::string& info, bool onInit = false, bool check = false, bool removeStops = true,
-                           std::string* msgReturn = nullptr);
+                           std::string* msgReturn = nullptr,
+                           // (cre): add pseudoInit flag to parameter list of replaceRouteEdges
+                           bool pseudoInit = false);
 
     /** @brief Replaces the current route by the given one
      *
@@ -593,6 +596,14 @@ public:
     /// @brief departure position where the vehicle fits fully onto the edge (if possible)
     double basePos(const MSEdge* edge) const;
 
+    // (qpk): forces a vehicle to leave parking area
+    /// @brief virtual setter for force leave flag
+    virtual void forceLeave(bool val = true);
+
+    // (chs): set the duration of the stop the vehicle is currently on
+    /// @brief setter for current stop duration
+    void setCurrentStopDuration(SUMOTime newDuration);
+
     /** @brief Adds a stop
      *
      * The stop is put into the sorted list.
@@ -600,7 +611,9 @@ public:
      * @return Whether the stop could be added
      */
     bool addStop(const SUMOVehicleParameter::Stop& stopPar, std::string& errorMsg, SUMOTime untilOffset = 0, bool collision = false,
-                 MSRouteIterator* searchStart = nullptr);
+                 MSRouteIterator* searchStart = nullptr,
+                 // (cre): add insert stop flag parameter
+                 bool insertStop = false);
 
     /** @brief Adds stops to the built vehicle
      *
@@ -985,6 +998,10 @@ protected:
 
     /// @brief Whether this vehicle is registered as waiting for a person or container (for deadlock-recognition)
     bool myAmRegisteredAsWaiting = false;
+
+    // (qpk): flag for forced leave of parking area
+    /// @brief flag for forced leave
+    bool myIsForcedOut;
 
     /* @brief magic value for undeparted vehicles
      * @note: in previous versions this was -1

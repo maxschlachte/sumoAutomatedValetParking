@@ -55,8 +55,14 @@ GUIParkingArea::GUIParkingArea(const std::string& id, const std::vector<std::str
                                double frompos, double topos, unsigned int capacity,
                                double width, double length, double angle, const std::string& name,
                                bool onRoad,
-                               const std::string& departPos) :
-    MSParkingArea(id, lines, lane, frompos, topos, capacity, width, length, angle, name, onRoad, departPos),
+                               const std::string& departPos,
+                               // (qpk): add parameter for exit lane
+                               MSLane* exitLane,
+                               // (chs): add parameters for charging space (power, efficiency and charge delay)
+                               double power, double efficiency, SUMOTime chargeDelay) :
+    // (qpk): pass parameter for exit lane
+    // (chs): pass parameters for charging space (power, efficiency and charge delay)
+    MSParkingArea(id, lines, lane, frompos, topos, capacity, width, length, angle, name, onRoad, departPos, exitLane, power, efficiency, chargeDelay),
     GUIGlObject_AbstractAdd(GLO_PARKING_AREA, id) {
     const double offsetSign = MSGlobals::gLefthand ? -1 : 1;
     myShapeRotations.reserve(myShape.size() - 1);
@@ -145,8 +151,25 @@ GUIParkingArea::drawGL(const GUIVisualizationSettings& s) const {
         }
         // draw spaceOccupancies
         for (int i = 0; i < (int)mySpaceOccupancies.size(); i += indexUpdater) {
-            GLHelper::drawSpaceOccupancies(exaggeration, mySpaceOccupancies.at(i).position, mySpaceOccupancies.at(i).rotation,
-                                           mySpaceOccupancies.at(i).width, mySpaceOccupancies.at(i).length, mySpaceOccupancies.at(i).vehicle ? true : false);
+            // (chs): draw space as a charging space if it is one (~ if it holds a MSChargingSpace reference)
+            if(mySpaceOccupancies.at(i).chargingSpace != nullptr) {
+                GLHelper::drawChargingSpaceOccupancies(exaggeration, mySpaceOccupancies.at(i).position, mySpaceOccupancies.at(i).rotation,
+                                                      mySpaceOccupancies.at(i).width, mySpaceOccupancies.at(i).length, mySpaceOccupancies.at(i).vehicle ? true : false, s);
+            } else {
+                GLHelper::drawSpaceOccupancies(exaggeration, mySpaceOccupancies.at(i).position, mySpaceOccupancies.at(i).rotation,
+                                              mySpaceOccupancies.at(i).width, mySpaceOccupancies.at(i).length, mySpaceOccupancies.at(i).vehicle ? true : false);
+            }
+            // (qpk): draw subspaces
+            for(auto ssd : mySpaceOccupancies.at(i).subspaces) {
+                // (chs): draw subspace as a charging space if it is one (~ if it holds a MSChargingSpace reference)
+                if(ssd.chargingSpace != nullptr) {
+                    GLHelper::drawChargingSpaceOccupancies(exaggeration, ssd.position, ssd.rotation,
+                                                          ssd.width, ssd.length, ssd.vehicle ? true : false, s);
+                } else {
+                    GLHelper::drawSpaceOccupancies(exaggeration, ssd.position, ssd.rotation,
+                                                  ssd.width, ssd.length, ssd.vehicle ? true : false);
+                }
+            }
         }
         GLHelper::setColor(blue);
         // draw the lines
@@ -174,8 +197,11 @@ GUIParkingArea::drawGL(const GUIVisualizationSettings& s) const {
         glTranslated(0, 0, .1);
         GLHelper::setColor(grey);
         GLHelper::drawFilledCircle((double) 0.9, noPoints);
-        if (s.drawDetail(s.detailSettings.stoppingPlaceText, exaggeration)) {
+        // (chs): check if parking area has power value - if so draw a C indicating that this parking area is a charging area
+        if (s.drawDetail(s.detailSettings.stoppingPlaceText, exaggeration) && myChargingPower < 0) {
             GLHelper::drawText("P", Position(), .1, 1.6, blue, mySignRot);
+        } else {
+            GLHelper::drawText("C", Position(), .1, 1.6, blue, mySignRot);
         }
     }
     GLHelper::popMatrix();
@@ -197,8 +223,11 @@ GUIParkingArea::drawGL(const GUIVisualizationSettings& s) const {
 void
 GUIParkingArea::addLotEntry(double x, double y, double z,
                             double width, double length,
-                            double angle, double slope) {
-    MSParkingArea::addLotEntry(x, y, z, width, length, angle, slope);
+                            double angle, double slope,
+                            // (chs): charging space parameter in addSubspace
+                            MSChargingSpace* chargingSpace) {
+    // (chs): pass charging space parameter to addLotEntry
+    MSParkingArea::addLotEntry(x, y, z, width, length, angle, slope, chargingSpace);
     Boundary b;
     b.add(Position(x, y));
     b.grow(MAX2(width, length) + 5);

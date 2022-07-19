@@ -54,6 +54,8 @@ StringBijection<int>::Entry SUMOXMLDefinitions::tags[] = {
     { "chargingStation",                SUMO_TAG_CHARGING_STATION },
     { "parkingArea",                    SUMO_TAG_PARKING_AREA },
     { "space",                          SUMO_TAG_PARKING_SPACE },
+    // (qpk): add tag for explicitly defined subspaces
+    { "subspace",                       SUMO_TAG_PARKING_SUBSPACE },
     { "e1Detector",                     SUMO_TAG_E1DETECTOR },
     { "inductionLoop",                  SUMO_TAG_INDUCTION_LOOP },
     { "e2Detector",                     SUMO_TAG_E2DETECTOR },
@@ -496,6 +498,9 @@ StringBijection<int>::Entry SUMOXMLDefinitions::attrs[] = {
     { "energyChargedStopped",   SUMO_ATTR_ENERGYCHARGEDSTOPPED },
     { "posOnLane",              SUMO_ATTR_POSONLANE },
     { "timeStopped",            SUMO_ATTR_TIMESTOPPED },
+    // (pki): totalChargingTime and totalBlockingTime attributes
+    { "totalChargingTime",      SUMO_ATTR_TOTALCHARGINGTIME },
+    { "totalBlockingTime",      SUMO_ATTR_TOTALBLOCKINGTIME },
     // MMPEVEM
     { "wheelRadius",               SUMO_ATTR_WHEELRADIUS },
     { "maximumTorque",             SUMO_ATTR_MAXIMUMTORQUE },
@@ -740,6 +745,12 @@ StringBijection<int>::Entry SUMOXMLDefinitions::attrs[] = {
     { "containerStop",          SUMO_ATTR_CONTAINER_STOP },
     { "parkingArea",            SUMO_ATTR_PARKING_AREA },
     { "roadsideCapacity",       SUMO_ATTR_ROADSIDE_CAPACITY },
+    // (qpk): add entry for exit lane
+    { "exitLane",               SUMO_ATTR_EXIT_LANE },
+    // (qpk): attribute for generating subspaces by number given in space element
+    { "subspaces",              SUMO_ATTR_SUBSPACES },
+    // (utl): attribute for generating spaces based on the space with the rowlength attribute
+    { "rowLength",              SUMO_ATTR_ROWLENGTH },
     { "onRoad",                 SUMO_ATTR_ONROAD },
     { "chargingStation",        SUMO_ATTR_CHARGING_STATION },
     { "group",                  SUMO_ATTR_GROUP },

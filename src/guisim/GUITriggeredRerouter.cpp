@@ -232,8 +232,11 @@ GUITriggeredRerouter::GUITriggeredRerouterPopupMenu::onCmdOpenManip(FXObject*,
 // -------------------------------------------------------------------------
 
 GUITriggeredRerouter::GUITriggeredRerouter(const std::string& id, const MSEdgeVector& edges, double prob,
+        // (utl): add prio parameter
+        double prio,
         bool off, SUMOTime timeThreshold, const std::string& vTypes, SUMORTree& rtree) :
-    MSTriggeredRerouter(id, edges, prob, off, timeThreshold, vTypes),
+    // (utl): pass prio parameter when creating the MSTriggeredRerouter
+    MSTriggeredRerouter(id, edges, prob, prio, off, timeThreshold, vTypes),
     GUIGlObject_AbstractAdd(GLO_REROUTER, id),
     myShiftProbDistIndex(0) {
     // add visualisation objects for edges which trigger the rerouter

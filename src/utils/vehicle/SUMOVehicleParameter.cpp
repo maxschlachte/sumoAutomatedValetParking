@@ -297,6 +297,11 @@ SUMOVehicleParameter::Stop::write(OutputDevice& dev, const bool close, const boo
     if (!actType.empty()) {
         dev.writeAttr(SUMO_ATTR_ACTTYPE, actType);
     }
+    // (qpk): write Attribute exit lane
+    // only write exit lane if it is given
+    if (exitLane != "") {
+        dev.writeAttr(SUMO_ATTR_EXIT_LANE, exitLane);
+    }
     if (close) {
         dev.closeTag();
     }

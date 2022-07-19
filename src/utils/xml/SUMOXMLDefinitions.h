@@ -75,6 +75,9 @@ enum SumoXMLTag {
     SUMO_TAG_PARKING_AREA,
     /// @brief A parking space for a single vehicle within a parking area
     SUMO_TAG_PARKING_SPACE,
+    // (qpk): tag definition for subspace used in queue parking
+    /// @brief subspace for queue parking
+    SUMO_TAG_PARKING_SUBSPACE,
     /// @brief an e1 detector
     SUMO_TAG_E1DETECTOR,
     /// @brief alternative tag for e1 detector
@@ -750,6 +753,11 @@ enum SumoXMLAttr {
     SUMO_ATTR_POSONLANE,
     /// @brief Time stopped
     SUMO_ATTR_TIMESTOPPED,
+    // (pki): new Parameters for parking info
+    /// @brief Accumulated charge times
+    SUMO_ATTR_TOTALCHARGINGTIME,
+    /// @brief Accumulated time a vehicle is blocking a charging space
+    SUMO_ATTR_TOTALBLOCKINGTIME,
     /// @}
 
     /// @name MMPEVEM parameters
@@ -1096,6 +1104,12 @@ enum SumoXMLAttr {
     SUMO_ATTR_CONTAINER_STOP,
     SUMO_ATTR_PARKING_AREA,
     SUMO_ATTR_ROADSIDE_CAPACITY,
+    // (qpk): exit lane attribute
+    SUMO_ATTR_EXIT_LANE,
+    // (qpk): attribute for generating subspaces by number given in space element
+    SUMO_ATTR_SUBSPACES,
+    // (utl): attribute for generating spaces based on the space with the rowlength attribute
+    SUMO_ATTR_ROWLENGTH,
     SUMO_ATTR_ONROAD,
     SUMO_ATTR_CHARGING_STATION,
     SUMO_ATTR_GROUP,

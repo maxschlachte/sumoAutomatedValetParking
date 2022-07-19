@@ -38,6 +38,8 @@
 #include <microsim/trigger/MSCalibrator.h>
 #include <microsim/MSStoppingPlace.h>
 #include <microsim/trigger/MSChargingStation.h>
+// (chs): include charging space header
+#include <microsim/trigger/MSChargingSpace.h>
 #include <microsim/trigger/MSOverheadWire.h>
 #include <utils/common/StringTokenizer.h>
 #include <utils/common/FileHelpers.h>
@@ -49,6 +51,7 @@
 #include "NLTriggerBuilder.h"
 #include <utils/xml/SUMOXMLDefinitions.h>
 #include <utils/xml/XMLSubSys.h>
+#include <libsumo/TraCIConstants.h>
 
 
 #include <mesosim/MELoop.h>
@@ -562,12 +565,19 @@ NLTriggerBuilder::parseAndBeginParkingArea(MSNet& net, const SUMOSAXAttributes& 
     double angle = attrs.getOpt<double>(SUMO_ATTR_ANGLE, id.c_str(), ok, 0);
     const std::string name = attrs.getOpt<std::string>(SUMO_ATTR_NAME, id.c_str(), ok);
     const std::string departPos = attrs.getOpt<std::string>(SUMO_ATTR_DEPARTPOS, id.c_str(), ok);
+    // (qpk): get exit lane from parameter
+    MSLane* exitLane = MSLane::dictionary(attrs.getOpt<std::string>(SUMO_ATTR_EXIT_LANE, id.c_str(), ok, ""));
+    // (chs): parse attributes power, efficiency and charge delay
+    double power = attrs.getOpt<double>(SUMO_ATTR_CHARGINGPOWER, "", ok, -1.);
+    double efficiency = attrs.getOpt<double>(SUMO_ATTR_EFFICIENCY, "", ok, 0.95);
+    SUMOTime chargeDelay = attrs.getOptSUMOTimeReporting(SUMO_ATTR_CHARGEDELAY, id.c_str(), ok, 0);
     if (!ok || (myHandler->checkStopPos(frompos, topos, lane->getLength(), POSITION_EPS, friendlyPos) != SUMORouteHandler::StopPos::STOPPOS_VALID)) {
         throw InvalidArgument("Invalid position for parking area '" + id + "'.");
     }
     const std::vector<std::string>& lines = attrs.getOpt<std::vector<std::string> >(SUMO_ATTR_LINES, id.c_str(), ok);
     // build the parking area
-    beginParkingArea(net, id, lines, lane, frompos, topos, capacity, width, length, angle, name, onRoad, departPos);
+    // (chs): pass power, efficiency and charge delay to beginParkingArea()
+    beginParkingArea(net, id, lines, lane, frompos, topos, capacity, width, length, angle, name, onRoad, departPos, exitLane, power, efficiency, chargeDelay);
 }
 
 
@@ -584,17 +594,100 @@ NLTriggerBuilder::parseAndAddLotEntry(const SUMOSAXAttributes& attrs) {
     if (!ok) {
         throw InvalidArgument("Invalid x position for lot entry.");
     }
+    // (qpk): save last x for usage in possible further subspaces
+    myLastX = x;
     double y = attrs.get<double>(SUMO_ATTR_Y, "", ok);
     if (!ok) {
         throw InvalidArgument("Invalid y position for lot entry.");
     }
+    // (qpk): save last y for usage in possible further subspaces
+    myLastY = y;
     double z = attrs.getOpt<double>(SUMO_ATTR_Z, "", ok, 0.);
+    myLastZ = z;
+    // (qpk): save last lot width for usage in possible further subspaces
     double width = attrs.getOpt<double>(SUMO_ATTR_WIDTH, "", ok, myParkingArea->getWidth());
+    // (qpk): save last lot width for usage in possible further subspaces
+    myLastWidth = width;
+    myLastSubChargeIdx = 0;
     double length = attrs.getOpt<double>(SUMO_ATTR_LENGTH, "", ok, myParkingArea->getLength());
     double angle = attrs.getOpt<double>(SUMO_ATTR_ANGLE, "", ok, myParkingArea->getAngle());
     double slope = attrs.getOpt<double>(SUMO_ATTR_SLOPE, "", ok, 0.);
+    // (chs): if the attribute chargingpower is a non negative value create the lot as a lot for charging
+    double power = attrs.getOpt<double>(SUMO_ATTR_CHARGINGPOWER, "", ok, myParkingArea->getChargingPower());
+    MSChargingSpace* chargingSpace = nullptr;
+    double efficiency = 0.;
+    SUMOTime chargeDelay = 0.;
+    int spaceRow = attrs.getOpt<int>(SUMO_ATTR_ROWLENGTH, "", ok, 1);
+    for (int s = 0; s < MAX2(1,spaceRow); s++) {
+        if(power > 0) {
+            efficiency = attrs.getOpt<double>(SUMO_ATTR_EFFICIENCY, "", ok, myParkingArea->getChargingEfficiency());
+            SUMOTime chargeDelay = attrs.getOptSUMOTimeReporting(SUMO_ATTR_CHARGEDELAY, "", ok, 0);
+            std::string id = myParkingArea->getID() + "_cs_" + toString(s) + "_0";
+            chargingSpace = new MSChargingSpace(id, power, efficiency, chargeDelay);
+        }
+        // add the lot entry
+        double xl = x + (cos(3.14159265 * (angle) / 180) * width) * s;
+        double yl = y + (sin(3.14159265 * (angle) / 180) * width) * s;
+        addLotEntry(xl, yl, z, width, length, angle, slope, chargingSpace);
+        int numOfSubspaces = attrs.getOpt<int>(SUMO_ATTR_SUBSPACES, "", ok, 0);
+        for(int i = 0; i < numOfSubspaces; i++) {
+            double xs = xl + (cos(3.14159265 * (angle-90) / 180) * length) * (i+1);
+            double ys = yl + (sin(3.14159265 * (angle-90) / 180) * length) * (i+1);
+            if(power > 0) {
+                std::string id = myParkingArea->getID() + "_cs_" + toString(s) + "_" + toString(i+1);
+                chargingSpace = new MSChargingSpace(id, power, efficiency, chargeDelay);
+            }
+            myParkingArea->addSubspace(xs, ys, z, width, length, angle, slope, chargingSpace);
+        }
+    }
     // add the lot entry
-    addLotEntry(x, y, z, width, length, angle, slope);
+    //addLotEntry(x, y, z, width, length, angle, slope);
+}
+
+
+// (qpk): definition of parsing method for subspaces
+void
+NLTriggerBuilder::parseAndAddSubspace(const SUMOSAXAttributes& attrs) {
+    bool ok = true;
+    // Check for open parking area
+    if (myParkingArea == nullptr) {
+        throw ProcessError();
+    }
+    // get the positions
+    double x = attrs.getOpt<double>(SUMO_ATTR_X, "", ok, libsumo::INVALID_DOUBLE_VALUE);
+    if (!ok) {
+        throw InvalidArgument("Invalid x position for lot entry.");
+    }
+    double y = attrs.getOpt<double>(SUMO_ATTR_Y, "", ok, libsumo::INVALID_DOUBLE_VALUE);
+    if (!ok) {
+        throw InvalidArgument("Invalid y position for lot entry.");
+    }
+    double z = attrs.getOpt<double>(SUMO_ATTR_Z, "", ok, myLastZ);
+    double width = attrs.getOpt<double>(SUMO_ATTR_WIDTH, "", ok, myLastWidth);
+    double length = attrs.getOpt<double>(SUMO_ATTR_LENGTH, "", ok, myParkingArea->getLength());
+    double angle = attrs.getOpt<double>(SUMO_ATTR_ANGLE, "", ok, myParkingArea->getAngle());
+    double slope = attrs.getOpt<double>(SUMO_ATTR_SLOPE, "", ok, myLastZ);
+    if (x == libsumo::INVALID_DOUBLE_VALUE) {
+        x = myLastX + (cos(3.14159265 * (angle-90) / 180) * length);
+    }
+    myLastX = x;
+    if (y == libsumo::INVALID_DOUBLE_VALUE) {
+        y = myLastY + (sin(3.14159265 * (angle-90) / 180) * length);
+    }
+    myLastY = y;
+    // (chs): if the attribute chargingpower is a non negative value create the subspace as a lot for charging
+    double power = attrs.getOpt<double>(SUMO_ATTR_CHARGINGPOWER, "", ok, myParkingArea->getChargingPower());
+    double efficiency = 0.;
+    SUMOTime chargeDelay = 0.;
+    MSChargingSpace* chargingSpace = nullptr;
+    if(power >= 0) {
+        efficiency = attrs.getOpt<double>(SUMO_ATTR_EFFICIENCY, "", ok, myParkingArea->getChargingEfficiency());
+        SUMOTime chargeDelay = attrs.getOptSUMOTimeReporting(SUMO_ATTR_CHARGEDELAY, "", ok, 0);
+        myLastSubChargeIdx += 1;
+        std::string id = myParkingArea->getID() + "_cs_" + toString(myParkingArea->getFirstRowCapacity()-1) + "_" + toString(myLastSubChargeIdx);
+        chargingSpace = new MSChargingSpace(id, power, efficiency, chargeDelay);
+    }
+    myParkingArea->addSubspace(x, y, z, width, length, angle, slope, chargingSpace);
 }
 
 
@@ -684,13 +777,17 @@ NLTriggerBuilder::parseAndBuildRerouter(MSNet& net, const SUMOSAXAttributes& att
         throw InvalidArgument("No edges found for MSTriggeredRerouter '" + id + "'.");
     }
     double prob = attrs.getOpt<double>(SUMO_ATTR_PROB, id.c_str(), ok, 1);
+    // (cre): get priority attribute
+    double prio = attrs.getOpt<double>(SUMO_ATTR_PRIORITY, id.c_str(), ok, 0);
     bool off = attrs.getOpt<bool>(SUMO_ATTR_OFF, id.c_str(), ok, false);
     SUMOTime timeThreshold = TIME2STEPS(attrs.getOpt<double>(SUMO_ATTR_HALTING_TIME_THRESHOLD, id.c_str(), ok, 0));
     const std::string vTypes = attrs.getOpt<std::string>(SUMO_ATTR_VTYPES, id.c_str(), ok, "");
     if (!ok) {
         throw InvalidArgument("Could not parse MSTriggeredRerouter '" + id + "'.");
     }
-    MSTriggeredRerouter* trigger = buildRerouter(net, id, edges, prob, off, timeThreshold, vTypes);
+    // (cre): pass priority attribute
+    //MSTriggeredRerouter* trigger = buildRerouter(net, id, edges, prob, off, timeThreshold, vTypes);
+    MSTriggeredRerouter* trigger = buildRerouter(net, id, edges, prob, prio, off, timeThreshold, vTypes);
     // read in the trigger description
     trigger->registerParent(SUMO_TAG_REROUTER, myHandler);
 }
@@ -738,9 +835,12 @@ NLTriggerBuilder::buildCalibrator(MSNet& /*net*/, const std::string& id,
 
 MSTriggeredRerouter*
 NLTriggerBuilder::buildRerouter(MSNet&, const std::string& id,
-                                MSEdgeVector& edges, double prob, bool off,
+                                MSEdgeVector& edges, double prob,
+                                // (utl): add prio parameter
+                                double prio, bool off,
                                 SUMOTime timeThreshold, const std::string& vTypes) {
-    return new MSTriggeredRerouter(id, edges, prob, off, timeThreshold, vTypes);
+    // (cre): pass prio parameter
+    return new MSTriggeredRerouter(id, edges, prob, prio, off, timeThreshold, vTypes);
 }
 
 
@@ -764,9 +864,15 @@ NLTriggerBuilder::beginParkingArea(MSNet& net, const std::string& id,
                                    unsigned int capacity,
                                    double width, double length, double angle, const std::string& name,
                                    bool onRoad,
-                                   const std::string& departPos) {
+                                   const std::string& departPos,
+                                   // (qpk): add parameter for exit lane
+                                   MSLane* exitLane,
+                                   // (chs): add parameters for charging space (power, efficiency and charge delay)
+                                   double power, double efficiency, SUMOTime chargeDelay) {
     // Close previous parking area if there are not lots inside
-    MSParkingArea* stop = new MSParkingArea(id, lines, *lane, frompos, topos, capacity, width, length, angle, name, onRoad, departPos);
+    // (qpk): pass exit lane too
+    // (chs): pass charging space parameters too
+    MSParkingArea* stop = new MSParkingArea(id, lines, *lane, frompos, topos, capacity, width, length, angle, name, onRoad, departPos, exitLane, power, efficiency, chargeDelay);
     if (!net.addStoppingPlace(SUMO_TAG_PARKING_AREA, stop)) {
         delete stop;
         throw InvalidArgument("Could not build parking area '" + id + "'; probably declared twice.");
@@ -779,10 +885,13 @@ NLTriggerBuilder::beginParkingArea(MSNet& net, const std::string& id,
 void
 NLTriggerBuilder::addLotEntry(double x, double y, double z,
                               double width, double length,
-                              double angle, double slope) {
+                              double angle, double slope,
+                              // (chs): charging space parameter in space
+                              MSChargingSpace* chargingSpace) {
     if (myParkingArea != nullptr) {
         if (!myParkingArea->parkOnRoad()) {
-            myParkingArea->addLotEntry(x, y, z, width, length, angle, slope);
+            // (chs): pass charging space
+            myParkingArea->addLotEntry(x, y, z, width, length, angle, slope, chargingSpace);
         } else {
             throw InvalidArgument("Cannot not add lot entry to on-road parking area.");
         }

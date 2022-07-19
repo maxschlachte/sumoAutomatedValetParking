@@ -87,10 +87,13 @@ protected:
      * @param[in] id The id of the rerouter
      * @param[in] edges The edges the rerouter is placed at
      * @param[in] prob The probability the rerouter reoutes vehicles with
+     * @param[in] prio The priority the rerouter reoutes vehicles with (cre)
      */
     virtual MSTriggeredRerouter* buildRerouter(MSNet& net,
             const std::string& id, MSEdgeVector& edges,
-            double prob, bool off, SUMOTime timeThreshold,
+            double prob,
+            // (cre): add prio parameter
+            double prio, bool off, SUMOTime timeThreshold,
             const std::string& vTypes) override;
 
 
@@ -134,7 +137,11 @@ protected:
                                   unsigned int capacity,
                                   double width, double length, double angle, const std::string& name,
                                   bool onRoad,
-                                  const std::string& departPos) override;
+                                  const std::string& departPos,
+                                  // (qpk): add parameter for exit lane
+                                  MSLane* exitLane,
+                                  // (chs): add parameters for charging space (power, efficiency and charge delay)
+                                  double power, double efficiency, SUMOTime chargeDelay) override;
 
 
     /** @brief Builds a charging station

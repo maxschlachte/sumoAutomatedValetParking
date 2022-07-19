@@ -29,6 +29,9 @@
 #include <microsim/MSNet.h>
 #include <microsim/MSLane.h>
 #include <microsim/MSEdge.h>
+// (chs): add MSStop and MSParkingArea in order to interact with the stop the charging space is on
+#include <microsim/MSStop.h>
+#include <microsim/MSParkingArea.h>
 #include <microsim/MSVehicle.h>
 #include "MSDevice_Tripinfo.h"
 #include "MSDevice_Emissions.h"
@@ -103,6 +106,10 @@ MSDevice_Battery::MSDevice_Battery(SUMOVehicle& holder, const std::string& id, c
     myActChargingStation(nullptr),         // Initially the vehicle isn't over a Charging Station
     myPreviousNeighbouringChargingStation(nullptr),    // Initially the vehicle wasn't over a Charging Station
     myEnergyCharged(0),                 // Initially the energy charged is zero
+    // (pki): init new parameters for parking info
+    myTotalChargingTime(0),
+    myTotalEnergyCharged(0),
+    myTotalBlockingTime(0),
     myVehicleStopped(0) {  // Initially the vehicle is stopped and the corresponding variable is 0
 
     if (maximumBatteryCapacity < 0) {
@@ -206,6 +213,9 @@ bool MSDevice_Battery::notifyMove(SUMOTrafficObject& tObject, double /* oldPos *
 
     // Check if vehicle has under their position one charge Station
     const std::string chargingStationID = MSNet::getInstance()->getStoppingPlaceID(veh.getLane(), veh.getPositionOnLane(), SUMO_TAG_CHARGING_STATION);
+    // (chs): Check if vehicle is parking on a charging space
+    // is vehicle parking AND the veh is currently on a charging space
+    bool isOnChargingSpace = veh.isParking() && veh.getStops().front().parkingarea->getChargingSpace(veh) != nullptr;
 
     // If vehicle is over a charging station
     if (chargingStationID != "") {
@@ -245,10 +255,19 @@ bool MSDevice_Battery::notifyMove(SUMOTrafficObject& tObject, double /* oldPos *
                 // Calulate energy charged
                 myEnergyCharged = myActChargingStation->getChargingPower(myTrackFuel) * myActChargingStation->getEfficency() * TS;
 
+                if (getActualBatteryCapacity() < getMaximumBatteryCapacity()) {
+                    // (pki): increase metric for total charging time, blocking time is not considered for charging lanes
+                    myTotalChargingTime += DELTA_T;
+                }
+
                 // Update Battery charge
                 if ((myEnergyCharged + getActualBatteryCapacity()) > getMaximumBatteryCapacity()) {
+                    // (pki): increase metric for total charged energy
+                    myTotalEnergyCharged += getMaximumBatteryCapacity() - getActualBatteryCapacity();
                     setActualBatteryCapacity(getMaximumBatteryCapacity());
                 } else {
+                    // (pki): increase metric for total charged energy
+                    myTotalEnergyCharged += myEnergyCharged;
                     setActualBatteryCapacity(getActualBatteryCapacity() + myEnergyCharged);
                 }
             }
@@ -264,6 +283,47 @@ bool MSDevice_Battery::notifyMove(SUMOTrafficObject& tObject, double /* oldPos *
             myPreviousNeighbouringChargingStation->setChargingVehicle(false);
         }
         myPreviousNeighbouringChargingStation = cs;
+    }
+    // (chs): if the vehicle is on a charging space
+    else if(isOnChargingSpace) {
+        // (chs): get values from space
+        myActChargingSpace = veh.getStops().front().parkingarea->getChargingSpace(veh);
+        myActChargingSpaceID = myActChargingSpace->getID();
+        // (chs): check if charging time exceeds the charge delay
+        if (getChargingStartTime() > myActChargingSpace->getChargeDelay()) {
+            //power = myTrackFuel ? power : power / 3600
+            // (chs): Calculate energy charged
+            myEnergyCharged = myActChargingSpace->getChargingPower(myTrackFuel) * myActChargingSpace->getEfficiency() * TS;
+#ifdef DEBUG_CHARGINGSPACES
+            // (chs) (dbg): debug print for charging space
+            std::cout << "veh=" << veh.getID() << " is on charging space:\n"
+                    << "time on space=" << time2string(getChargingStartTime()) << "\n"
+                    << "myEnergyCharged=" << myEnergyCharged << "\n"
+                    << "maximum capacity=" << getMaximumBatteryCapacity() << "\n"
+                    << "current charge=" << getActualBatteryCapacity() << "\n"
+                    << "steps to full charge=" << ceil(((getMaximumBatteryCapacity() - getActualBatteryCapacity()) / myEnergyCharged)) << "\n";
+#endif
+            if (getActualBatteryCapacity() < getMaximumBatteryCapacity()) {
+                // (pki): increase metric for total charging time
+                myTotalChargingTime += DELTA_T;
+            } else {
+                // (pki): if the vehicle is on a charging space but is not charging, it blocks the space for other vehicles
+                myTotalBlockingTime += DELTA_T;
+            }
+
+            if ((myEnergyCharged + getActualBatteryCapacity()) > getMaximumBatteryCapacity()) {
+                // (pki): increase metric for total charged energy
+                myTotalEnergyCharged += getMaximumBatteryCapacity() - getActualBatteryCapacity();
+                setActualBatteryCapacity(getMaximumBatteryCapacity());
+            } else {
+                // (pki): increase metric for total charged energy
+                myTotalEnergyCharged += myEnergyCharged;
+                setActualBatteryCapacity(getActualBatteryCapacity() + myEnergyCharged);
+            }
+        }
+        // (chs): add to charging start time
+        increaseChargingStartTime();
+        myActChargingSpace->addChargeValueForOutput(myEnergyCharged, this);
     }
     // In other case, vehicle will be not charged
     else {
@@ -412,7 +472,10 @@ MSDevice_Battery::getChargingStartTime() const {
 
 std::string
 MSDevice_Battery::getChargingStationID() const {
-    if (myActChargingStation != nullptr) {
+    // (chs): return charging space id
+    if(myActChargingSpace != nullptr) {
+        return myActChargingSpaceID;
+    } else if (myActChargingStation != nullptr) {
         return myActChargingStation->getID();
     } else {
         return "NULL";
@@ -455,6 +518,13 @@ MSDevice_Battery::getParameter(const std::string& key) const {
         return getChargingStationID();
     } else if (key == toString(SUMO_ATTR_VEHICLEMASS)) {
         return toString(myHolder.getEmissionParameters()->getDouble(SUMO_ATTR_VEHICLEMASS));
+    // (pki): add new metrics to parameter getter
+    } else if (key == toString(SUMO_ATTR_TOTALCHARGINGTIME)) {
+        return time2string(myTotalChargingTime);
+    } else if (key == toString(SUMO_ATTR_TOTALENERGYCHARGED)) {
+        return toString(myTotalEnergyCharged);
+    } else if (key == toString(SUMO_ATTR_TOTALBLOCKINGTIME)) {
+        return time2string(myTotalBlockingTime);
     }
     throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
 }
@@ -488,4 +558,21 @@ MSDevice_Battery::notifyParking() {
 }
 
 
+// (pki): getter for myTotalChargingTime
+SUMOTime
+MSDevice_Battery::getTotalChargingTime() const {
+    return myTotalChargingTime;
+}
+
+// (pki): getter for myTotalBlockingTime
+SUMOTime
+MSDevice_Battery::getTotalBlockingTime() const {
+    return myTotalBlockingTime;
+}
+
+// (pki): getter for myTotalEnergyCharged
+double
+MSDevice_Battery::getTotalEnergyCharged() const {
+    return myTotalEnergyCharged;
+}
 /****************************************************************************/

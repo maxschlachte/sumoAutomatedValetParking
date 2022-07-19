@@ -42,6 +42,10 @@
 #include "MSDevice_Taxi.h"
 #include "MSDevice_GLOSA.h"
 #include "MSDevice_ElecHybrid.h"
+// (cre): include device header
+#include "MSDevice_eParkingReroute.h"
+// (pki): include device header
+#include "MSDevice_ParkingInfo.h"
 #include "MSTransportableDevice_Routing.h"
 #include "MSTransportableDevice_FCD.h"
 #include "MSRoutingEngine.h"
@@ -85,6 +89,10 @@ MSDevice::insertOptions(OptionsCont& oc) {
     MSDevice_Tripinfo::insertOptions(oc);
     MSDevice_Vehroutes::insertOptions(oc);
     MSDevice_Friction::insertOptions(oc);
+    // (cre): create options for MSDevice_eParkingReroute
+    MSDevice_eParkingReroute::insertOptions(oc);
+    // (pki): create options for MSDevice_ParkingInfo
+    MSDevice_ParkingInfo::insertOptions(oc);
 
     MSTransportableDevice_Routing::insertOptions(oc);
     MSTransportableDevice_FCD::insertOptions(oc);
@@ -118,6 +126,10 @@ MSDevice::buildVehicleDevices(SUMOVehicle& v, std::vector<MSVehicleDevice*>& int
     MSDevice_Taxi::buildVehicleDevices(v, into);
     MSDevice_GLOSA::buildVehicleDevices(v, into);
     MSDevice_Friction::buildVehicleDevices(v, into);
+    // (cre): build MSDevice_eParkingReroute
+    MSDevice_eParkingReroute::buildVehicleDevices(v, into);
+    // (pki): build MSDevice_ParkingInfo
+    MSDevice_ParkingInfo::buildVehicleDevices(v, into);
 }
 
 
@@ -134,6 +146,8 @@ MSDevice::cleanupAll() {
     MSDevice_Tripinfo::cleanup();
     MSDevice_FCD::cleanup();
     MSDevice_Taxi::cleanup();
+    // (cre): call cleanup for MSDevice_eParkingReroute since the static registered vehicles map needs to be cleared in case of a reset
+    MSDevice_eParkingReroute::cleanup();
 }
 
 void

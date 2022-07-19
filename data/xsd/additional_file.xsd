@@ -100,6 +100,8 @@
                                 <xsd:attribute name="id" type="idType" use="required"/>
                                 <xsd:attribute name="probability" type="nonNegativeFloatType"/>
                                 <xsd:attribute name="visible" type="boolType"/>
+                                <!-- (utl): add priority attribute -->
+                                <xsd:attribute name="priority" type="nonNegativeFloatType"/>
                             </xsd:complexType>
                         </xsd:element>
                     </xsd:choice>
@@ -349,6 +351,8 @@
                                 <xsd:attribute name="id" type="idType" use="required"/>
                                 <xsd:attribute name="probability" type="nonNegativeFloatType"/>
                                 <xsd:attribute name="visible" type="boolType"/>
+                                <!-- (utl): add priority attribute -->
+                                <xsd:attribute name="priority" type="nonNegativeFloatType"/>
                             </xsd:complexType>
                         </xsd:element>
                     </xsd:choice>
@@ -523,6 +527,14 @@
         <xsd:attribute name="length" type="positiveFloatType" use="optional"/>
         <xsd:attribute name="angle" type="xsd:float" use="optional"/>
         <xsd:attribute name="slope" type="xsd:float" use="optional"/>
+        <!-- (chs): add parameters for charging spaces to parking space type -->
+        <xsd:attribute name="power" type="xsd:float" use="optional"/>
+        <xsd:attribute name="efficiency" type="xsd:float" use="optional"/>
+        <xsd:attribute name="chargeDelay" type="xsd:float" use="optional"/>
+        <!-- (qpk): number of subspaces to be generated -->
+        <xsd:attribute name="subspaces" type="nonNegativeIntType" use="optional"/>
+        <!-- (qpk): number of spaces to be generated in a row -->
+        <xsd:attribute name="rowLength" type="nonNegativeIntType" use="optional"/>
     </xsd:complexType>
 
     <xsd:complexType name="calibratorType">

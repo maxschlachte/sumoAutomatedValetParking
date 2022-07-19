@@ -109,9 +109,12 @@ public:
      * @param[in] onInit Whether the vehicle starts with this route
      * @param[in] check Whether the route should be checked for validity
      * @param[in] removeStops Whether stops should be removed if they do not fit onto the new route
+     * @param[in] pseudoInit Works like onInit in replaceRouteEdges but is not passed on to replaceRoute (cre)
      * @return Whether the new route was accepted
      */
-    virtual bool replaceRouteEdges(ConstMSEdgeVector& edges, double cost, double savings, const std::string& info, bool onInit = false, bool check = false, bool removeStops = true, std::string* msgReturn = nullptr) = 0;
+    virtual bool replaceRouteEdges(ConstMSEdgeVector& edges, double cost, double savings, const std::string& info, bool onInit = false, bool check = false, bool removeStops = true, std::string* msgReturn = nullptr,
+    // (cre): add pseudoInit flag to parameter list of virtual replaceRouteEdges
+    bool pseudoInit = false) = 0;
 
     /// Replaces the current route by the given one
     virtual bool replaceRoute(const MSRoute* route, const std::string& info, bool onInit = false, int offset = 0, bool addStops = true, bool removeStops = true, std::string* msgReturn = nullptr) = 0;
@@ -267,7 +270,9 @@ public:
      * @return Whether the stop could be added
      */
     virtual bool addStop(const SUMOVehicleParameter::Stop& stopPar, std::string& errorMsg, SUMOTime untilOffset = 0, bool collision = false,
-                         ConstMSEdgeVector::const_iterator* searchStart = 0) = 0;
+                         ConstMSEdgeVector::const_iterator* searchStart = 0,
+                         // (cre): add insert stop flag parameter
+                         bool insertStop = false) = 0;
 
     /// @brief return list of route indices and stop positions for the remaining stops
     virtual std::vector<std::pair<int, double> > getStopIndices() const = 0;
@@ -389,4 +394,11 @@ public:
      */
     virtual void loadState(const SUMOSAXAttributes& attrs, const SUMOTime offset) = 0;
     //@}
+
+    // (chs): define virtual method
+    /// @brief virtual method for setting the current stop duration
+    virtual void setCurrentStopDuration(SUMOTime newDuration) = 0;
+
+    // (qpk): forces a vehicle to leave parking area
+    virtual void forceLeave(bool val = true) = 0;
 };

@@ -903,5 +903,35 @@ GLHelper::drawBoundary(const Boundary& b) {
     GLHelper::popMatrix();
 }
 
+// (chs): implement method for drawing charging spaces (based on drawSpaceOccupancies using the color scheme of charging stations)
+void
+GLHelper::drawChargingSpaceOccupancies(const double exaggeration, const Position& pos, const double rotation,
+                                       const double width, const double length, const bool vehicle, const GUIVisualizationSettings& s) {
+    // colors for charging spaces
+    const RGBColor chargingSpaceBaseColor = s.colorSettings.chargingStationColor;
+    const RGBColor chargingColor = s.colorSettings.chargingStationColorCharge;
+    // declare geometry
+    PositionVector geom;
+    const double w = width / 2. - 0.1 * exaggeration;
+    const double h = length;
+    // set geometry
+    geom.push_back(Position(-w, +0, 0.));
+    geom.push_back(Position(+w, +0, 0.));
+    geom.push_back(Position(+w, +h, 0.));
+    geom.push_back(Position(-w, +h, 0.));
+    geom.push_back(Position(-w, +0, 0.));
+    // push matrix
+    GLHelper::pushMatrix();
+    // translate
+    glTranslated(pos.x(), pos.y(), pos.z());
+    // rotate
+    glRotated(rotation, 0, 0, 1);
+    // set color
+    GLHelper::setColor(vehicle ? chargingColor : chargingSpaceBaseColor);
+    // draw box lines
+    GLHelper::drawBoxLines(geom, 0.1 * exaggeration);
+    // pop matrix
+    GLHelper::popMatrix();
+}
 
 /****************************************************************************/

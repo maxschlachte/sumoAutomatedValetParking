@@ -1217,6 +1217,29 @@ public:
      */
     bool rerouteParkingArea(const std::string& parkingAreaID, std::string& errorMsg);
 
+    // (cre): creates a new stop and reroutes the vehicle there
+    /**
+     * creates a new stop and reroutes the vehicle there
+     * @param stopPar    stop parameter of the new stop
+     * @param errorMsg   string to hold any error messages
+     */
+    bool rerouteNewStop(const SUMOVehicleParameter::Stop& stopPar, std::string& errorMsg);
+
+    // (cre): sets a call flag indicating that the vehicle was already called by another vehicle for rerouting to a free charging lot
+    /**
+     * Sets a flag indicating the vehicle was called to a charging lot.
+     * @param val    boolean value of the flag (default: true)
+     */
+    void setChargeCallFlag(bool val = true);
+
+    // (cre): Returns whether the vehicle was called to a charging lot.
+    /// @brief Returns whether the vehicle was called to a charging lot.
+    bool wasCalledForCharging();
+
+    // (cre): sets the myReparkTimeStamp in order to recount for reparking
+    /// @brief sets the myReparkTimeStamp in order to recount for reparking
+    void setReparkTimeStamp();
+
     /**
      * schedule a new stop for the vehicle; each time a stop is reached, the vehicle
      * will wait for the given duration before continuing on its route
@@ -2109,6 +2132,21 @@ private:
     /// @brief An instance of a velocity/lane influencing instance; built in "getInfluencer"
     Influencer* myInfluencer;
 
+    // (chs): indicates if a vehicle forced its leaders out of the current stop
+    /// @brief indicates if a vehicle forced its leaders out of the current stop
+    bool myForcedMyLeaders;
+
+    // (cre): flag indicating whether or not the vehicle was already called to an charging lot
+    /// @brief flag indicating whether or not the vehicle was already called to an charging lot
+    bool myWasCalledForCharging;
+
+    // (cre): indicates that the call flag should be reset
+    /// @brief indicates that the call flag should be reset
+    bool myResetCallFlag;
+
+    // (pki): timestamp for measuring reparking time
+    /// @brief timestamp for measuring reparking time
+    SUMOTime myReparkTimeStamp;
 
 private:
     /// @brief invalidated default constructor

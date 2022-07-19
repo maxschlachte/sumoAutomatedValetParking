@@ -354,6 +354,10 @@ public:
         /// @brief The lane to stop at
         std::string lane;
 
+        // (qpk): add string variable exitLane
+        /// @brief exit lane id (used by NETEDIT)
+        std::string exitLane = "";
+
         /// @brief (Optional) bus stop if one is assigned to the stop
         std::string busstop;
 

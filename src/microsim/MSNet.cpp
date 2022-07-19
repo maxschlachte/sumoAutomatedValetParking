@@ -1257,6 +1257,15 @@ MSNet::addTractionSubstation(MSTractionSubstation* substation) {
     return false;
 }
 
+// (qpk): sorts LotSpaceDefinitions of all parking areas
+void
+MSNet::sortParkingLots() {
+  if (myStoppingPlaces.count(SUMO_TAG_PARKING_AREA) > 0) {
+      for (auto pa : myStoppingPlaces.find(SUMO_TAG_PARKING_AREA)->second) {
+          dynamic_cast<MSParkingArea*>(pa.second)->sortSpaceOccupancies();
+      }
+  }
+}
 
 MSStoppingPlace*
 MSNet::getStoppingPlace(const std::string& id, const SumoXMLTag category) const {

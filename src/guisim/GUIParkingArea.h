@@ -69,13 +69,21 @@ public:
      * @param[in] width Default width of the lot rectangle (if = 0 is computed from line.getWidth())
      * @param[in] length Default length of the lot rectangle (if = 0 is computed from endPos-begPos)
      * @param[in] angle Default angle of the lot rectangle relative to lane direction (if = 0 is computed ... TODO)
+     * @param[in] exitLane parameter for parking queues defining the lane the vehicles should exit to (qpk)
+     * @param[in] power power value for charging areas (if > 0 the parking area is considered a charging area) (chs)
+     * @param[in] efficiency efficiency value for charging areas (chs)
+     * @param[in] chargeDelay chargeDelay value for charging areas (chs)
      */
     GUIParkingArea(const std::string& id,
                    const std::vector<std::string>& lines, MSLane& lane,
                    double frompos, double topos, unsigned int capacity,
                    double width, double length, double angle, const std::string& name,
                    bool onRoad,
-                   const std::string& departPos);
+                   const std::string& departPos,
+                   // (qpk): add parameter for exit lane
+                   MSLane* exitLane,
+                   // (chs): add parameters for charging space (power, efficiency and charge delay)
+                   double power, double efficiency, SUMOTime chargeDelay);
 
 
     /// @brief Destructor
@@ -124,7 +132,9 @@ public:
     /// @brief extend boundary
     void addLotEntry(double x, double y, double z,
                      double width, double length,
-                     double angle, double slope);
+                     double angle, double slope,
+                     // (chs): charging space parameter
+                     MSChargingSpace* chargingSpace);
 
     /** @brief Draws the object
      * @param[in] s The settings for the current view (may influence drawing)

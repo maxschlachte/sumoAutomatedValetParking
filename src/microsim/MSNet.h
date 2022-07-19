@@ -824,6 +824,10 @@ public:
     static const std::string STAGE_INSERTIONS;
     static const std::string STAGE_REMOTECONTROL;
 
+    // (qpk): sorts LotSpaceDefinitions of all parking areas in the net
+    /// @brief sorts LotSpaceDefinitions of all parking areas in the net
+    void sortParkingLots();
+
 protected:
     /// @brief check all lanes for elevation data
     bool checkElevation();

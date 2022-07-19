@@ -54,8 +54,11 @@ public:
      * @param[in] edges The edges the rerouter is placed at
      * @param[in] prob The probability to reroute vehicles
      * @param[in] off Whether the rerouter is off (not working) initially
+     * @param[in] prio The priority to reroute vehicles (utl)
      */
     GUITriggeredRerouter(const std::string& id, const MSEdgeVector& edges, double prob,
+                         // (utl): add prio parameter
+                         double prio,
                          bool off, SUMOTime timeThreshold, const std::string& vTypes,
                          SUMORTree& rtree);
 
