@@ -20,10 +20,10 @@
 // The base abstract class for SOTL logics
 /****************************************************************************/
 
-#include <microsim/MSLane.h>
-#include <microsim/MSEdge.h>
-#include "MSPushButton.h"
 #include "MSSOTLTrafficLightLogic.h"
+#include "../MSLane.h"
+#include "../MSEdge.h"
+#include "MSPushButton.h"
 //#define SWARM_DEBUG
 //#define ANALYSIS_DEBUG
 
@@ -38,7 +38,7 @@ MSSOTLTrafficLightLogic::MSSOTLTrafficLightLogic(
     const Phases& phases,
     int step,
     SUMOTime delay,
-    const Parameterised::Map& parameters)
+    const std::map<std::string, std::string>& parameters)
     : MSPhasedTrafficLightLogic(tlcontrol, id, programID, 0, logicType, phases, step, delay, parameters) {
     this->mySensors = nullptr;
     this->myCountSensors = nullptr;
@@ -56,7 +56,7 @@ MSSOTLTrafficLightLogic::MSSOTLTrafficLightLogic(
     const Phases& phases,
     int step,
     SUMOTime delay,
-    const Parameterised::Map& parameters,
+    const std::map<std::string, std::string>& parameters,
     MSSOTLSensors* sensors)
     : MSPhasedTrafficLightLogic(tlcontrol, id, programID, 0, logicType, phases, step, delay, parameters) {
     this->mySensors = sensors;

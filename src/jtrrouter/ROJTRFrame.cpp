@@ -97,7 +97,7 @@ ROJTRFrame::checkOptions() {
     OptionsCont& oc = OptionsCont::getOptions();
     bool ok = ROFrame::checkOptions(oc);
     if (oc.isDefault("no-internal-links")) {
-        oc.setDefault("no-internal-links", "true");
+        oc.set("no-internal-links", "true");
     }
 
     SUMOVehicleParameter p;

@@ -22,8 +22,6 @@
 // ===========================================================================
 // included modules
 // ===========================================================================
-#include <config.h>
-
 #include <gtest/gtest.h>
 #include <utils/common/StringUtils.h>
 
@@ -66,7 +64,6 @@ TEST(StringUtils, test_method_convertUmlaute) {
     EXPECT_EQ("e", StringUtils::convertUmlaute("\xE9"));
     EXPECT_EQ("E", StringUtils::convertUmlaute("\xC8"));
     EXPECT_EQ("e", StringUtils::convertUmlaute("\xE8"));
-    EXPECT_EQ("normal_string_no_umlaute", StringUtils::convertUmlaute("normal_string_no_umlaute"));
 }
 
 /* Tests the method replace. */
@@ -99,7 +96,6 @@ TEST(StringUtils, test_method_replace_empty_third_argument) {
 TEST(StringUtils, test_method_toTimeString) {
     EXPECT_EQ("-00:00:01", StringUtils::toTimeString(-1));
     EXPECT_EQ("00:00:00", StringUtils::toTimeString(0));
-    EXPECT_EQ("00:00:00", StringUtils::toTimeString(-0));
     EXPECT_EQ("01:00:00", StringUtils::toTimeString(3600));
     EXPECT_EQ("00:00:01", StringUtils::toTimeString(1));
     EXPECT_EQ("49:40:00", StringUtils::toTimeString(178800));

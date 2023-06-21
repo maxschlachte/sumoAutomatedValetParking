@@ -26,7 +26,7 @@
 #include <cmath>
 #include <string>
 #include <utils/common/StdDefs.h>
-#include <utils/common/SUMOTime.h>
+#include <utils/common/FileHelpers.h>
 
 #define INVALID_SPEED 299792458 + 1 // nothing can go faster than the speed of light!
 // Factor that the minimum emergency decel is increased by in corresponding situations
@@ -89,9 +89,6 @@ public:
         UNUSED_PARAMETER(vMin);
         return vMax;
     }
-
-    /// @brief apply speed adaptation on startup
-    virtual double applyStartupDelay(const MSVehicle* veh, const double vMin, const double vMax, const SUMOTime addTime = 0) const;
 
 
     /** @brief Computes the vehicle's safe speed without a leader
@@ -265,6 +262,7 @@ public:
         return myCollisionMinGapFactor;
     }
 
+
     /// @name Virtual methods with default implementation
     /// @{
 
@@ -333,7 +331,7 @@ public:
      * @param[in] speed The vehicle's current speed
      * @return The distance needed to halt
      */
-    double brakeGap(const double speed) const {
+    virtual double brakeGap(const double speed) const {
         return brakeGap(speed, myDecel, myHeadwayTime);
     }
 
@@ -364,7 +362,7 @@ public:
      * @return The velocity after maximum deceleration
      */
     inline double getSpeedAfterMaxDecel(double v) const {
-        return MAX2(0., v - ACCEL2SPEED(myDecel));
+        return MAX2((double) 0, v - (double) ACCEL2SPEED(myDecel));
     }
     /// @}
 
@@ -656,9 +654,6 @@ protected:
 
     /// @brief The driver's desired time headway (aka reaction time tau) [s]
     double myHeadwayTime;
-
-    /// @brief The startup delay after halting [s]
-    SUMOTime myStartupDelay;
 
 
 

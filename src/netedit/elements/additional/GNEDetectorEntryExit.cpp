@@ -33,14 +33,14 @@
 // ===========================================================================
 
 GNEDetectorEntryExit::GNEDetectorEntryExit(SumoXMLTag entryExitTag, GNENet* net) :
-    GNEDetector("", net, GLO_DET_ENTRY, entryExitTag, 0, 0, {}, "", {}, "", false, Parameterised::Map()) {
+    GNEDetector("", net, GLO_DET_ENTRY, entryExitTag, 0, 0, {}, "", {}, "", false, std::map<std::string, std::string>()) {
     // reset default values
     resetDefaultValues();
 }
 
 
 GNEDetectorEntryExit::GNEDetectorEntryExit(SumoXMLTag entryExitTag, GNENet* net, GNEAdditional* parent, GNELane* lane, const double pos,
-        const bool friendlyPos, const Parameterised::Map& parameters) :
+        const bool friendlyPos, const std::map<std::string, std::string>& parameters) :
     GNEDetector(parent, net, GLO_DET_ENTRY, entryExitTag, pos, 0, {
     lane
 }, "", "", friendlyPos, parameters) {
@@ -77,10 +77,10 @@ GNEDetectorEntryExit::isAdditionalValid() const {
 
 std::string
 GNEDetectorEntryExit::getAdditionalProblem() const {
-    // obtain final length
+    // obtain final lenght
     const double len = getParentLanes().front()->getParentEdge()->getNBEdge()->getFinalLength();
     // check if detector has a problem
-    if (GNEAdditionalHandler::checkLanePosition(myPositionOverLane, 0, len, myFriendlyPosition)) {
+    if (GNEAdditionalHandler::checkSinglePositionOverLane(myPositionOverLane, len, myFriendlyPosition)) {
         return "";
     } else {
         // declare variable for error position
@@ -102,8 +102,7 @@ GNEDetectorEntryExit::fixAdditionalProblem() {
     // declare new position
     double newPositionOverLane = myPositionOverLane;
     // fix pos and length checkAndFixDetectorPosition
-    double length = 0;
-    GNEAdditionalHandler::fixLanePosition(newPositionOverLane, length, getParentLanes().front()->getParentEdge()->getNBEdge()->getFinalLength());
+    GNEAdditionalHandler::fixSinglePositionOverLane(newPositionOverLane, getParentLanes().front()->getParentEdge()->getNBEdge()->getFinalLength());
     // set new position
     setAttribute(SUMO_ATTR_POSITION, toString(newPositionOverLane), myNet->getViewNet()->getUndoList());
 }
@@ -318,10 +317,16 @@ GNEDetectorEntryExit::isValid(SumoXMLAttr key, const std::string& value) {
         case GNE_ATTR_SELECTED:
             return canParse<bool>(value);
         case GNE_ATTR_PARAMETERS:
-            return areParametersValid(value);
+            return Parameterised::areParametersValid(value);
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
+}
+
+
+bool
+GNEDetectorEntryExit::isAttributeEnabled(SumoXMLAttr /* key */) const {
+    return true;
 }
 
 

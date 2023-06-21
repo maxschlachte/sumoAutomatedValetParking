@@ -29,7 +29,7 @@
 #include <utils/options/OptionsCont.h>
 #define FONTSTASH_IMPLEMENTATION // Expands implementation
 #ifdef _MSC_VER
-#pragma warning(disable: 4505 5219) // do not warn about unused functions and implicit float conversions
+#pragma warning(disable: 4505) // do not warn about unused functions
 #endif
 #if __GNUC__ > 3
 #pragma GCC diagnostic push
@@ -47,8 +47,7 @@
 #include "GLHelper.h"
 
 #define CIRCLE_RESOLUTION (double)10 // inverse in degrees
-//#define CHECK_PUSHPOP         // enable or disable check push and pop matrix/names
-//#define CHECK_ELEMENTCOUNTER  // enable or disable element counter (for matrix and vertex)
+//#define CHECK_PUSHPOP // enable or disable check push and pop matrix/names
 
 #ifndef CALLBACK
 #define CALLBACK
@@ -59,8 +58,6 @@
 // ===========================================================================
 
 int GLHelper::myMatrixCounter = 0;
-int GLHelper::myVertexCounter = 0;
-int GLHelper::myMatrixCounterDebug = 0;
 int GLHelper::myNameCounter = 0;
 std::vector<std::pair<double, double> > GLHelper::myCircleCoords;
 std::vector<RGBColor> GLHelper::myDottedcontourColors;
@@ -116,12 +113,8 @@ GLHelper::angleLookup(double angleDeg) {
 void
 GLHelper::pushMatrix() {
     glPushMatrix();
-    // update counters
-#ifdef CHECK_ELEMENTCOUNTER
-    myMatrixCounter++;
-#endif
 #ifdef CHECK_PUSHPOP
-    myMatrixCounterDebug++;
+    myMatrixCounter++;
 #endif
 }
 
@@ -130,7 +123,7 @@ void
 GLHelper::popMatrix() {
     glPopMatrix();
 #ifdef CHECK_PUSHPOP
-    myMatrixCounterDebug--;
+    myMatrixCounter--;
 #endif
 }
 
@@ -153,37 +146,12 @@ GLHelper::popName() {
 }
 
 
-int
-GLHelper::getMatrixCounter() {
-    return myMatrixCounter;
-}
-
-
-void
-GLHelper::resetMatrixCounter() {
-    myMatrixCounter = 0;
-}
-
-
-int
-GLHelper::getVertexCounter() {
-    return myVertexCounter;
-}
-
-
-void
-GLHelper::resetVertexCounter() {
-    myVertexCounter = 0;
-}
-
-
 void
 GLHelper::checkCounterMatrix() {
 #ifdef CHECK_PUSHPOP
-    if (myMatrixCounterDebug != 0) {
+    if (myMatrixCounter != 0) {
         WRITE_WARNING("invalid matrix counter. Check that number of pushMatrix and popMatrix functions calls are the same");
     }
-    myMatrixCounterDebug = 0;
 #endif
 }
 
@@ -194,7 +162,6 @@ GLHelper::checkCounterName() {
     if (myNameCounter != 0) {
         WRITE_WARNING("invalid Name counter. Check that number of pushName and popName functions calls are the same");
     }
-    myNameCounter = 0;
 #endif
 }
 
@@ -209,16 +176,10 @@ GLHelper::drawFilledPoly(const PositionVector& v, bool close) {
     for (PositionVector::const_iterator i = v.begin(); i != v.end(); i++) {
         const Position& p = *i;
         glVertex2d(p.x(), p.y());
-#ifdef CHECK_ELEMENTCOUNTER
-        myVertexCounter++;
-#endif
     }
     if (close) {
         const Position& p = *(v.begin());
         glVertex2d(p.x(), p.y());
-#ifdef CHECK_ELEMENTCOUNTER
-        myVertexCounter++;
-#endif
     }
     glEnd();
 }
@@ -230,10 +191,6 @@ GLHelper::drawFilledPolyTesselated(const PositionVector& v, bool close) {
         return;
     }
     GLUtesselator* tobj = gluNewTess();
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable: 4191)
-#endif
 #if defined(__GNUC__) && __GNUC__ >= 8
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-function-type"
@@ -244,9 +201,6 @@ GLHelper::drawFilledPolyTesselated(const PositionVector& v, bool close) {
     gluTessCallback(tobj, GLU_TESS_COMBINE, (GLvoid(CALLBACK*)()) &combCallback);
 #if defined(__GNUC__) && __GNUC__ >= 8
 #pragma GCC diagnostic pop
-#endif
-#ifdef _MSC_VER
-#pragma warning(pop)
 #endif
     gluTessProperty(tobj, GLU_TESS_WINDING_RULE, GLU_TESS_WINDING_ODD);
     gluTessBeginPolygon(tobj, nullptr);
@@ -286,9 +240,6 @@ GLHelper::drawBoxLine(const Position& beg, double rot, double visLength,
     glVertex2d(width - offset, 0);
     glEnd();
     GLHelper::popMatrix();
-#ifdef CHECK_ELEMENTCOUNTER
-    myVertexCounter += 4;
-#endif
 }
 
 
@@ -306,9 +257,6 @@ GLHelper::drawBoxLine(const Position& beg1, const Position& beg2,
     glVertex2d(width, 0);
     glEnd();
     GLHelper::popMatrix();
-#ifdef CHECK_ELEMENTCOUNTER
-    myVertexCounter += 4;
-#endif
 }
 
 
@@ -427,9 +375,6 @@ GLHelper::drawLine(const Position& beg, double rot, double visLength) {
     glVertex2d(0, -visLength);
     glEnd();
     GLHelper::popMatrix();
-#ifdef CHECK_ELEMENTCOUNTER
-    myVertexCounter += 2;
-#endif
 }
 
 
@@ -444,9 +389,6 @@ GLHelper::drawLine(const Position& beg1, const Position& beg2,
     glVertex2d(0, -visLength);
     glEnd();
     GLHelper::popMatrix();
-#ifdef CHECK_ELEMENTCOUNTER
-    myVertexCounter += 2;
-#endif
 }
 
 
@@ -458,9 +400,6 @@ GLHelper::drawLine(const PositionVector& v) {
     for (int i = 0; i < e; ++i) {
         glVertex2d(v[i].x(), v[i].y());
         glVertex2d(v[i + 1].x(), v[i + 1].y());
-#ifdef CHECK_ELEMENTCOUNTER
-        myVertexCounter += 2;
-#endif
     }
     glEnd();
 }
@@ -474,9 +413,6 @@ GLHelper::drawLine(const PositionVector& v, const std::vector<RGBColor>& cols) {
         setColor(cols[i]);
         glVertex2d(v[i].x(), v[i].y());
         glVertex2d(v[i + 1].x(), v[i + 1].y());
-#ifdef CHECK_ELEMENTCOUNTER
-        myVertexCounter += 2;
-#endif
     }
     glEnd();
 }
@@ -488,9 +424,6 @@ GLHelper::drawLine(const Position& beg, const Position& end) {
     glVertex2d(beg.x(), beg.y());
     glVertex2d(end.x(), end.y());
     glEnd();
-#ifdef CHECK_ELEMENTCOUNTER
-    myVertexCounter += 2;
-#endif
 }
 
 
@@ -514,9 +447,6 @@ GLHelper::drawFilledCircle(double width, int steps, double beg, double end) {
         glVertex2d(0, 0);
         glEnd();
         p1 = p2;
-#ifdef CHECK_ELEMENTCOUNTER
-        myVertexCounter += 2;
-#endif
     }
 }
 
@@ -547,9 +477,6 @@ GLHelper::drawOutlineCircle(double width, double iwidth, int steps,
 
         glEnd();
         p1 = p2;
-#ifdef CHECK_ELEMENTCOUNTER
-        myVertexCounter += 6;
-#endif
     }
 }
 
@@ -573,9 +500,6 @@ GLHelper::drawTriangleAtEnd(const Position& p1, const Position& p2, double tLeng
     glVertex2d(+tWidth, 0);
     glEnd();
     GLHelper::popMatrix();
-#ifdef CHECK_ELEMENTCOUNTER
-    myVertexCounter += 3;
-#endif
 }
 
 
@@ -804,9 +728,6 @@ GLHelper::drawCrossTies(const PositionVector& geom,
                 glVertex2d(halfWidth, -t - length);
                 glVertex2d(halfWidth, -t);
                 glEnd();
-#ifdef CHECK_ELEMENTCOUNTER
-                myVertexCounter += 4;
-#endif
             }
         } else {
             // only draw a single rectangle if it's being drawn only for selecting
@@ -816,9 +737,6 @@ GLHelper::drawCrossTies(const PositionVector& geom,
             glVertex2d(halfWidth, -lengths.back());
             glVertex2d(halfWidth, 0);
             glEnd();
-#ifdef CHECK_ELEMENTCOUNTER
-            myVertexCounter += 4;
-#endif
         }
         // pop three draw matrix
         GLHelper::popMatrix();
@@ -853,9 +771,6 @@ GLHelper::drawInverseMarkings(const PositionVector& geom,
                 glVertex2d(-mw2, -t - length);
                 glVertex2d(-mw2, -t);
                 glEnd();
-#ifdef CHECK_ELEMENTCOUNTER
-                myVertexCounter += 4;
-#endif
                 if (!cl || !cr) {
                     // draw inverse marking between asymmetrical lane markings
                     const double length2 = MIN2((double)6, lengths[i] - t);
@@ -865,9 +780,6 @@ GLHelper::drawInverseMarkings(const PositionVector& geom,
                     glVertex2d(-halfWidth - 0.02, -t - length);
                     glVertex2d(-halfWidth - 0.02, -t - length2);
                     glEnd();
-#ifdef CHECK_ELEMENTCOUNTER
-                    myVertexCounter += 4;
-#endif
                 }
             }
             GLHelper::popMatrix();
@@ -877,15 +789,10 @@ GLHelper::drawInverseMarkings(const PositionVector& geom,
 
 
 void
-GLHelper::debugVertices(const PositionVector& shape, const GUIVisualizationTextSettings& settings, double scale, double layer) {
+GLHelper::debugVertices(const PositionVector& shape, double size, double layer) {
     RGBColor color = RGBColor::randomHue();
     for (int i = 0; i < (int)shape.size(); ++i) {
-        drawTextBox(toString(i), shape[i], layer,
-                    settings.scaledSize(scale),
-                    color,
-                    settings.bgColor,
-                    RGBColor::INVISIBLE,
-                    0, 0, 0.2);
+        GLHelper::drawText(toString(i), shape[i], layer, size, color, 0);
     }
 }
 
@@ -933,5 +840,6 @@ GLHelper::drawChargingSpaceOccupancies(const double exaggeration, const Position
     // pop matrix
     GLHelper::popMatrix();
 }
+
 
 /****************************************************************************/

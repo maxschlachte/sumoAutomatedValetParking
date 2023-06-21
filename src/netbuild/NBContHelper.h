@@ -202,6 +202,10 @@ public:
         /// @brief Whether edge priority may override closer angles
         bool myRegardPriority;
 
+    private:
+        /// @brief Invalidated assignment operator
+        edge_opposite_direction_sorter& operator=(const edge_opposite_direction_sorter& s) = delete;
+
     };
 
     // ---------------------------
@@ -267,6 +271,10 @@ public:
     private:
         const NBEdge* const myEdge;
 
+    private:
+        /// @brief invalidated assignment operator
+        node_with_incoming_finder& operator=(const node_with_incoming_finder& s) = delete;
+
     };
 
 
@@ -282,6 +290,10 @@ public:
 
     private:
         const NBEdge* const myEdge;
+
+    private:
+        /// @brief invalidated assignment operator
+        node_with_outgoing_finder& operator=(const node_with_outgoing_finder& s) = delete;
 
     };
 

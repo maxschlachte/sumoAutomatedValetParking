@@ -50,26 +50,25 @@ const int VEHPARS_NUMBER_SET = 2 << 5;
 const int VEHPARS_PERIOD_SET = 2 << 6;
 const int VEHPARS_VPH_SET = 2 << 7;
 const int VEHPARS_PROB_SET = 2 << 8;
-const int VEHPARS_POISSON_SET = 2 << 9;
-const int VEHPARS_ROUTE_SET = 2 << 10;
-const int VEHPARS_ARRIVALLANE_SET = 2 << 11;
-const int VEHPARS_ARRIVALPOS_SET = 2 << 12;
-const int VEHPARS_ARRIVALSPEED_SET = 2 << 13;
-const int VEHPARS_LINE_SET = 2 << 14;
-const int VEHPARS_FROM_TAZ_SET = 2 << 15;
-const int VEHPARS_TO_TAZ_SET = 2 << 16;
-const int VEHPARS_FORCE_REROUTE = 2 << 17;
-const int VEHPARS_PERSON_CAPACITY_SET = 2 << 18;
-const int VEHPARS_PERSON_NUMBER_SET = 2 << 19;
-const int VEHPARS_CONTAINER_NUMBER_SET = 2 << 20;
-const int VEHPARS_DEPARTPOSLAT_SET = 2 << 21;
-const int VEHPARS_ARRIVALPOSLAT_SET = 2 << 22;
-const int VEHPARS_VIA_SET = 2 << 23;
-const int VEHPARS_SPEEDFACTOR_SET = 2 << 24;
-const int VEHPARS_DEPARTEDGE_SET = 2 << 25;
-const int VEHPARS_ARRIVALEDGE_SET = 2 << 26;
-const int VEHPARS_CALIBRATORSPEED_SET = 2 << 27;
-const int VEHPARS_JUNCTIONMODEL_PARAMS_SET = 2 << 28;
+const int VEHPARS_ROUTE_SET = 2 << 9;
+const int VEHPARS_ARRIVALLANE_SET = 2 << 10;
+const int VEHPARS_ARRIVALPOS_SET = 2 << 11;
+const int VEHPARS_ARRIVALSPEED_SET = 2 << 12;
+const int VEHPARS_LINE_SET = 2 << 13;
+const int VEHPARS_FROM_TAZ_SET = 2 << 14;
+const int VEHPARS_TO_TAZ_SET = 2 << 15;
+const int VEHPARS_FORCE_REROUTE = 2 << 16;
+const int VEHPARS_PERSON_CAPACITY_SET = 2 << 17;
+const int VEHPARS_PERSON_NUMBER_SET = 2 << 18;
+const int VEHPARS_CONTAINER_NUMBER_SET = 2 << 19;
+const int VEHPARS_DEPARTPOSLAT_SET = 2 << 20;
+const int VEHPARS_ARRIVALPOSLAT_SET = 2 << 21;
+const int VEHPARS_VIA_SET = 2 << 22;
+const int VEHPARS_SPEEDFACTOR_SET = 2 << 23;
+const int VEHPARS_DEPARTEDGE_SET = 2 << 24;
+const int VEHPARS_ARRIVALEDGE_SET = 2 << 25;
+const int VEHPARS_CALIBRATORSPEED_SET = 2 << 26;
+const int VEHPARS_JUNCTIONMODEL_PARAMS_SET = 2 << 27;
 
 const int STOP_INDEX_END = -1;
 const int STOP_INDEX_FIT = -2;
@@ -94,7 +93,6 @@ const int STOP_PERMITTED_SET = 2 << 15;
 const int STOP_ENDED_SET = 2 << 16;
 const int STOP_STARTED_SET = 2 << 17;
 const int STOP_POSLAT_SET = 2 << 18;
-const int STOP_ONDEMAND_SET = 2 << 19;
 
 const double MIN_STOP_LENGTH = 2 * POSITION_EPS;
 
@@ -106,19 +104,19 @@ const double MIN_STOP_LENGTH = 2 * POSITION_EPS;
  * @enum DepartDefinition
  * @brief Possible ways to depart
  */
-enum class DepartDefinition {
+enum DepartDefinition {
     /// @brief The time is given
-    GIVEN,
+    DEPART_GIVEN,
     /// @brief The departure is person triggered
-    TRIGGERED,
+    DEPART_TRIGGERED,
     /// @brief The departure is container triggered
-    CONTAINER_TRIGGERED,
+    DEPART_CONTAINER_TRIGGERED,
     /// @brief The vehicle is discarded if emission fails (not fully implemented yet)
-    NOW,
+    DEPART_NOW,
     /// @brief The departure is triggered by a train split
-    SPLIT,
+    DEPART_SPLIT,
     /// @brief Tag for the last element in the enum for safe int casting
-    DEF_MAX
+    DEPART_DEF_MAX
 };
 
 
@@ -153,9 +151,7 @@ enum class DepartPosDefinition {
     DEFAULT,
     /// @brief The position is given
     GIVEN,
-    /// @brief The position is given
-    GIVEN_VEHROUTE,
-    /// @brief The position is set by the vehroute device
+    /// @brief The position is chosen randomly
     RANDOM,
     /// @brief A free position is chosen
     FREE,
@@ -179,8 +175,6 @@ enum class DepartPosLatDefinition {
     DEFAULT,
     /// @brief The position is given
     GIVEN,
-    /// @brief The position is set by the vehroute device
-    GIVEN_VEHROUTE,
     /// @brief At the rightmost side of the lane
     RIGHT,
     /// @brief At the center of the lane
@@ -205,8 +199,6 @@ enum class DepartSpeedDefinition {
     DEFAULT,
     /// @brief The speed is given
     GIVEN,
-    /// @brief The speed is set by the vehroute device
-    GIVEN_VEHROUTE,
     /// @brief The speed is chosen randomly
     RANDOM,
     /// @brief The maximum safe speed is used
@@ -346,7 +338,7 @@ public:
         void write(OutputDevice& dev, const bool close = true, const bool writeTagAndParents = true) const;
 
         /// @brief write trigger attribute
-        std::vector<std::string> getTriggers() const;
+        void writeTriggers(OutputDevice& dev) const;
 
         /// @brief The edge to stop at (used only in NETEDIT)
         std::string edge;
@@ -433,17 +425,14 @@ public:
         /// @brief the speed at which this stop counts as reached (waypoint mode)
         double speed = 0.;
 
-        /// @brief the lateral offset when stopping
-        double posLat = INVALID_DOUBLE;
-
-        /// @brief whether the stop may be skipped
-        bool onDemand = false;
-
         /// @brief the time at which this stop was reached
         mutable SUMOTime started = -1;
 
         /// @brief the time at which this stop was ended
-        mutable SUMOTime ended = -1;
+        SUMOTime ended = -1;
+
+        /// @brief the lateral offset when stopping
+        double posLat = INVALID_DOUBLE;
 
         /// @brief lanes and positions connected to this stop (only used by duarouter where Stop is used to store stopping places)
         std::vector<std::tuple<std::string, double, double> > accessPos;
@@ -454,8 +443,6 @@ public:
         /// @brief Information for the output which parameter were set
         int parametersSet = 0;
 
-        /// @brief return flags as per Vehicle::getStops
-        int getFlags() const;
     };
 
 
@@ -731,9 +718,6 @@ public:
     /// @brief The time offset between vehicle reinsertions
     SUMOTime repetitionOffset;
 
-    /// @brief The offset between depart and the time for the next vehicle insertions
-    SUMOTime repetitionTotalOffset;
-
     /// @brief The probability for emitting a vehicle per second
     double repetitionProbability;
 
@@ -769,15 +753,8 @@ public:
     /// @brief speed (used by calibrator flows
     double calibratorSpeed;
 
-    /// @brief bitset of InsertionCheck
-    int insertionChecks;
-
     /// @brief Information for the router which parameter were set, TraCI may modify this (when changing color)
     mutable int parametersSet;
-
-public:
-    /// @brief increment flow
-    void incrementFlow(double scale, SumoRNG* rng = nullptr);
 
 protected:
     /// @brief obtain depart parameter in string format
@@ -813,12 +790,4 @@ protected:
     /// @brief obtain arrival edge parameter in string format
     std::string getArrivalEdge() const;
 
-    /// @brief get insertion checks in string format
-    std::string getInsertionChecks() const;
-
-    /// @brief check if given insertion checks are valid
-    bool areInsertionChecksValid(const std::string& value) const;
-
-    /// @brief parses insertion checks
-    void parseInsertionChecks(const std::string& value);
 };

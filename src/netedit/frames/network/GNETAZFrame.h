@@ -21,7 +21,6 @@
 #include <config.h>
 
 #include <netedit/frames/GNEFrame.h>
-#include <netedit/frames/GNEDrawingShape.h>
 
 
 // ===========================================================================
@@ -242,11 +241,11 @@ public:
         /// @brief destructor
         ~TAZChildDefaultParameters();
 
-        /// @brief extend TAZ child default parameters Module (if we have selected a TAZ)
-        void extendTAZChildDefaultParameters();
+        /// @brief show TAZ child default parameters Module
+        void showTAZChildDefaultParametersModule();
 
-        /// @brief collapse TAZ child default parameters Module (if we have selected a TAZ)
-        void collapseTAZChildDefaultParameters();
+        /// @brief hide TAZ child default parameters Module
+        void hideTAZChildDefaultParametersModule();
 
         /// @brief update "select edges button"
         void updateSelectEdgesButton();
@@ -265,15 +264,11 @@ public:
         /// @brief Called when the user changes default values
         long onCmdSetDefaultValues(FXObject* obj, FXSelector, void*);
 
-        /// @brief Called when the user press "use selected edges" button
+        /// @brief Called when the user press use selected edges
         long onCmdUseSelectedEdges(FXObject* obj, FXSelector, void*);
-
-        /// @brief Called when the user press "zero fringe probabilities" button
-        long onCmdSetZeroFringeProbabilities(FXObject* obj, FXSelector, void*);
         /// @}
 
     protected:
-        /// @brief FOX need this
         FOX_CONSTRUCTOR(TAZChildDefaultParameters)
 
     private:
@@ -282,9 +277,6 @@ public:
 
         /// @brief CheckButton to enable or disable Toggle edge Membership
         FXCheckButton* myToggleMembership;
-
-        /// @brief Horizontal Frame toggle membership
-        FXHorizontalFrame* myToggleMembershipFrame;
 
         /// @brief Horizontal Frame for default TAZ Source Weight
         FXHorizontalFrame* myDefaultTAZSourceFrame;
@@ -300,9 +292,6 @@ public:
 
         /// @brief button for use selected edges
         FXButton* myUseSelectedEdges;
-
-        /// @brief button for setting zero fringe probabilities
-        FXButton* myZeroFringeProbabilities;
 
         /// @brief information label
         FXLabel* myInformationLabel;
@@ -541,7 +530,7 @@ public:
     void processEdgeSelection(const std::vector<GNEEdge*>& edges);
 
     /// @brief get drawing mode modul
-    GNEDrawingShape* getDrawingShapeModule() const;
+    GNEFrameModules::DrawingShape* getDrawingShapeModule() const;
 
     /// @brief get Current TAZ modul
     CurrentTAZ* getCurrentTAZModule() const;
@@ -557,7 +546,7 @@ protected:
     CommonXMLStructure::SumoBaseObject* myBaseTAZ;
 
     /**@brief build a shaped element using the drawed shape
-     * return true if was successfully created
+     * return true if was sucesfully created
      * @note called when user stop drawing shape
      */
     bool shapeDrawed();
@@ -578,8 +567,11 @@ private:
     /// @brief TAZ parameters
     TAZParameters* myTAZParameters;
 
+    /// @brief Netedit parameter
+    GNEFrameAttributeModules::NeteditAttributes* myNeteditAttributes;
+
     /// @brief Drawing shape
-    GNEDrawingShape* myDrawingShape;
+    GNEFrameModules::DrawingShape* myDrawingShape;
 
     /// @brief save TAZ Edges
     TAZSaveChanges* myTAZSaveChanges;

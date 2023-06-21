@@ -111,13 +111,10 @@ class FXMenuCheckIcon;
 /// @name FXButtons for toolbar
 /// @{
 /// @brief MFX Checkable Button with icon placed in navigation toolbar
-#define GUIDesignMFXCheckableButtonSquare       (BUTTON_NORMAL | LAYOUT_FIX_WIDTH | LAYOUT_FIX_HEIGHT), 0, 0, GUIDesignHeight, GUIDesignHeight
+#define GUIDesignMFXCheckableButton             (BUTTON_NORMAL | LAYOUT_FIX_WIDTH | LAYOUT_FIX_HEIGHT), 0, 0, GUIDesignHeight, GUIDesignHeight
 
 /// @brief checkable button with icon placed in navigation toolbar for supermodes
 #define GUIDesignMFXCheckableButtonSupermode    (BUTTON_NORMAL | LAYOUT_FIX_WIDTH | LAYOUT_FIX_HEIGHT), 0, 0, 100, GUIDesignHeight
-
-/// @brief checkable button extended over frame
-#define GUIDesignMFXCheckableButton             (BUTTON_NORMAL | LAYOUT_FILL_X | LAYOUT_FIX_HEIGHT), 0, 0, 0, GUIDesignHeight
 
 /// @}
 
@@ -134,9 +131,6 @@ class FXMenuCheckIcon;
 
 /// @brief Reset Button
 #define GUIDesignButtonReset                (ICON_BEFORE_TEXT | LAYOUT_FIX_WIDTH | LAYOUT_FIX_HEIGHT | FRAME_THICK | FRAME_RAISED), 0, 0, 75, GUIDesignHeight, 2, 2, 2, 2
-
-/// @brief Focus Button
-#define GUIDesignButtonFocus                (ICON_BEFORE_TEXT | LAYOUT_FIX_WIDTH | LAYOUT_FIX_HEIGHT | FRAME_NONE), 0, 0, 0, 0, 0, 0, 0, 0
 
 /// @brief Button with custom width (used in GNEGeometryPointDialog)
 #define GUIDesignButtonCustomWidth(width)   (ICON_BEFORE_TEXT | LAYOUT_FIX_WIDTH | LAYOUT_FIX_HEIGHT | FRAME_THICK | FRAME_RAISED), 0, 0, width, GUIDesignHeight, 2, 2, 2, 2
@@ -281,8 +275,11 @@ class FXMenuCheckIcon;
 /// @brief Combo box static     (cannot be edited) extended over the matrix column
 #define GUIDesignComboBoxAttribute          (COMBOBOX_NORMAL | FRAME_THICK | LAYOUT_FILL_X | LAYOUT_FIX_HEIGHT), 0, 0, 0, GUIDesignHeight, 2, 2, 2, 2
 
-/// @brief comboBox with thick frame, width 180
+/// @brief comboBox with thick frame, width 180 (Used in GNEVType)
 #define GUIDesignComboBoxWidth180           (COMBOBOX_NORMAL | FRAME_THICK | LAYOUT_FIX_WIDTH | LAYOUT_FIX_HEIGHT), 0, 0, 180, GUIDesignHeight, 2, 2, 2, 2
+
+/// @brief comboBox with thick frame, width 120
+#define GUIDesignComboBoxWidth120           (COMBOBOX_NORMAL | FRAME_THICK | LAYOUT_FIX_WIDTH | LAYOUT_FIX_HEIGHT), 0, 0, 120, GUIDesignHeight, 2, 2, 2, 2
 
 /// @brief number of column of every combo box
 #define GUIDesignComboBoxNCol               1
@@ -292,12 +289,6 @@ class FXMenuCheckIcon;
 
 /// @name FXPackers
 /// @{
-/// @brief Horizontal frame extended over X-frame parent used in FXGroupBoxModule
-#define GUIDesignGroupBoxModule             (LAYOUT_FILL_X), 0, 0, 0, 0, 4, 4, 4, 4, 4, 4
-
-/// @brief Horizontal frame extended over XY-frame parent used in FXGroupBoxModule
-#define GUIDesignGroupBoxModuleExtendY      (LAYOUT_FILL_X | LAYOUT_FILL_Y), 0, 0, 0, 0, 4, 4, 4, 4, 4, 4
-
 /// @brief Horizontal frame extended over frame parent
 #define GUIDesignHorizontalFrame            (LAYOUT_FILL_X), 0, 0, 0, 0, 4, 4, 4, 4, 4, 4
 
@@ -337,34 +328,31 @@ class FXMenuCheckIcon;
 /// @name General design for netedit frames
 /// @{
 /// @brief design for frames area
-#define GUIDesignFrameArea                      (FRAME_SUNKEN | LAYOUT_SIDE_TOP | LAYOUT_FIX_WIDTH | LAYOUT_FILL_Y)
+#define GUIDesignFrameArea                  (FRAME_SUNKEN | LAYOUT_SIDE_TOP | LAYOUT_FIX_WIDTH | LAYOUT_FILL_Y)
 
 /// @brief design for viewn area
-#define GUIDesignViewnArea                      (FRAME_SUNKEN | LAYOUT_SIDE_TOP | LAYOUT_FILL_X | LAYOUT_FILL_Y), 0, 0, 0, 0, 0, 0, 0, 0
+#define GUIDesignViewnArea                  (FRAME_SUNKEN | LAYOUT_SIDE_TOP | LAYOUT_FILL_X | LAYOUT_FILL_Y), 0, 0, 0, 0, 0, 0, 0, 0
 
 /// @brief design for the content frame of every frame
-#define GUIDesignContentsScrollWindow           (LAYOUT_FILL_X | LAYOUT_FILL_Y | HSCROLLER_NEVER), 0, 0, 0, 0
+#define GUIDesignContentsScrollWindow       (LAYOUT_FILL_X | LAYOUT_FILL_Y | HSCROLLER_NEVER), 0, 0, 0, 0
 
 /// @brief design for auxiliar (Without borders) frames used to pack another frames extended in all directions
-#define GUIDesignAuxiliarFrame                  (LAYOUT_FILL_X | LAYOUT_FILL_Y), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+#define GUIDesignAuxiliarFrame              (LAYOUT_FILL_X | LAYOUT_FILL_Y), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 
 /// @brief design for auxiliar (Without borders) horizontal frame used to pack another frames
-#define GUIDesignAuxiliarHorizontalFrame        (LAYOUT_FILL_X), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-
-/// @brief design for auxiliar (Without borders) horizontal frame used to pack another frames  uniform
-#define GUIDesignAuxiliarHorizontalFrameUniform (LAYOUT_FILL_X | PACK_UNIFORM_WIDTH), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+#define GUIDesignAuxiliarHorizontalFrame    (LAYOUT_FILL_X), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 
 /// @brief design for auxiliar (Without borders) horizontal frame used to pack another frames
-#define GUIDesignAuxiliarVerticalFrame          (LAYOUT_FILL_Y), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+#define GUIDesignAuxiliarVerticalFrame      (LAYOUT_FILL_Y), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 
 /// @brief design for horizontal frame used to pack another frames with a uniform width
-#define GUIDesignUniformHorizontalFrame         (LAYOUT_FILL_X | LAYOUT_FILL_Y | PACK_UNIFORM_WIDTH)
+#define GUIDesignUniformHorizontalFrame     (LAYOUT_FILL_X | LAYOUT_FILL_Y | PACK_UNIFORM_WIDTH)
 
 /// @brief design for the main content frame of every frame/dialog
-#define GUIDesignContentsFrame                  (LAYOUT_FILL_X | LAYOUT_FILL_Y)
+#define GUIDesignContentsFrame              (LAYOUT_FILL_X | LAYOUT_FILL_Y)
 
 /// @brief design for CollapsableFrame (Used in FXGroupBoxModule)
-#define GUIDesignCollapsableFrame               (LAYOUT_FILL_X | LAYOUT_FILL_Y), 0, 0, 0, 0, 2, 2, 2, 2, 2, 2
+#define GUIDesignCollapsableFrame           (LAYOUT_FILL_X | LAYOUT_FILL_Y), 0, 0, 0, 0, 2, 2, 2, 2, 2, 2
 
 /// @}
 
@@ -571,7 +559,7 @@ class FXMenuCheckIcon;
 #define GUIDesignTableAdditionals       (LAYOUT_FILL_X | LAYOUT_FILL_Y | VSCROLLER_ALWAYS | HSCROLLER_NEVER | TABLE_NO_ROWSELECT | TABLE_NO_COLSELECT), 0, 0, 0, 0, 2, 2, 2, 2
 
 /// @brief design for tables used in GNEFixDemandElements dialogs
-#define GUIDesignTableFixElements       (LAYOUT_FILL_X | LAYOUT_FILL_Y | VSCROLLER_ALWAYS | HSCROLLER_NEVER | TABLE_NO_ROWSELECT | TABLE_NO_COLSELECT), 0, 0, 0, 0, 2, 2, 2, 2
+#define GUIDesignTableFixElements       (LAYOUT_FILL_X | LAYOUT_FIX_HEIGHT | VSCROLLER_ALWAYS | HSCROLLER_NEVER | TABLE_NO_ROWSELECT | TABLE_NO_COLSELECT), 0, 0, 0, 200, 2, 2, 2, 2
 
 /// @}
 
@@ -608,7 +596,7 @@ class FXMenuCheckIcon;
 /// @}
 
 
-/// @name design for FXTreeListDynamic
+/// @name design for FXTreeListDinamic
 /// @{
 /// @brief treeListDinamic used in Inspector frame
 #define GUIDesignTreeListDinamic                (TREELIST_SHOWS_LINES | TREELIST_SHOWS_BOXES | TREELIST_SINGLESELECT | FRAME_SUNKEN | FRAME_THICK | LAYOUT_FILL_X | LAYOUT_FIX_HEIGHT)

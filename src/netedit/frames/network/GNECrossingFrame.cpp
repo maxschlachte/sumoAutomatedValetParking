@@ -35,9 +35,9 @@
 // ===========================================================================
 
 FXDEFMAP(GNECrossingFrame::EdgesSelector) EdgesSelectorMap[] = {
-    FXMAPFUNC(SEL_COMMAND,  MID_GNE_USESELECTED,        GNECrossingFrame::EdgesSelector::onCmdUseSelectedEdges),
-    FXMAPFUNC(SEL_COMMAND,  MID_GNE_CLEARSELECTION,     GNECrossingFrame::EdgesSelector::onCmdClearSelection),
-    FXMAPFUNC(SEL_COMMAND,  MID_GNE_INVERTSELECTION,    GNECrossingFrame::EdgesSelector::onCmdInvertSelection),
+    FXMAPFUNC(SEL_COMMAND,  MID_GNE_ADDITIONALFRAME_USESELECTED,        GNECrossingFrame::EdgesSelector::onCmdUseSelectedEdges),
+    FXMAPFUNC(SEL_COMMAND,  MID_GNE_ADDITIONALFRAME_CLEARSELECTION,     GNECrossingFrame::EdgesSelector::onCmdClearSelection),
+    FXMAPFUNC(SEL_COMMAND,  MID_GNE_ADDITIONALFRAME_INVERTSELECTION,    GNECrossingFrame::EdgesSelector::onCmdInvertSelection),
 };
 
 FXDEFMAP(GNECrossingFrame::CrossingParameters) CrossingParametersMap[] = {
@@ -64,7 +64,7 @@ FXIMPLEMENT(GNECrossingFrame::CreateCrossing,       FXGroupBoxModule,     Create
 // ---------------------------------------------------------------------------
 
 GNECrossingFrame::CurrentJunction::CurrentJunction(GNECrossingFrame* crossingFrameParent) :
-    FXGroupBoxModule(crossingFrameParent, "Junction") {
+    FXGroupBoxModule(crossingFrameParent->myContentFrame, "Junction") {
     // Create frame for junction ID
     FXHorizontalFrame* junctionIDFrame = new FXHorizontalFrame(getCollapsableFrame(), GUIDesignAuxiliarHorizontalFrame);
     // create label
@@ -92,18 +92,18 @@ GNECrossingFrame::CurrentJunction::updateCurrentJunctionLabel(const std::string&
 // ---------------------------------------------------------------------------
 
 GNECrossingFrame::EdgesSelector::EdgesSelector(GNECrossingFrame* crossingFrameParent) :
-    FXGroupBoxModule(crossingFrameParent, ("selection of " + toString(SUMO_TAG_EDGE) + "s").c_str()),
+    FXGroupBoxModule(crossingFrameParent->myContentFrame, ("selection of " + toString(SUMO_TAG_EDGE) + "s").c_str()),
     myCrossingFrameParent(crossingFrameParent),
     myCurrentJunction(nullptr) {
 
     // Create button for selected edges
-    myUseSelectedEdges = new FXButton(getCollapsableFrame(), ("Use selected " + toString(SUMO_TAG_EDGE) + "s").c_str(), nullptr, this, MID_GNE_USESELECTED, GUIDesignButton);
+    myUseSelectedEdges = new FXButton(getCollapsableFrame(), ("Use selected " + toString(SUMO_TAG_EDGE) + "s").c_str(), nullptr, this, MID_GNE_ADDITIONALFRAME_USESELECTED, GUIDesignButton);
 
     // Create button for clear selection
-    myClearEdgesSelection = new FXButton(getCollapsableFrame(), ("Clear " + toString(SUMO_TAG_EDGE) + "s").c_str(), nullptr, this, MID_GNE_CLEARSELECTION, GUIDesignButton);
+    myClearEdgesSelection = new FXButton(getCollapsableFrame(), ("Clear " + toString(SUMO_TAG_EDGE) + "s").c_str(), nullptr, this, MID_GNE_ADDITIONALFRAME_CLEARSELECTION, GUIDesignButton);
 
     // Create button for invert selection
-    myInvertEdgesSelection = new FXButton(getCollapsableFrame(), ("Invert " + toString(SUMO_TAG_EDGE) + "s").c_str(), nullptr, this, MID_GNE_INVERTSELECTION, GUIDesignButton);
+    myInvertEdgesSelection = new FXButton(getCollapsableFrame(), ("Invert " + toString(SUMO_TAG_EDGE) + "s").c_str(), nullptr, this, MID_GNE_ADDITIONALFRAME_INVERTSELECTION, GUIDesignButton);
 }
 
 
@@ -185,11 +185,11 @@ GNECrossingFrame::EdgesSelector::onCmdInvertSelection(FXObject*, FXSelector, voi
 }
 
 // ---------------------------------------------------------------------------
-// GNECrossingFrame::GNENeteditAttributes- methods
+// GNECrossingFrame::NeteditAttributes- methods
 // ---------------------------------------------------------------------------
 
 GNECrossingFrame::CrossingParameters::CrossingParameters(GNECrossingFrame* crossingFrameParent) :
-    FXGroupBoxModule(crossingFrameParent, "Crossing parameters"),
+    FXGroupBoxModule(crossingFrameParent->myContentFrame, "Crossing parameters"),
     myCrossingFrameParent(crossingFrameParent),
     myCrossingTemplate(nullptr),
     myCurrentParametersValid(true) {
@@ -459,7 +459,7 @@ GNECrossingFrame::CrossingParameters::onCmdHelp(FXObject*, FXSelector, void*) {
 // ---------------------------------------------------------------------------
 
 GNECrossingFrame::CreateCrossing::CreateCrossing(GNECrossingFrame* crossingFrameParent) :
-    FXGroupBoxModule(crossingFrameParent, "Create"),
+    FXGroupBoxModule(crossingFrameParent->myContentFrame, "Create"),
     myCrossingFrameParent(crossingFrameParent) {
     // Create groupbox for create crossings
     myCreateCrossingButton = new FXButton(getCollapsableFrame(), "Create crossing", 0, this, MID_GNE_CREATE, GUIDesignButton);
@@ -508,7 +508,7 @@ GNECrossingFrame::CreateCrossing::setCreateCrossingButton(bool value) {
 // ---------------------------------------------------------------------------
 
 GNECrossingFrame::Information::Information(GNECrossingFrame* crossingFrameParent) :
-    FXGroupBoxModule(crossingFrameParent, "Information") {
+    FXGroupBoxModule(crossingFrameParent->myContentFrame, "Information") {
     // candidate
     FXLabel* colorCandidateLabel = new FXLabel(getCollapsableFrame(), " Candidate", 0, GUIDesignLabelLeft);
     colorCandidateLabel->setBackColor(MFXUtils::getFXColor(crossingFrameParent->getViewNet()->getVisualisationSettings().candidateColorSettings.possible));

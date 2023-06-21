@@ -171,7 +171,6 @@ NIXMLEdgesHandler::addEdge(const SUMOSAXAttributes& attrs) {
         // update existing edge. only update lane-specific settings when explicitly requested
         myIsUpdate = true;
         myCurrentSpeed = NBEdge::UNSPECIFIED_SPEED;
-        myCurrentFriction = NBEdge::UNSPECIFIED_FRICTION;
         myPermissions = SVC_UNSPECIFIED;
         myCurrentWidth = NBEdge::UNSPECIFIED_WIDTH;
         myCurrentType = myCurrentEdge->getTypeID();
@@ -179,7 +178,6 @@ NIXMLEdgesHandler::addEdge(const SUMOSAXAttributes& attrs) {
     } else {
         // this is a completely new edge. get the type specific defaults
         myCurrentSpeed = myTypeCont.getEdgeTypeSpeed(myCurrentType);
-        myCurrentFriction = myTypeCont.getEdgeTypeFriction(myCurrentType);
         myPermissions = myTypeCont.getEdgeTypePermissions(myCurrentType);
         myCurrentWidth = myTypeCont.getEdgeTypeWidth(myCurrentType);
         myLanesSpread = myTypeCont.getEdgeTypeSpreadType(myCurrentType);
@@ -246,10 +244,6 @@ NIXMLEdgesHandler::addEdge(const SUMOSAXAttributes& attrs) {
     if (myOptions.getBool("speed-in-kmh") && myCurrentSpeed != NBEdge::UNSPECIFIED_SPEED) {
         myCurrentSpeed = myCurrentSpeed / (double) 3.6;
     }
-    // try to read the friction value from file
-    if (attrs.hasAttribute(SUMO_ATTR_FRICTION)) {
-        myCurrentFriction = attrs.get<double>(SUMO_ATTR_FRICTION, myCurrentID.c_str(), ok);
-    }
     // try to get the number of lanes
     if (attrs.hasAttribute(SUMO_ATTR_NUMLANES)) {
         myCurrentLaneNo = attrs.get<int>(SUMO_ATTR_NUMLANES, myCurrentID.c_str(), ok);
@@ -302,17 +296,10 @@ NIXMLEdgesHandler::addEdge(const SUMOSAXAttributes& attrs) {
         myCurrentEdge = nullptr;
         return;
     }
-    if (myFromNode == myToNode) {
-        // this might as well be an error. We make this a warning mostly for
-        // backward compatibility
-        WRITE_WARNINGF("Ignoring self-looped edge '%' at junction '%'", myCurrentID, myFromNode->getID());
-        myCurrentEdge = nullptr;
-        return;
-    }
     // check whether a previously defined edge shall be overwritten
     const bool applyLaneType = myCurrentEdge == nullptr;
     if (myCurrentEdge != nullptr) {
-        myCurrentEdge->reinit(myFromNode, myToNode, myCurrentType, myCurrentSpeed, myCurrentFriction,
+        myCurrentEdge->reinit(myFromNode, myToNode, myCurrentType, myCurrentSpeed,
                               myCurrentLaneNo, myCurrentPriority, myShape,
                               myCurrentWidth, myCurrentEndOffset,
                               myCurrentStreetName, myLanesSpread,
@@ -320,11 +307,11 @@ NIXMLEdgesHandler::addEdge(const SUMOSAXAttributes& attrs) {
     } else {
         // the edge must be allocated in dependence to whether a shape is given
         if (myShape.size() == 0) {
-            myCurrentEdge = new NBEdge(myCurrentID, myFromNode, myToNode, myCurrentType, myCurrentSpeed, myCurrentFriction,
+            myCurrentEdge = new NBEdge(myCurrentID, myFromNode, myToNode, myCurrentType, myCurrentSpeed,
                                        myCurrentLaneNo, myCurrentPriority, myCurrentWidth, myCurrentEndOffset,
                                        myLanesSpread, myCurrentStreetName);
         } else {
-            myCurrentEdge = new NBEdge(myCurrentID, myFromNode, myToNode, myCurrentType, myCurrentSpeed, myCurrentFriction,
+            myCurrentEdge = new NBEdge(myCurrentID, myFromNode, myToNode, myCurrentType, myCurrentSpeed,
                                        myCurrentLaneNo, myCurrentPriority, myCurrentWidth, myCurrentEndOffset,
                                        myShape, myLanesSpread, myCurrentStreetName, "",
                                        myKeepEdgeShape);
@@ -346,9 +333,6 @@ NIXMLEdgesHandler::addEdge(const SUMOSAXAttributes& attrs) {
                 if (laneType.attrs.count(SUMO_ATTR_SPEED) > 0) {
                     myCurrentEdge->setSpeed(lane, laneType.speed);
                 }
-                if (laneType.attrs.count(SUMO_ATTR_FRICTION) > 0) {
-                    myCurrentEdge->setFriction(lane, laneType.friction);
-                }
                 if (laneType.attrs.count(SUMO_ATTR_DISALLOW) > 0 || laneType.attrs.count(SUMO_ATTR_ALLOW) > 0) {
                     myCurrentEdge->setPermissions(laneType.permissions, lane);
                 }
@@ -361,9 +345,6 @@ NIXMLEdgesHandler::addEdge(const SUMOSAXAttributes& attrs) {
     }
     // try to get the kilometrage/mileage
     myCurrentEdge->setDistance(attrs.getOpt<double>(SUMO_ATTR_DISTANCE, myCurrentID.c_str(), ok, myCurrentEdge->getDistance()));
-    // preserve bidi edge (only as boo, the actual edge will be recomputed)
-    const std::string bidi = attrs.getOpt<std::string>(SUMO_ATTR_BIDI, myCurrentID.c_str(), ok, "");
-    myCurrentEdge->setBidi(myCurrentEdge->getBidiEdge() != nullptr || bidi != "");
 
     myLastParameterised.push_back(myCurrentEdge);
 }
@@ -424,10 +405,6 @@ NIXMLEdgesHandler::addLane(const SUMOSAXAttributes& attrs) {
     if (attrs.hasAttribute(SUMO_ATTR_SPEED)) {
         myCurrentEdge->setSpeed(lane, attrs.get<double>(SUMO_ATTR_SPEED, myCurrentID.c_str(), ok));
     }
-    // try to get lane specific friction
-    if (attrs.hasAttribute(SUMO_ATTR_FRICTION)) {
-        myCurrentEdge->setFriction(lane, attrs.get<double>(SUMO_ATTR_FRICTION, myCurrentID.c_str(), ok));
-    }
     // check whether this is an acceleration lane
     if (attrs.hasAttribute(SUMO_ATTR_ACCELERATION)) {
         myCurrentEdge->setAcceleration(lane, attrs.get<bool>(SUMO_ATTR_ACCELERATION, myCurrentID.c_str(), ok));
@@ -484,7 +461,7 @@ void NIXMLEdgesHandler::addSplit(const SUMOSAXAttributes& attrs) {
         if (e.pos < 0) {
             e.pos += myCurrentEdge->getGeometry().length();
         }
-        for (const std::string& id : attrs.getOpt<std::vector<std::string> >(SUMO_ATTR_LANES, myCurrentID.c_str(), ok)) {
+        for (const std::string& id : attrs.getOptStringVector(SUMO_ATTR_LANES, myCurrentID.c_str(), ok)) {
             try {
                 int lane = StringUtils::toInt(id);
                 e.lanes.push_back(lane);
@@ -676,21 +653,22 @@ NIXMLEdgesHandler::myEndElement(int element) {
 
 void
 NIXMLEdgesHandler::addRoundabout(const SUMOSAXAttributes& attrs) {
-    bool ok = true;
-    const std::vector<std::string>& edgeIDs = attrs.get<std::vector<std::string> >(SUMO_ATTR_EDGES, nullptr, ok);
-    if (ok) {
+    if (attrs.hasAttribute(SUMO_ATTR_EDGES)) {
+        std::vector<std::string> edgeIDs = attrs.getStringVector(SUMO_ATTR_EDGES);
         EdgeSet roundabout;
-        for (const std::string& eID : edgeIDs) {
-            NBEdge* edge = myEdgeCont.retrieve(eID);
+        for (std::vector<std::string>::iterator it = edgeIDs.begin(); it != edgeIDs.end(); ++it) {
+            NBEdge* edge = myEdgeCont.retrieve(*it);
             if (edge == nullptr) {
-                if (!myEdgeCont.wasIgnored(eID)) {
-                    WRITE_ERROR("Unknown edge '" + eID + "' in roundabout.");
+                if (!myEdgeCont.wasIgnored(*it)) {
+                    WRITE_ERROR("Unknown edge '" + (*it) + "' in roundabout");
                 }
             } else {
                 roundabout.insert(edge);
             }
         }
         myEdgeCont.addRoundabout(roundabout);
+    } else {
+        WRITE_ERROR("Empty edges in roundabout.");
     }
 }
 

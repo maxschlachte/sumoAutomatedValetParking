@@ -47,34 +47,22 @@
 
 #define HAS_NOT_LEFT_DETECTOR -1
 
-//#define DEBUG_E1_NOTIFY_MOVE
-
-#define DEBUG_COND (true)
-//#define DEBUG_COND (isSelected())
-//#define DEBUG_COND (getID()=="")
-
 // ===========================================================================
 // method definitions
 // ===========================================================================
 MSInductLoop::MSInductLoop(const std::string& id, MSLane* const lane,
                            double positionInMeters,
-                           double length,
                            const std::string& vTypes,
-                           const std::string& nextEdges,
                            int detectPersons,
                            const bool needLocking) :
     MSMoveReminder(id, lane),
-    MSDetectorFileOutput(id, vTypes, nextEdges, detectPersons),
+    MSDetectorFileOutput(id, vTypes, detectPersons),
     myPosition(positionInMeters),
-    myEndPosition(myPosition + length),
     myNeedLock(needLocking || MSGlobals::gNumSimThreads > 1),
     myLastLeaveTime(SIMTIME),
-    myOverrideTime(-1),
-    myOverrideEntryTime(-1),
     myVehicleDataCont(),
     myVehiclesOnDet() {
-    assert(length >= 0);
-    assert(myPosition >= 0 && myEndPosition <= myLane->getLength());
+    assert(myPosition >= 0 && myPosition <= myLane->getLength());
     reset();
 }
 
@@ -140,48 +128,27 @@ MSInductLoop::notifyMove(SUMOTrafficObject& veh, double oldPos,
         const double timeBeforeEnter = MSCFModel::passingTime(oldPos, myPosition, newPos, oldSpeed, newSpeed);
         myVehiclesOnDet[&veh] = SIMTIME + timeBeforeEnter;
         myEnteredVehicleNumber++;
-#ifdef DEBUG_E1_NOTIFY_MOVE
-        if (DEBUG_COND) {
-            std::cout << SIMTIME << " det=" << getID() << " enteredVeh=" << veh.getID() << "\n";
-        }
-#endif
     }
     double oldBackPos = oldPos - veh.getVehicleType().getLength();
     double newBackPos = newPos - veh.getVehicleType().getLength();
-    if (newBackPos > myEndPosition) {
+    if (newBackPos > myPosition) {
         // vehicle passed the detector (it may have changed onto this lane somewhere past the detector)
         // assert(!MSGlobals::gSemiImplicitEulerUpdate || newSpeed > 0 || myVehiclesOnDet.find(&veh) == myVehiclesOnDet.end());
         // assertion is invalid in case of teleportation
-        if (oldBackPos <= myEndPosition) {
+        if (oldBackPos <= myPosition) {
             const std::map<SUMOTrafficObject*, double>::iterator it = myVehiclesOnDet.find(&veh);
             if (it != myVehiclesOnDet.end()) {
                 const double entryTime = it->second;
-                const double leaveTime = SIMTIME + MSCFModel::passingTime(oldBackPos, myEndPosition, newBackPos, oldSpeed, newSpeed);
+                const double leaveTime = SIMTIME + MSCFModel::passingTime(oldBackPos, myPosition, newBackPos, oldSpeed, newSpeed);
                 myVehiclesOnDet.erase(it);
                 assert(entryTime <= leaveTime);
                 myVehicleDataCont.push_back(VehicleData(veh, entryTime, leaveTime, false));
                 myLastLeaveTime = leaveTime;
-#ifdef DEBUG_E1_NOTIFY_MOVE
-                if (DEBUG_COND) {
-                    std::cout << SIMTIME << " det=" << getID() << " leftVeh=" << veh.getID() << " oldBackPos=" << oldBackPos << " newBackPos=" << newBackPos << "\n";
-                }
-#endif
-            } else {
-#ifdef DEBUG_E1_NOTIFY_MOVE
-                if (DEBUG_COND) {
-                    std::cout << SIMTIME << " det=" << getID() << " leftVeh=" << veh.getID() << " oldBackPos=" << oldBackPos << " newBackPos=" << newBackPos << " (notFound)\n";
-                }
-#endif
             }
         } else {
             // vehicle is already beyond the detector...
             // This can happen even if it is still registered in myVehiclesOnDet, e.g., after teleport.
             myVehiclesOnDet.erase(&veh);
-#ifdef DEBUG_E1_NOTIFY_MOVE
-            if (DEBUG_COND) {
-                std::cout << SIMTIME << " det=" << getID() << " leftVeh=" << veh.getID() << " oldBackPos=" << oldBackPos << " newBackPos=" << newBackPos << " (unusual)\n";
-            }
-#endif
         }
         return false;
     }
@@ -230,9 +197,6 @@ MSInductLoop::getVehicleLength(const int offset) const {
 
 double
 MSInductLoop::getOccupancy() const {
-    if (myOverrideTime >= 0) {
-        return myOverrideTime < TS ? (TS - myOverrideTime) / TS * 100 : 0;
-    }
     const SUMOTime tbeg = SIMSTEP - DELTA_T;
     double occupancy = 0;
     const double csecond = SIMTIME;
@@ -247,9 +211,6 @@ MSInductLoop::getOccupancy() const {
 
 double
 MSInductLoop::getEnteredNumber(const int offset) const {
-    if (myOverrideTime >= 0) {
-        return myOverrideTime < TS ? 1 : 0;
-    }
     return (double)collectVehiclesOnDet(SIMSTEP - offset, true, true).size();
 }
 
@@ -266,9 +227,6 @@ MSInductLoop::getVehicleIDs(const int offset) const {
 
 double
 MSInductLoop::getTimeSinceLastDetection() const {
-    if (myOverrideTime >= 0) {
-        return myOverrideTime;
-    }
     if (myVehiclesOnDet.size() != 0) {
         // detector is occupied
         return 0;
@@ -277,52 +235,14 @@ MSInductLoop::getTimeSinceLastDetection() const {
 }
 
 
-double
-MSInductLoop::getOccupancyTime() const {
-    if (myOverrideTime >= 0) {
-        return SIMTIME - myOverrideEntryTime;
-    }
-    if (myVehiclesOnDet.size() == 0) {
-        // detector is unoccupied
-        return 0;
-    } else {
-        double minEntry = std::numeric_limits<double>::max();
-        for (const auto& i : myVehiclesOnDet) {
-            minEntry = MIN2(i.second, minEntry);
-        }
-        return SIMTIME - minEntry;
-    }
-}
-
-
-
 SUMOTime
 MSInductLoop::getLastDetectionTime() const {
-    if (myOverrideTime >= 0) {
-        return SIMSTEP - TIME2STEPS(myOverrideTime);
-    }
     if (myVehiclesOnDet.size() != 0) {
         return MSNet::getInstance()->getCurrentTimeStep();
     }
     return TIME2STEPS(myLastLeaveTime);
 }
 
-
-void
-MSInductLoop::overrideTimeSinceDetection(double time) {
-    myOverrideTime = time;
-    if (time < 0) {
-        myOverrideEntryTime = -1;
-    } else {
-        const double entryTime = MAX2(0.0, SIMTIME - time);
-        if (myOverrideEntryTime >= 0) {
-            // maintain earlier entry time to achive continous detection
-            myOverrideEntryTime = MIN2(myOverrideEntryTime, entryTime);
-        } else {
-            myOverrideEntryTime = entryTime;
-        }
-    }
-}
 
 void
 MSInductLoop::writeXMLDetectorProlog(OutputDevice& dev) const {
@@ -443,8 +363,7 @@ MSInductLoop::VehicleData::VehicleData(const SUMOTrafficObject& v, double entryT
 
 
 void
-MSInductLoop::clearState(SUMOTime time) {
-    myLastLeaveTime = STEPS2TIME(time);
+MSInductLoop::clearState() {
     myEnteredVehicleNumber = 0;
     myLastVehicleDataCont.clear();
     myVehicleDataCont.clear();

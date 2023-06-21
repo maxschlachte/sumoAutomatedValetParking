@@ -36,7 +36,6 @@
 
 
 #define LIBTRACI_SUBSCRIPTION_IMPLEMENTATION(CLASS, DOMAIN) \
-const int CLASS::DOMAIN_ID(libsumo::CMD_GET_##DOMAIN##_VARIABLE); \
 void CLASS::subscribe(const std::string& objectID, const std::vector<int>& varIDs, double begin, double end, const libsumo::TraCIResults& params) { \
     libtraci::Connection::getActive().subscribe(libsumo::CMD_SUBSCRIBE_##DOMAIN##_VARIABLE, objectID, begin, end, -1, -1, varIDs, params); \
 } \
@@ -170,10 +169,6 @@ public:
 
     static std::vector<std::string> getStringVector(int var, const std::string& id, tcpip::Storage* add = nullptr) {
         return get(var, id, add, libsumo::TYPE_STRINGLIST).readStringList();
-    }
-
-    static std::vector<double> getDoubleVector(int var, const std::string& id, tcpip::Storage* add = nullptr) {
-        return get(var, id, add, libsumo::TYPE_DOUBLELIST).readDoubleList();
     }
 
     static libsumo::TraCIColor getCol(int var, const std::string& id, tcpip::Storage* add = nullptr) {

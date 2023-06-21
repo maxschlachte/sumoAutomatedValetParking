@@ -13,8 +13,6 @@ set(microsim_devices_STAT_SRCS
    MSDevice_BTsender.h
    MSDevice_Emissions.cpp
    MSDevice_Emissions.h
-   MSDevice_Friction.h
-   MSDevice_Friction.cpp
    MSDevice_Transportable.cpp
    MSDevice_Transportable.h
    MSDevice_Routing.cpp
@@ -37,10 +35,8 @@ set(microsim_devices_STAT_SRCS
    MSDevice_Taxi.h
    MSDevice_GLOSA.cpp
    MSDevice_GLOSA.h
-   # (pki): Add ParkingInfo files to cmake file
    MSDevice_ParkingInfo.cpp
    MSDevice_ParkingInfo.h
-   # (cre): Add eParkingReroute files to cmake file
    MSDevice_eParkingReroute.cpp
    MSDevice_eParkingReroute.h
    MSTransportableDevice.h

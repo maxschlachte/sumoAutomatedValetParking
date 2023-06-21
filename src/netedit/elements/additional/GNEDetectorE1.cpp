@@ -21,6 +21,7 @@
 #include <netedit/GNEUndoList.h>
 #include <netedit/GNEViewNet.h>
 #include <netedit/changes/GNEChange_Attribute.h>
+#include <utils/gui/globjects/GLIncludes.h>
 #include <utils/gui/div/GLHelper.h>
 
 #include "GNEDetectorE1.h"
@@ -32,14 +33,14 @@
 // ===========================================================================
 
 GNEDetectorE1::GNEDetectorE1(GNENet* net) :
-    GNEDetector("", net, GLO_E1DETECTOR, SUMO_TAG_E1DETECTOR, 0, 0, {}, "", {}, "", false, Parameterised::Map()) {
+    GNEDetector("", net, GLO_E1DETECTOR, SUMO_TAG_E1DETECTOR, 0, 0, {}, "", {}, "", false, std::map<std::string, std::string>()) {
     // reset default values
     resetDefaultValues();
 }
 
 
 GNEDetectorE1::GNEDetectorE1(const std::string& id, GNELane* lane, GNENet* net, const double pos, const SUMOTime freq, const std::string& filename, const std::vector<std::string>& vehicleTypes,
-                             const std::string& name, bool friendlyPos, const Parameterised::Map& parameters) :
+                             const std::string& name, bool friendlyPos, const std::map<std::string, std::string>& parameters) :
     GNEDetector(id, net, GLO_E1DETECTOR, SUMO_TAG_E1DETECTOR, pos, freq, {
     lane
 }, filename, vehicleTypes, name, friendlyPos, parameters) {
@@ -61,9 +62,7 @@ GNEDetectorE1::writeAdditional(OutputDevice& device) const {
     }
     device.writeAttr(SUMO_ATTR_LANE, getParentLanes().front()->getID());
     device.writeAttr(SUMO_ATTR_POSITION, myPositionOverLane);
-    if (getAttribute(SUMO_ATTR_PERIOD).size() > 0) {
-        device.writeAttr(SUMO_ATTR_PERIOD, time2string(myPeriod));
-    }
+    device.writeAttr(SUMO_ATTR_FREQUENCY, time2string(myFreq));
     if (myFilename.size() > 0) {
         device.writeAttr(SUMO_ATTR_FILE, myFilename);
     }
@@ -92,10 +91,10 @@ GNEDetectorE1::isAdditionalValid() const {
 
 std::string
 GNEDetectorE1::getAdditionalProblem() const {
-    // obtain final length
+    // obtain final lenght
     const double len = getParentLanes().front()->getParentEdge()->getNBEdge()->getFinalLength();
     // check if detector has a problem
-    if (GNEAdditionalHandler::checkLanePosition(myPositionOverLane, 0, len, myFriendlyPosition)) {
+    if (GNEAdditionalHandler::checkSinglePositionOverLane(myPositionOverLane, len, myFriendlyPosition)) {
         return "";
     } else {
         // declare variable for error position
@@ -117,8 +116,7 @@ GNEDetectorE1::fixAdditionalProblem() {
     // declare new position
     double newPositionOverLane = myPositionOverLane;
     // fix pos and length checkAndFixDetectorPosition
-    double length = 0;
-    GNEAdditionalHandler::fixLanePosition(newPositionOverLane, length, getParentLanes().front()->getParentEdge()->getNBEdge()->getFinalLength());
+    GNEAdditionalHandler::fixSinglePositionOverLane(newPositionOverLane, getParentLanes().front()->getParentEdge()->getNBEdge()->getFinalLength());
     // set new position
     setAttribute(SUMO_ATTR_POSITION, toString(newPositionOverLane), myNet->getViewNet()->getUndoList());
 }
@@ -196,17 +194,13 @@ std::string
 GNEDetectorE1::getAttribute(SumoXMLAttr key) const {
     switch (key) {
         case SUMO_ATTR_ID:
-            return getMicrosimID();
+            return getID();
         case SUMO_ATTR_LANE:
             return getParentLanes().front()->getID();
         case SUMO_ATTR_POSITION:
             return toString(myPositionOverLane);
-        case SUMO_ATTR_PERIOD:
-            if (myPeriod == SUMOTime_MAX_PERIOD) {
-                return "";
-            } else {
-                return time2string(myPeriod);
-            }
+        case SUMO_ATTR_FREQUENCY:
+            return time2string(myFreq);
         case SUMO_ATTR_NAME:
             return myAdditionalName;
         case SUMO_ATTR_FILE:
@@ -244,7 +238,7 @@ GNEDetectorE1::setAttribute(SumoXMLAttr key, const std::string& value, GNEUndoLi
         case SUMO_ATTR_ID:
         case SUMO_ATTR_LANE:
         case SUMO_ATTR_POSITION:
-        case SUMO_ATTR_PERIOD:
+        case SUMO_ATTR_FREQUENCY:
         case SUMO_ATTR_NAME:
         case SUMO_ATTR_FILE:
         case SUMO_ATTR_VTYPES:
@@ -273,12 +267,8 @@ GNEDetectorE1::isValid(SumoXMLAttr key, const std::string& value) {
             }
         case SUMO_ATTR_POSITION:
             return canParse<double>(value) && fabs(parse<double>(value)) < getParentLanes().front()->getParentEdge()->getNBEdge()->getFinalLength();
-        case SUMO_ATTR_PERIOD:
-            if (value.empty()) {
-                return true;
-            } else {
-                return (canParse<double>(value) && (parse<double>(value) >= 0));
-            }
+        case SUMO_ATTR_FREQUENCY:
+            return (canParse<double>(value) && (parse<double>(value) >= 0));
         case SUMO_ATTR_NAME:
             return SUMOXMLDefinitions::isValidAttribute(value);
         case SUMO_ATTR_FILE:
@@ -294,10 +284,16 @@ GNEDetectorE1::isValid(SumoXMLAttr key, const std::string& value) {
         case GNE_ATTR_SELECTED:
             return canParse<bool>(value);
         case GNE_ATTR_PARAMETERS:
-            return areParametersValid(value);
+            return Parameterised::areParametersValid(value);
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
+}
+
+
+bool
+GNEDetectorE1::isAttributeEnabled(SumoXMLAttr /* key */) const {
+    return true;
 }
 
 // ===========================================================================
@@ -317,12 +313,8 @@ GNEDetectorE1::setAttribute(SumoXMLAttr key, const std::string& value) {
         case SUMO_ATTR_POSITION:
             myPositionOverLane = parse<double>(value);
             break;
-        case SUMO_ATTR_PERIOD:
-            if (value.empty()) {
-                myPeriod = SUMOTime_MAX_PERIOD;
-            } else {
-                myPeriod = string2time(value);
-            }
+        case SUMO_ATTR_FREQUENCY:
+            myFreq = string2time(value);
             break;
         case SUMO_ATTR_FILE:
             myFilename = value;

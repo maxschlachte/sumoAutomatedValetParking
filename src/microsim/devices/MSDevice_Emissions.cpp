@@ -23,12 +23,9 @@
 
 #include <microsim/MSNet.h>
 #include <microsim/MSLane.h>
-#include <microsim/MSStop.h>
 #include <microsim/MSVehicleControl.h>
-#include <microsim/output/MSDetectorControl.h>
 #include <utils/options/OptionsCont.h>
 #include <utils/emissions/PollutantsInterface.h>
-#include <utils/emissions/HelpersEnergy.h>
 #include <utils/iodevices/OutputDevice.h>
 #include "MSDevice_Emissions.h"
 
@@ -43,9 +40,6 @@ void
 MSDevice_Emissions::insertOptions(OptionsCont& oc) {
     insertDefaultAssignmentOptions("emissions", "Emissions", oc);
 
-    oc.doRegister("device.emissions.begin", new Option_String("-1"));
-    oc.addDescription("device.emissions.begin", "Emissions", "Recording begin time for emission-data");
-
     oc.doRegister("device.emissions.period", new Option_String("0"));
     oc.addDescription("device.emissions.period", "Emissions", "Recording period for emission-output");
 }
@@ -55,7 +49,9 @@ void
 MSDevice_Emissions::buildVehicleDevices(SUMOVehicle& v, std::vector<MSVehicleDevice*>& into) {
     OptionsCont& oc = OptionsCont::getOptions();
     if (equippedByDefaultAssignmentOptions(oc, "emissions", v, oc.isSet("emission-output"))) {
-        into.push_back(new MSDevice_Emissions(v));
+        // build the device
+        MSDevice_Emissions* device = new MSDevice_Emissions(v, "emissions_" + v.getID());
+        into.push_back(device);
     }
 }
 
@@ -63,8 +59,8 @@ MSDevice_Emissions::buildVehicleDevices(SUMOVehicle& v, std::vector<MSVehicleDev
 // ---------------------------------------------------------------------------
 // MSDevice_Emissions-methods
 // ---------------------------------------------------------------------------
-MSDevice_Emissions::MSDevice_Emissions(SUMOVehicle& holder)
-    : MSVehicleDevice(holder, "emissions_" + holder.getID()), myEmissions() {
+MSDevice_Emissions::MSDevice_Emissions(SUMOVehicle& holder, const std::string& id)
+    : MSVehicleDevice(holder, id), myEmissions() {
 }
 
 
@@ -75,18 +71,20 @@ MSDevice_Emissions::~MSDevice_Emissions() {
 bool
 MSDevice_Emissions::notifyMove(SUMOTrafficObject& veh, double /*oldPos*/, double /*newPos*/, double newSpeed) {
     const SUMOEmissionClass c = veh.getVehicleType().getEmissionClass();
-    myEmissions.addScaled(PollutantsInterface::computeAll(c, newSpeed, veh.getAcceleration(), veh.getSlope(), myHolder.getEmissionParameters()), TS);
+    const double a = veh.getAcceleration();
+    const double slope = veh.getSlope();
+    myEmissions.addScaled(PollutantsInterface::computeAll(c, newSpeed, a, slope,
+                          static_cast<const SUMOVehicle&>(veh).getEmissionParameters()), TS);
     return true;
 }
-
 
 bool
 MSDevice_Emissions::notifyIdle(SUMOTrafficObject& veh) {
     const SUMOEmissionClass c = veh.getVehicleType().getEmissionClass();
-    myEmissions.addScaled(PollutantsInterface::computeAll(c, 0., 0., 0., myHolder.getEmissionParameters()), TS);
+    myEmissions.addScaled(PollutantsInterface::computeAll(c, 0., 0., 0.,
+                          static_cast<const SUMOVehicle&>(veh).getEmissionParameters()), TS);
     return true;
 }
-
 
 void
 MSDevice_Emissions::notifyMoveInternal(const SUMOTrafficObject& veh,
@@ -99,8 +97,10 @@ MSDevice_Emissions::notifyMoveInternal(const SUMOTrafficObject& veh,
                                        const double /* meanLengthOnLane */) {
 
     // called by meso (see MSMeanData_Emissions::MSLaneMeanDataValues::notifyMoveInternal)
-    const SUMOEmissionClass c = veh.getVehicleType().getEmissionClass();
-    myEmissions.addScaled(PollutantsInterface::computeAll(c, meanSpeedVehicleOnLane, veh.getAcceleration(), veh.getSlope(), myHolder.getEmissionParameters()), timeOnLane);
+    const double a = veh.getAcceleration();
+    myEmissions.addScaled(PollutantsInterface::computeAll(veh.getVehicleType().getEmissionClass(),
+                          meanSpeedVehicleOnLane, a, veh.getSlope(),
+                          static_cast<const SUMOVehicle&>(veh).getEmissionParameters()), timeOnLane);
 }
 
 

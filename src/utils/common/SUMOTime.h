@@ -32,13 +32,12 @@
 typedef long long int SUMOTime;
 #define SUMOTime_MAX std::numeric_limits<SUMOTime>::max()
 #define SUMOTime_MIN std::numeric_limits<SUMOTime>::min()
-#define SUMOTime_MAX_PERIOD (SUMOTime_MAX - SUMOTime_MAX % DELTA_T)
 
 // the step length in ms
 extern SUMOTime DELTA_T;
 
 // the step length in seconds as double
-#define TS (static_cast<double>(DELTA_T)/1000.)
+#define TS (static_cast<double>(DELTA_T/1000.))
 
 // x*deltaT
 #define SPEED2DIST(x) ((x)*TS)

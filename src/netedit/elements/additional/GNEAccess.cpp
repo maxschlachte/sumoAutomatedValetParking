@@ -20,7 +20,9 @@
 #include <config.h>
 
 #include <netedit/GNENet.h>
+#include <netedit/GNENet.h>
 #include <netedit/GNEUndoList.h>
+#include <netedit/GNEViewNet.h>
 #include <netedit/GNEViewNet.h>
 #include <netedit/GNEViewParent.h>
 #include <netedit/changes/GNEChange_Attribute.h>
@@ -37,9 +39,10 @@
 
 GNEAccess::GNEAccess(GNENet* net) :
     GNEAdditional("", net, GLO_ACCESS, SUMO_TAG_ACCESS, "",
-{}, {}, {}, {}, {}, {}),
-myPositionOverLane(0),
-myLength(0),
+{}, {}, {}, {}, {}, {}, {}, {},
+std::map<std::string, std::string>()),
+    myPositionOverLane(0),
+    myLength(0),
 myFriendlyPosition(false) {
     // reset default values
     resetDefaultValues();
@@ -47,10 +50,10 @@ myFriendlyPosition(false) {
 
 
 GNEAccess::GNEAccess(GNEAdditional* busStop, GNELane* lane, GNENet* net, double pos, const double length, bool friendlyPos,
-                     const Parameterised::Map& parameters) :
+                     const std::map<std::string, std::string>& parameters) :
     GNEAdditional(net, GLO_ACCESS, SUMO_TAG_ACCESS, "",
-{}, {}, {lane}, {busStop}, {}, {}),
-Parameterised(parameters),
+{}, {}, {lane}, {busStop}, {}, {}, {}, {},
+parameters),
 myPositionOverLane(pos),
 myLength(length),
 myFriendlyPosition(friendlyPos) {
@@ -195,7 +198,7 @@ GNEAccess::drawGL(const GUIVisualizationSettings& s) const {
         }
         // pop layer matrix
         GLHelper::popMatrix();
-        // pop gl identificator
+        // pop gl identficador
         GLHelper::popName();
         // draw lock icon
         GNEViewNetHelper::LockIcon::drawLockIcon(this, getType(), myAdditionalGeometry.getShape().front(), accessExaggeration, 0.3);
@@ -243,12 +246,6 @@ GNEAccess::getAttributeDouble(SumoXMLAttr key) const {
 }
 
 
-const Parameterised::Map&
-GNEAccess::getACParametersMap() const {
-    return getParametersMap();
-}
-
-
 void
 GNEAccess::setAttribute(SumoXMLAttr key, const std::string& value, GNEUndoList* undoList) {
     switch (key) {
@@ -256,7 +253,6 @@ GNEAccess::setAttribute(SumoXMLAttr key, const std::string& value, GNEUndoList* 
         case SUMO_ATTR_POSITION:
         case SUMO_ATTR_LENGTH:
         case SUMO_ATTR_FRIENDLY_POS:
-        case GNE_ATTR_PARENT:
         case GNE_ATTR_SELECTED:
         case GNE_ATTR_PARAMETERS:
         case GNE_ATTR_SHIFTLANEINDEX:
@@ -298,16 +294,19 @@ GNEAccess::isValid(SumoXMLAttr key, const std::string& value) {
             }
         case SUMO_ATTR_FRIENDLY_POS:
             return canParse<bool>(value);
-        case GNE_ATTR_PARENT:
-            return ((myNet->getAttributeCarriers()->retrieveAdditional(SUMO_TAG_BUS_STOP, value, false) != nullptr) ||
-                    (myNet->getAttributeCarriers()->retrieveAdditional(SUMO_TAG_TRAIN_STOP, value, false) != nullptr));
         case GNE_ATTR_SELECTED:
             return canParse<bool>(value);
         case GNE_ATTR_PARAMETERS:
-            return areParametersValid(value);
+            return Parameterised::areParametersValid(value);
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
+}
+
+
+bool
+GNEAccess::isAttributeEnabled(SumoXMLAttr /* key */) const {
+    return true;
 }
 
 
@@ -340,13 +339,6 @@ GNEAccess::setAttribute(SumoXMLAttr key, const std::string& value) {
             break;
         case SUMO_ATTR_FRIENDLY_POS:
             myFriendlyPosition = parse<bool>(value);
-            break;
-        case GNE_ATTR_PARENT:
-            if (myNet->getAttributeCarriers()->retrieveAdditional(SUMO_TAG_BUS_STOP, value, false) != nullptr) {
-                replaceAdditionalParent(SUMO_TAG_BUS_STOP, value, 0);
-            } else {
-                replaceAdditionalParent(SUMO_TAG_TRAIN_STOP, value, 0);
-            }
             break;
         case GNE_ATTR_SELECTED:
             if (parse<bool>(value)) {

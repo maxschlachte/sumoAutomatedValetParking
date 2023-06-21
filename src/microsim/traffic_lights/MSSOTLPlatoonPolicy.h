@@ -32,11 +32,11 @@
 class MSSOTLPlatoonPolicy: public MSSOTLPolicy, public SigmoidLogic, public PushButtonLogic {
 
 public:
-    MSSOTLPlatoonPolicy(const Parameterised::Map& parameters);
+    MSSOTLPlatoonPolicy(const std::map<std::string, std::string>& parameters);
     MSSOTLPlatoonPolicy(MSSOTLPolicyDesirability* desirabilityAlgorithm);
 
     MSSOTLPlatoonPolicy(MSSOTLPolicyDesirability* desirabilityAlgorithm,
-                        const Parameterised::Map& parameters);
+                        const std::map<std::string, std::string>& parameters);
 
     bool canRelease(SUMOTime elapsed, bool thresholdPassed, bool pushButtonPressed,
                     const MSPhaseDefinition* stage, int vehicleCount);

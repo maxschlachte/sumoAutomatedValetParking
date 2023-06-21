@@ -45,7 +45,7 @@ Reservation::getID() const {
 // MSDispatch methods
 // ===========================================================================
 
-MSDispatch::MSDispatch(const Parameterised::Map& params) :
+MSDispatch::MSDispatch(const std::map<std::string, std::string>& params) :
     Parameterised(params),
     myOutput(nullptr),
     myReservationCount(0) {

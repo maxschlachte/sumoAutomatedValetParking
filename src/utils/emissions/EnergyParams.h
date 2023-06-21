@@ -39,22 +39,13 @@ class SUMOVTypeParameter;
  * @brief An upper class for objects with additional parameters
  */
 class EnergyParams {
-public:
-    /// @brief Constructor
-    EnergyParams(const SUMOVTypeParameter* typeParams = nullptr);
 
-    /// @brief Constructor
-    EnergyParams(const EnergyParams* secondaryParams) : mySecondaryParams(secondaryParams) {}
+public:
+    /// @brief Default constructor
+    EnergyParams(const SUMOVTypeParameter* typeParams = nullptr);
 
     /// @brief Destructor
     ~EnergyParams();
-
-    /**@brief Set secondary params
-     * @param[in] secondaryParams The secondary parameters
-     */
-    void setSecondary(const EnergyParams* secondaryParams) {
-        mySecondaryParams = secondaryParams;
-    }
 
     /**@brief Sets a parameter
      * @param[in] key The parameter's name
@@ -78,31 +69,12 @@ public:
      */
     const CharacteristicMap& getCharacteristicMap(SumoXMLAttr attr) const;
 
-    void checkParam(const SumoXMLAttr paramKey, const std::string& id, const double lower = 0., const double upper = std::numeric_limits<double>::infinity());
-
-    /** @brief Returns the state of the engine when the vehicle is not moving
-     * @return whether the engine is running
-     */
-    bool isEngineOff() const;
-
-    /** @brief Returns whether the vehicle is currently consuming any energy derived from the parking state
-     * @return whether the vehicle has any consumption
-     */
-    bool isOff() const;
-
-    static const EnergyParams* getDefault() {
-        if (myDefault == nullptr) {
-            myDefault = new EnergyParams();
-        }
-        return myDefault;
-    }
+    bool knowsParameter(SumoXMLAttr attr) const;
 
 private:
+
     /// @brief The key->value maps
     std::map<SumoXMLAttr, double> myMap;
     std::map<SumoXMLAttr, std::vector<double> > myVecMap;
     std::map<SumoXMLAttr, CharacteristicMap> myCharacteristicMapMap;
-    const EnergyParams* mySecondaryParams = nullptr;
-
-    static const EnergyParams* myDefault;
 };

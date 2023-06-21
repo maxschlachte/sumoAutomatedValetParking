@@ -15,7 +15,7 @@
 /// @author  Michael Behrisch
 /// @date    07.04.2021
 ///
-// C++ libsumo / TraCI client API implementation
+// C++ TraCI client API implementation
 /****************************************************************************/
 #pragma once
 #include <vector>
@@ -28,12 +28,7 @@
 // class declarations
 // ===========================================================================
 #ifndef LIBTRACI
-namespace FX {
-class FXApp;
-}
 class GUISUMOAbstractView;
-class GUIApplicationWindow;
-typedef long long int SUMOTime;
 #endif
 
 
@@ -41,7 +36,7 @@ typedef long long int SUMOTime;
 // class definitions
 // ===========================================================================
 /**
- * @class GUI
+ * @class POI
  * @brief C++ TraCI client API implementation
  */
 namespace LIBSUMO_NAMESPACE {
@@ -68,29 +63,12 @@ public:
 
 #ifndef LIBTRACI
 #ifndef SWIG
-    static bool start(const std::vector<std::string>& cmd);
-
-    static bool load(const std::vector<std::string>& cmd);
-
-    static bool hasInstance();
-
-    static bool step(SUMOTime t);
-
-    static bool close(const std::string& reason);
-
     static std::shared_ptr<VariableWrapper> makeWrapper();
 
     static bool handleVariable(const std::string& objID, const int variable, VariableWrapper* wrapper, tcpip::Storage* paramData);
 
 private:
-    static SubscriptionResults mySubscriptionResults;
-    static ContextSubscriptionResults myContextSubscriptionResults;
     static GUISUMOAbstractView* getView(const std::string& id);
-
-    static GUIApplicationWindow* myWindow;
-
-    static FX::FXApp* myApp;
-
 #endif
 #endif
 

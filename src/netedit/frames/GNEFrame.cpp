@@ -135,12 +135,6 @@ GNEFrame::getViewNet() const {
 }
 
 
-FXVerticalFrame*
-GNEFrame::getContentFrame() const {
-    return myContentFrame;
-}
-
-
 FXLabel*
 GNEFrame::getFrameHeaderLabel() const {
     return myFrameHeaderLabel;
@@ -152,6 +146,57 @@ GNEFrame::getFrameHeaderFont() const {
     return myFrameHeaderFont;
 }
 
+
+void
+GNEFrame::updateFrameAfterUndoRedo() {
+    // this function has to be reimplemente in all child frames that needs to draw a polygon (for example, GNEFrame or GNETAZFrame)
+}
+
+// ---------------------------------------------------------------------------
+// GNEFrame - protected methods
+// ---------------------------------------------------------------------------
+
+void
+GNEFrame::tagSelected() {
+    // this function has to be reimplemente in all child frames that uses a TagSelector modul
+}
+
+
+void
+GNEFrame::demandElementSelected() {
+    // this function has to be reimplemente in all child frames that uses a DemandElementSelector
+}
+
+
+bool
+GNEFrame::shapeDrawed() {
+    // this function has to be reimplemente in all child frames that needs to draw a polygon (for example, GNEFrame or GNETAZFrame)
+    return false;
+}
+
+
+void
+GNEFrame::attributeUpdated() {
+    // this function has to be reimplemente in all child frames that uses a TagSelector modul
+}
+
+
+void
+GNEFrame::attributesEditorExtendedDialogOpened()  {
+    // this function has to be reimplemente in all child frames that uses a AttributesCreator editor with extended attributes
+}
+
+
+void
+GNEFrame::selectedOverlappedElement(GNEAttributeCarrier* /* AC */) {
+    // this function has to be reimplemente in all child frames that uses a OverlappedInspection
+}
+
+
+void
+GNEFrame::createPath() {
+    // this function has to be reimplemente in all child frames that uses a path
+}
 
 void
 GNEFrame::openHelpAttributesDialog(const GNEAttributeCarrier* AC) const {
@@ -220,76 +265,9 @@ GNEFrame::openHelpAttributesDialog(const GNEAttributeCarrier* AC) const {
 }
 
 
-void
-GNEFrame::updateFrameAfterUndoRedo() {
-    // this function has to be reimplemente in all child frames that needs to draw a polygon (for example, GNEFrame or GNETAZFrame)
-}
-
-// ---------------------------------------------------------------------------
-// GNEFrame - protected methods
-// ---------------------------------------------------------------------------
-
-void
-GNEFrame::tagSelected() {
-    // this function has to be reimplemente in all child frames that uses a GNETagSelector modul
-}
-
-
-void
-GNEFrame::demandElementSelected() {
-    // this function has to be reimplemente in all child frames that uses a DemandElementSelector
-}
-
-
-bool
-GNEFrame::shapeDrawed() {
-    // this function has to be reimplemente in all child frames that needs to draw a polygon (for example, GNEFrame or GNETAZFrame)
-    return false;
-}
-
-
-void
-GNEFrame::attributeUpdated() {
-    // this function has to be reimplemente in all child frames that uses a GNETagSelector modul
-}
-
-
-void
-GNEFrame::attributesEditorExtendedDialogOpened()  {
-    // this function has to be reimplemente in all child frames that uses a GNEAttributesCreator editor with extended attributes
-}
-
-
-void
-GNEFrame::selectedOverlappedElement(GNEAttributeCarrier* /* AC */) {
-    // this function has to be reimplemente in all child frames that uses a GNEOverlappedInspection
-}
-
-
-void
-GNEFrame::createPath(const bool /*useLastRoute*/) {
-    // this function has to be reimplemente in all child frames that uses a path or consecutiveLanePath
-}
-
-
 const std::vector<std::string>&
 GNEFrame::getPredefinedTagsMML() const {
     return myPredefinedTagsMML;
-}
-
-
-FXLabel*
-GNEFrame::buildRainbow(FXComposite* parent) {
-    // create label for color information
-    FXLabel* label = new FXLabel(parent, "Scale: Min -> Max", nullptr, GUIDesignLabelCenterThick);
-    // create frame for color scale
-    FXHorizontalFrame* horizontalFrameColors = new FXHorizontalFrame(parent, GUIDesignAuxiliarHorizontalFrame);
-    for (const auto& color : GNEViewNetHelper::getRainbowScaledColors()) {
-        FXLabel* colorLabel = new FXLabel(horizontalFrameColors, "", nullptr, GUIDesignLabelLeft);
-        colorLabel->setBackColor(MFXUtils::getFXColor(color));
-    }
-    // return label
-    return label;
 }
 
 /****************************************************************************/

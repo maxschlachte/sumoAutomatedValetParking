@@ -113,6 +113,13 @@ NIVissimNodeDef::dict_assignConnectionsToNodes() {
 */
 
 
+int
+NIVissimNodeDef::dictSize() {
+    return (int)myDict.size();
+}
+
+
+
 void
 NIVissimNodeDef::clearDict() {
     for (DictType::iterator i = myDict.begin(); i != myDict.end(); i++) {

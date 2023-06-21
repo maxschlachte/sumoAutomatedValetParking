@@ -22,7 +22,7 @@
 #include "MSSOTLCongestionPolicy.h"
 
 MSSOTLCongestionPolicy::MSSOTLCongestionPolicy(
-    const Parameterised::Map& parameters) :
+    const std::map<std::string, std::string>& parameters) :
     MSSOTLPolicy("Congestion", parameters) {
 }
 
@@ -34,7 +34,7 @@ MSSOTLCongestionPolicy::MSSOTLCongestionPolicy(
 
 MSSOTLCongestionPolicy::MSSOTLCongestionPolicy(
     MSSOTLPolicyDesirability* desirabilityAlgorithm,
-    const Parameterised::Map& parameters) :
+    const std::map<std::string, std::string>& parameters) :
     MSSOTLPolicy("Congestion", desirabilityAlgorithm, parameters) {
     getDesirabilityAlgorithm()->setKeyPrefix("CONGESTION");
 

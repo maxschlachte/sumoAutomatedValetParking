@@ -21,11 +21,6 @@
 #include <config.h>
 
 #include <netedit/frames/GNEFrame.h>
-#include <netedit/elements/demand/GNERouteHandler.h>
-#include <netedit/frames/GNEAttributesCreator.h>
-#include <netedit/frames/GNEElementTree.h>
-#include <netedit/frames/GNEDemandSelector.h>
-#include <netedit/frames/GNETagSelector.h>
 
 
 // ===========================================================================
@@ -56,45 +51,39 @@ public:
     /**@brief add person plan element
      * @param objectsUnderCursor collection of objects under cursor after click over view
      * @param mouseButtonKeyPressed key pressed during click
-     * @return true if element was successfully added
+     * @return true if element was sucesfully added
      */
     bool addPersonPlanElement(const GNEViewNetHelper::ObjectsUnderCursor& objectsUnderCursor, const GNEViewNetHelper::MouseButtonKeyPressed& mouseButtonKeyPressed);
 
-    /// @brief reset selected person
-    void resetSelectedPerson();
-
-    /// @brief get path creator module
-    GNEPathCreator* getPathCreator() const;
-
-    /// @brief get Person Hierarchy
-    GNEElementTree* getPersonHierarchy() const;
+    /// @brief get path creator modul
+    GNEFrameModules::PathCreator* getPathCreator() const;
 
 protected:
-    /// @brief Tag selected in GNETagSelector
+    /// @brief Tag selected in TagSelector
     void tagSelected();
 
     /// @brief selected demand element in DemandElementSelector
     void demandElementSelected();
 
     /// @brief create path
-    void createPath(const bool useLastRoute);
+    void createPath();
 
 private:
     /// @brief route handler
     GNERouteHandler myRouteHandler;
 
     /// @brief Person selectors
-    DemandElementSelector* myPersonSelector;
+    GNEFrameModules::DemandElementSelector* myPersonSelector;
 
     /// @brief personPlan selector
-    GNETagSelector* myPersonPlanTagSelector;
+    GNEFrameModules::TagSelector* myPersonPlanTagSelector;
 
     /// @brief internal vehicle attributes
-    GNEAttributesCreator* myPersonPlanAttributes;
+    GNEFrameAttributeModules::AttributesCreator* myPersonPlanAttributes;
 
     /// @brief Path Creator
-    GNEPathCreator* myPathCreator;
+    GNEFrameModules::PathCreator* myPathCreator;
 
     /// @brief Person Hierarchy
-    GNEElementTree* myPersonHierarchy;
+    GNEFrameModules::HierarchicalElementTree* myPersonHierarchy;
 };

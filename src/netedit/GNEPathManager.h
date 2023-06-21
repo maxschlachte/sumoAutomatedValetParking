@@ -30,12 +30,9 @@
 // class definitions
 // ===========================================================================
 
-class GNENet;
 class GNEAttributeCarrier;
-class GNEEdge;
 class GNELane;
-class GNEJunction;
-class GNEAdditional;
+class GNENet;
 
 class GNEPathManager {
 
@@ -158,7 +155,7 @@ public:
         PathElement(const int options);
 
         /// @brief destructor
-        virtual ~PathElement();
+        ~PathElement();
 
         /// @brief check if pathElement is a network element
         bool isNetworkElement() const;
@@ -264,9 +261,6 @@ public:
 
         /// @brief SUMO Abstract myDijkstraRouter
         SUMOAbstractRouter<NBRouterEdge, NBVehicle>* myDijkstraRouter;
-
-        /// @brief optimize junction path
-        std::vector<GNEEdge*> optimizeJunctionPath(const std::vector<GNEEdge*>& edges) const;
     };
 
     /// @brief class used to mark path draw
@@ -320,9 +314,6 @@ public:
     /// @brief calculate path lanes (using dijkstra, require path calculator updated)
     void calculatePathLanes(PathElement* pathElement, SUMOVehicleClass vClass, const std::vector<GNELane*> lanes);
 
-    /// @brief calculate path junctions (using dijkstra, require path calculator updated)
-    void calculatePathJunctions(PathElement* pathElement, SUMOVehicleClass vClass, const std::vector<GNEJunction*> junctions);
-
     /// @brief calculate consecutive path edges
     void calculateConsecutivePathEdges(PathElement* pathElement, SUMOVehicleClass vClass, const std::vector<GNEEdge*> edges);
 
@@ -372,7 +363,7 @@ protected:
     /// @brief PathDraw instance
     PathDraw* myPathDraw;
 
-    /// @brief map with path element and their associated segments
+    /// @brief map with path element and their asociated segments
     std::map<const PathElement*, std::vector<Segment*> > myPaths;
 
     /// @brief map with lane segments

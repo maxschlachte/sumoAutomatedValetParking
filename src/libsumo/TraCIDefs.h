@@ -22,12 +22,6 @@
 /****************************************************************************/
 #pragma once
 // we do not include config.h here, since we should be independent of a special sumo build
-// but we want to avoid certain warnings in MSVC see config.h.cmake for details
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable: 4514 4820)
-#endif
-
 #include <libsumo/TraCIConstants.h>
 #include <vector>
 #include <limits>
@@ -70,26 +64,24 @@ static const libsumo::SubscriptionResults getAllSubscriptionResults(); \
 static const libsumo::TraCIResults getSubscriptionResults(const std::string& objectID); \
 static const libsumo::ContextSubscriptionResults getAllContextSubscriptionResults(); \
 static const libsumo::SubscriptionResults getContextSubscriptionResults(const std::string& objectID); \
-static void subscribeParameterWithKey(const std::string& objectID, const std::string& key, double beginTime = libsumo::INVALID_DOUBLE_VALUE, double endTime = libsumo::INVALID_DOUBLE_VALUE); \
-static const int DOMAIN_ID;
+static void subscribeParameterWithKey(const std::string& objectID, const std::string& key, double beginTime = libsumo::INVALID_DOUBLE_VALUE, double endTime = libsumo::INVALID_DOUBLE_VALUE);
 
-#define LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(CLASS, DOM) \
-const int CLASS::DOMAIN_ID(libsumo::CMD_GET_##DOM##_VARIABLE); \
+#define LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(CLASS, DOMAIN) \
 void \
 CLASS::subscribe(const std::string& objectID, const std::vector<int>& varIDs, double begin, double end, const libsumo::TraCIResults& params) { \
-    libsumo::Helper::subscribe(libsumo::CMD_SUBSCRIBE_##DOM##_VARIABLE, objectID, varIDs, begin, end, params); \
+    libsumo::Helper::subscribe(libsumo::CMD_SUBSCRIBE_##DOMAIN##_VARIABLE, objectID, varIDs, begin, end, params); \
 } \
 void \
 CLASS::unsubscribe(const std::string& objectID) { \
-    libsumo::Helper::subscribe(libsumo::CMD_SUBSCRIBE_##DOM##_VARIABLE, objectID, std::vector<int>(), libsumo::INVALID_DOUBLE_VALUE, libsumo::INVALID_DOUBLE_VALUE, libsumo::TraCIResults()); \
+    libsumo::Helper::subscribe(libsumo::CMD_SUBSCRIBE_##DOMAIN##_VARIABLE, objectID, std::vector<int>(), libsumo::INVALID_DOUBLE_VALUE, libsumo::INVALID_DOUBLE_VALUE, libsumo::TraCIResults()); \
 } \
 void \
 CLASS::subscribeContext(const std::string& objectID, int domain, double dist, const std::vector<int>& varIDs, double begin, double end, const TraCIResults& params) { \
-    libsumo::Helper::subscribe(libsumo::CMD_SUBSCRIBE_##DOM##_CONTEXT, objectID, varIDs, begin, end, params, domain, dist); \
+    libsumo::Helper::subscribe(libsumo::CMD_SUBSCRIBE_##DOMAIN##_CONTEXT, objectID, varIDs, begin, end, params, domain, dist); \
 } \
 void \
 CLASS::unsubscribeContext(const std::string& objectID, int domain, double dist) { \
-    libsumo::Helper::subscribe(libsumo::CMD_SUBSCRIBE_##DOM##_CONTEXT, objectID, std::vector<int>(), libsumo::INVALID_DOUBLE_VALUE, libsumo::INVALID_DOUBLE_VALUE, libsumo::TraCIResults(), domain, dist); \
+    libsumo::Helper::subscribe(libsumo::CMD_SUBSCRIBE_##DOMAIN##_CONTEXT, objectID, std::vector<int>(), libsumo::INVALID_DOUBLE_VALUE, libsumo::INVALID_DOUBLE_VALUE, libsumo::TraCIResults(), domain, dist); \
 } \
 const libsumo::SubscriptionResults \
 CLASS::getAllSubscriptionResults() { \
@@ -109,7 +101,7 @@ CLASS::getContextSubscriptionResults(const std::string& objectID) { \
 } \
 void \
 CLASS::subscribeParameterWithKey(const std::string& objectID, const std::string& key, double beginTime, double endTime) { \
-    libsumo::Helper::subscribe(libsumo::CMD_SUBSCRIBE_##DOM##_VARIABLE, objectID, std::vector<int>({libsumo::VAR_PARAMETER_WITH_KEY}), beginTime, endTime, libsumo::TraCIResults {{libsumo::VAR_PARAMETER_WITH_KEY, std::make_shared<libsumo::TraCIString>(key)}}); \
+    libsumo::Helper::subscribe(libsumo::CMD_SUBSCRIBE_##DOMAIN##_VARIABLE, objectID, std::vector<int>({libsumo::VAR_PARAMETER_WITH_KEY}), beginTime, endTime, libsumo::TraCIResults {{libsumo::VAR_PARAMETER_WITH_KEY, std::make_shared<libsumo::TraCIString>(key)}}); \
 }
 
 
@@ -277,20 +269,6 @@ struct TraCIStringList : TraCIResult {
         return os.str();
     }
     std::vector<std::string> value;
-};
-
-
-struct TraCIDoubleList : TraCIResult {
-    std::string getString() const {
-        std::ostringstream os;
-        os << "[";
-        for (double v : value) {
-            os << v << ",";
-        }
-        os << "]";
-        return os.str();
-    }
-    std::vector<double> value;
 };
 
 
@@ -624,8 +602,6 @@ struct TraCISignalConstraint {
     int type;
     /// @brief whether tripId must still wait for foeId to pass foeSignal
     bool mustWait;
-    /// @brief whether this constraint is active
-    bool active;
 
     std::string getString() const {
         std::ostringstream os;
@@ -635,8 +611,3 @@ struct TraCISignalConstraint {
 };
 
 }
-
-// pop MSVC warnings
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif

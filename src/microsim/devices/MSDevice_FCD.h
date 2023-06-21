@@ -22,9 +22,8 @@
 #include <config.h>
 
 #include "MSVehicleDevice.h"
-#include <microsim/MSVehicle.h>
 #include <utils/common/SUMOTime.h>
-#include <utils/shapes/SUMOPolygon.h>
+
 
 // ===========================================================================
 // class declarations
@@ -95,14 +94,6 @@ public:
     /// @brief resets the edge filter
     static void cleanup();
 
-    /// @brief checks if in polygon
-    static bool shapeFilter(const SUMOVehicle* veh);
-
-    /// @brief is there a filter based on shapes?
-    inline static bool hasShapeFilter() {
-        return myShapeFilterDesired == true;
-    }
-
 private:
     /** @brief Constructor
      *
@@ -112,18 +103,12 @@ private:
     MSDevice_FCD(SUMOVehicle& holder, const std::string& id);
 
 
-    /// @brief edge filter for FCD output
+    /// @brief spatial filter for FCD output
     static std::set<const MSEdge*> myEdgeFilter;
     static bool myEdgeFilterInitialized;
 
-    /// @brief polygon spatial filter for FCD output
-    static std::vector<PositionVector> myShape4Filters;
-    static bool myShapeFilterInitialized;
-    static bool myShapeFilterDesired;
-
     /// @brief bit mask for checking attributes to be written
     static long long int myWrittenAttributes;
-    static const long long int myDefaultMask;
 
 private:
     /// @brief Invalidated copy constructor.
@@ -131,8 +116,6 @@ private:
 
     /// @brief Invalidated assignment operator.
     MSDevice_FCD& operator=(const MSDevice_FCD&);
-
-    static void buildShapeFilter();
 
 
 };

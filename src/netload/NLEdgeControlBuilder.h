@@ -95,7 +95,7 @@ public:
      * @see MSLane
      * @todo Definitely not a good way
      */
-    virtual MSLane* addLane(const std::string& id, double maxSpeed, double friction,
+    virtual MSLane* addLane(const std::string& id, double maxSpeed,
                             double length, const PositionVector& shape,
                             double width,
                             SVCPermissions permissions,

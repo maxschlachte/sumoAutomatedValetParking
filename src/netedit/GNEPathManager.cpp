@@ -182,8 +182,7 @@ GNEPathManager::Segment::Segment() :
     myNextLane(nullptr),
     myJunction(nullptr),
     myNextSegment(nullptr),
-    myPreviousSegment(nullptr),
-    myLabelSegment(false) {
+    myPreviousSegment(nullptr) {
 }
 
 // ---------------------------------------------------------------------------
@@ -321,23 +320,11 @@ GNEPathManager::PathCalculator::calculateDijkstraPath(const SUMOVehicleClass vCl
 
 
 std::vector<GNEEdge*>
-GNEPathManager::PathCalculator::calculateDijkstraPath(const SUMOVehicleClass vClass, const GNEJunction* fromJunction, const GNEJunction* toJunction) const {
-    std::vector<GNEEdge*> edges;
-    // get from and to edges
-    const auto fromEdges = fromJunction->getGNEOutgoingEdges();
-    const auto toEdges = toJunction->getGNEIncomingEdges();
-    // try to find a path
-    for (const auto& fromEdge : fromEdges) {
-        for (const auto& toEdge : toEdges) {
-            edges = calculateDijkstraPath(vClass, {fromEdge, toEdge});
-            // if a path was found, clean it
-            if (edges.size() > 0) {
-                return optimizeJunctionPath(edges);
-            }
-        }
-    }
-    return {};
+GNEPathManager::PathCalculator::calculateDijkstraPath(const SUMOVehicleClass /*vClass*/, const GNEJunction* /*fromJunction*/, const GNEJunction* /*toJunction*/) const {
+    // implement path between junction here
+    return std::vector<GNEEdge*> ();
 }
+
 
 
 void
@@ -470,32 +457,6 @@ GNEPathManager::PathCalculator::isPathCalculatorUpdated() const {
 void
 GNEPathManager::PathCalculator::invalidatePathCalculator() {
     myPathCalculatorUpdated = false;
-}
-
-
-std::vector<GNEEdge*>
-GNEPathManager::PathCalculator::optimizeJunctionPath(const std::vector<GNEEdge*>& edges) const {
-    bool stop = false;
-    std::vector<GNEEdge*> solutionA, solutionB;
-    // get from and to junctions
-    const auto fromJunction = edges.front()->getFromJunction();
-    const auto toJunction = edges.back()->getToJunction();
-    // first optimize from Junction
-    for (auto it = edges.rbegin(); (it != edges.rend()) && !stop; it++) {
-        solutionA.insert(solutionA.begin(), *it);
-        if ((*it)->getFromJunction() == fromJunction) {
-            stop = true;
-        }
-    }
-    // optimize to edge
-    stop = false;
-    for (auto it = solutionA.begin(); (it != solutionA.end()) && !stop; it++) {
-        solutionB.push_back(*it);
-        if ((*it)->getToJunction() == toJunction) {
-            stop = true;
-        }
-    }
-    return solutionB;
 }
 
 // ---------------------------------------------------------------------------
@@ -722,18 +683,6 @@ GNEPathManager::calculatePathLanes(PathElement* pathElement, SUMOVehicleClass vC
 
 
 void
-GNEPathManager::calculatePathJunctions(PathElement* pathElement, SUMOVehicleClass vClass, const std::vector<GNEJunction*> junctions) {
-    // first calculate edge path between both elements
-    const auto junctionPath = myPathCalculator->calculateDijkstraPath(vClass, junctions.front(), junctions.back());
-    // if exist, then calculate edgePath between the first edges
-    if (junctionPath.size() > 0) {
-        // calculate path edges
-        calculatePathEdges(pathElement, vClass, {junctionPath.front(), junctionPath.back()});
-    }
-}
-
-
-void
 GNEPathManager::calculateConsecutivePathEdges(PathElement* pathElement, SUMOVehicleClass vClass, const std::vector<GNEEdge*> edges) {
     // declare lane vector
     std::vector<GNELane*> lanes;
@@ -849,14 +798,6 @@ GNEPathManager::forceDrawPath(const GUIVisualizationSettings& s, const PathEleme
         for (const auto& segment : laneSegment.second) {
             if (segment->getPathElement() == pathElement) {
                 pathElement->drawPartialGL(s, laneSegment.first, segment, 0);
-            }
-        }
-    }
-    // draw all junction segments
-    for (const auto& junctionSegment : myJunctionSegments) {
-        for (const auto& segment : junctionSegment.second) {
-            if (segment->getPathElement() == pathElement) {
-                segment->getPathElement()->drawPartialGL(s, segment->getPreviousLane(), segment->getNextLane(), segment, 0);
             }
         }
     }

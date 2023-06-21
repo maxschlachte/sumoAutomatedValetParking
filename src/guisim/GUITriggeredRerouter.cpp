@@ -234,9 +234,9 @@ GUITriggeredRerouter::GUITriggeredRerouterPopupMenu::onCmdOpenManip(FXObject*,
 GUITriggeredRerouter::GUITriggeredRerouter(const std::string& id, const MSEdgeVector& edges, double prob,
         // (utl): add prio parameter
         double prio,
-        bool off, SUMOTime timeThreshold, const std::string& vTypes, SUMORTree& rtree) :
+        const std::string& aXMLFilename, bool off, SUMOTime timeThreshold, const std::string& vTypes, SUMORTree& rtree) :
     // (utl): pass prio parameter when creating the MSTriggeredRerouter
-    MSTriggeredRerouter(id, edges, prob, prio, off, timeThreshold, vTypes),
+    MSTriggeredRerouter(id, edges, prob, prio, aXMLFilename, off, timeThreshold, vTypes),
     GUIGlObject_AbstractAdd(GLO_REROUTER, id),
     myShiftProbDistIndex(0) {
     // add visualisation objects for edges which trigger the rerouter
@@ -313,7 +313,7 @@ GUITriggeredRerouter::getPopUpMenu(GUIMainWindow& app,
     buildShowManipulatorPopupEntry(ret, false);
     buildNameCopyPopupEntry(ret);
     buildSelectionPopupEntry(ret);
-    buildPositionCopyEntry(ret, app);
+    buildPositionCopyEntry(ret, false);
     return ret;
 }
 

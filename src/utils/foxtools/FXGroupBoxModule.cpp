@@ -26,9 +26,6 @@
 #include <utils/gui/div/GUIDesigns.h>
 #include <utils/gui/images/GUIIconSubSys.h>
 #include <utils/gui/windows/GUIAppEnum.h>
-#include <netedit/frames/GNEFrame.h>
-#include <netedit/GNEViewNet.h>
-#include <netedit/GNEViewParent.h>
 
 #include "FXGroupBoxModule.h"
 
@@ -40,11 +37,8 @@
 FXDEFMAP(FXGroupBoxModule) FXGroupBoxModuleMap[] = {
     FXMAPFUNC(SEL_PAINT,    0,                              FXGroupBoxModule::onPaint),
     FXMAPFUNC(SEL_COMMAND,  MID_GROUPBOXMODULE_COLLAPSE,    FXGroupBoxModule::onCmdCollapseButton),
-    FXMAPFUNC(SEL_COMMAND,  MID_GROUPBOXMODULE_EXTEND,      FXGroupBoxModule::onCmdExtendButton),
-    FXMAPFUNC(SEL_COMMAND,  MID_GROUPBOXMODULE_RESETWIDTH,  FXGroupBoxModule::onCmdResetButton),
     FXMAPFUNC(SEL_COMMAND,  MID_GROUPBOXMODULE_SAVE,        FXGroupBoxModule::onCmdSaveButton),
     FXMAPFUNC(SEL_COMMAND,  MID_GROUPBOXMODULE_LOAD,        FXGroupBoxModule::onCmdLoadButton),
-    FXMAPFUNC(SEL_UPDATE,   MID_GROUPBOXMODULE_RESETWIDTH,  FXGroupBoxModule::onUpdResetButton),
 };
 
 // Object implementation
@@ -54,43 +48,14 @@ FXIMPLEMENT(FXGroupBoxModule, FXVerticalFrame, FXGroupBoxModuleMap, ARRAYNUMBER(
 // method definitions
 // ===========================================================================
 
-FXGroupBoxModule::FXGroupBoxModule(GNEFrame* frame, const std::string& text, const int options) :
-    FXVerticalFrame(frame->getContentFrame(), GUIDesignGroupBoxModule),
-    myOptions(options),
-    myFrameParent(frame),
-    myCollapsed(false) {
-    // build button and labels
-    FXHorizontalFrame* headerFrame = new FXHorizontalFrame(this, GUIDesignAuxiliarHorizontalFrame);
-    if (myOptions & Options::COLLAPSIBLE) {
-        myCollapseButton = new FXButton(headerFrame, "", GUIIconSubSys::getIcon(GUIIcon::COLLAPSE), this, MID_GROUPBOXMODULE_COLLAPSE, GUIDesignButtonFXGroupBoxModule);
-    }
-    if (myOptions & Options::EXTENSIBLE) {
-        myExtendButton = new FXButton(headerFrame, "", GUIIconSubSys::getIcon(GUIIcon::EXTEND), this, MID_GROUPBOXMODULE_EXTEND, GUIDesignButtonFXGroupBoxModule);
-        myResetWidthButton = new FXButton(headerFrame, "", GUIIconSubSys::getIcon(GUIIcon::RESET), this, MID_GROUPBOXMODULE_RESETWIDTH, GUIDesignButtonFXGroupBoxModule);
-    }
-    if (myOptions & Options::SAVE) {
-        mySaveButton = new FXButton(headerFrame, "", GUIIconSubSys::getIcon(GUIIcon::SAVE), this, MID_GROUPBOXMODULE_SAVE, GUIDesignButtonFXGroupBoxModule);
-    }
-    if (myOptions & Options::LOAD) {
-        myLoadButton = new FXButton(headerFrame, "", GUIIconSubSys::getIcon(GUIIcon::OPEN_NET), this, MID_GROUPBOXMODULE_LOAD, GUIDesignButtonFXGroupBoxModule);
-    }
-    myLabel = new FXLabel(headerFrame, text.c_str(), nullptr, GUIDesignLabelFXGroupBoxModule);
-    // build collapsable frame
-    myCollapsableFrame = new FXVerticalFrame(this, GUIDesignCollapsableFrame);
-}
-
-
 FXGroupBoxModule::FXGroupBoxModule(FXVerticalFrame* contentFrame, const std::string& text, const int options) :
-    FXVerticalFrame(contentFrame, GUIDesignGroupBoxModuleExtendY),
+    FXVerticalFrame(contentFrame, GUIDesignHorizontalFrame),
     myOptions(options),
     myCollapsed(false) {
     // build button and labels
     FXHorizontalFrame* headerFrame = new FXHorizontalFrame(this, GUIDesignAuxiliarHorizontalFrame);
     if (myOptions & Options::COLLAPSIBLE) {
         myCollapseButton = new FXButton(headerFrame, "", GUIIconSubSys::getIcon(GUIIcon::COLLAPSE), this, MID_GROUPBOXMODULE_COLLAPSE, GUIDesignButtonFXGroupBoxModule);
-    }
-    if (myOptions & Options::EXTENSIBLE) {
-        throw ProcessError("This FXGroupBoxModule doesn't support Extensible flag");
     }
     if (myOptions & Options::SAVE) {
         mySaveButton = new FXButton(headerFrame, "", GUIIconSubSys::getIcon(GUIIcon::SAVE), this, MID_GROUPBOXMODULE_SAVE, GUIDesignButtonFXGroupBoxModule);
@@ -149,49 +114,6 @@ FXGroupBoxModule::onCmdCollapseButton(FXObject*, FXSelector, void*) {
 
 
 long
-FXGroupBoxModule::onCmdExtendButton(FXObject*, FXSelector, void*) {
-    if (myFrameParent) {
-        int maximumWidth = -1;
-        // search in every child
-        for (auto child = getFirst(); child != nullptr; child = child->getNext()) {
-            // check if child is an scrollWindow
-            auto scrollWindow = dynamic_cast<FXScrollWindow*>(child->getFirst());
-            if (scrollWindow && (scrollWindow->getContentWidth() > maximumWidth)) {
-                maximumWidth = scrollWindow->getContentWidth();
-            }
-        }
-        // now set parent parent width
-        if (maximumWidth != -1) {
-            myFrameParent->getViewNet()->getViewParent()->setFrameAreaWith(maximumWidth);
-        }
-    }
-    return 1;
-}
-
-
-long
-FXGroupBoxModule::onCmdResetButton(FXObject*, FXSelector, void*) {
-    if (myFrameParent) {
-        myFrameParent->getViewNet()->getViewParent()->setFrameAreaWith(220);
-    }
-    return 1;
-}
-
-
-long
-FXGroupBoxModule::onUpdResetButton(FXObject* sender, FXSelector, void*) {
-    if (myFrameParent) {
-        if (myFrameParent->getViewNet()->getViewParent()->getFrameAreaWith() == 220) {
-            sender->handle(this, FXSEL(SEL_COMMAND, ID_DISABLE), nullptr);
-        } else {
-            sender->handle(this, FXSEL(SEL_COMMAND, ID_ENABLE), nullptr);
-        }
-    }
-    return 1;
-}
-
-
-long
 FXGroupBoxModule::onCmdSaveButton(FXObject*, FXSelector, void*) {
     return saveContents();
 }
@@ -224,7 +146,7 @@ FXGroupBoxModule::loadContents() const {
 
 
 void
-FXGroupBoxModule::toggleSaveButton(const bool value) {
+FXGroupBoxModule::toogleSaveButton(const bool value) {
     if (mySaveButton) {
         if (value) {
             mySaveButton->enable();

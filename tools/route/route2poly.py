@@ -46,7 +46,7 @@ def parse_args(args):
                          help="brightness for polygons (float from [0,1] or 'random')")
     optParser.add_option("-l", "--layer", default=100, help="layer for generated polygons")
     optParser.add_option("--geo", action="store_true",
-                         default=False, help="write polygons with geo-coordinates")
+                         default=False, help="write polgyons with geo-coordinates")
     optParser.add_option("--internal", action="store_true",
                          default=False, help="include internal edges in generated shapes")
     optParser.add_option("--spread", type="float", help="spread polygons laterally to avoid overlap")
@@ -88,7 +88,7 @@ SPREAD_MAX = [0]
 
 
 def getSpread(lanes):
-    """find the smallest spread value that is available for all lanes"""
+    """find the smalles spread value that is available for all lanes"""
     cands = [0]
     for i in range(1, SPREAD_MAX[0] + 2):
         cands += [i, -i]
@@ -193,10 +193,9 @@ def parseRoutes(options):
     keep = None
     if options.filterOutputFile is not None:
         keep = set()
-        with open(options.filterOutputFile) as filterOutput:
-            for line in filterOutput:
-                if line.startswith('edge:'):
-                    keep.add(line.replace('edge:', '').strip())
+        for line in open(options.filterOutputFile):
+            if line.startswith('edge:'):
+                keep.add(line.replace('edge:', '').strip())
 
     for routefile in options.routefiles:
         print("parsing %s" % routefile)

@@ -131,7 +131,7 @@ double MSCFModel_Rail::maxNextSpeed(double speed, const MSVehicle* const veh) co
         }
     }
 
-    double maxNextSpeed = speed + ACCEL2SPEED(a);
+    double maxNextSpeed = speed + a * DELTA_T / 1000.;
 
 //    std::cout << veh->getID() << " speed: " << (speed*3.6) << std::endl;
 
@@ -145,7 +145,7 @@ double MSCFModel_Rail::minNextSpeed(double speed, const MSVehicle* const veh) co
     const double res = getInterpolatedValueFromLookUpMap(speed, &(myTrainParams.resistance)); // kN
     const double totalRes = res + gr; //kN
     const double a = myTrainParams.decl + totalRes / myTrainParams.rotWeight;
-    const double vMin = speed - ACCEL2SPEED(a);
+    const double vMin = speed - a * DELTA_T / 1000.;
     if (MSGlobals::gSemiImplicitEulerUpdate) {
         return MAX2(vMin, 0.);
     } else {

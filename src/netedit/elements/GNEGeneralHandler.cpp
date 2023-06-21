@@ -45,47 +45,43 @@ GNEGeneralHandler::~GNEGeneralHandler() {}
 void
 GNEGeneralHandler::beginTag(SumoXMLTag tag, const SUMOSAXAttributes& attrs) {
     switch (tag) {
-        case SUMO_TAG_LOCATION:
-            // process in Network handler
-            myQueue.push_back(TagType(tag, true, false, false));
-            break;
         case SUMO_TAG_PARAM:
         case SUMO_TAG_INTERVAL:
             if (myQueue.size() > 0) {
                 // try to parse additional or demand element depending of last inserted tag
                 if (myQueue.back().additional && myAdditionalHandler.beginParseAttributes(tag, attrs)) {
-                    myQueue.push_back(TagType(tag, false, true, false));
+                    myQueue.push_back(TagType(tag, true, false));
                 } else if (myQueue.back().demand && myDemandHandler.beginParseAttributes(tag, attrs)) {
-                    myQueue.push_back(TagType(tag, false, false, true));
+                    myQueue.push_back(TagType(tag, false, true));
                 } else {
-                    myQueue.push_back(TagType(tag, false, false, false));
+                    myQueue.push_back(TagType(tag, false, false));
                 }
             } else {
-                myQueue.push_back(TagType(tag, false, false, false));
+                myQueue.push_back(TagType(tag, false, false));
             }
             break;
         case SUMO_TAG_FLOW:
             if (myQueue.size() > 0) {
                 // try to parse additional or demand element depending of last inserted tag
                 if (myQueue.back().additional && myAdditionalHandler.beginParseAttributes(tag, attrs)) {
-                    myQueue.push_back(TagType(tag, false, true, false));
+                    myQueue.push_back(TagType(tag, true, false));
                 } else if (myDemandHandler.beginParseAttributes(tag, attrs)) {
-                    myQueue.push_back(TagType(tag, false, false, true));
+                    myQueue.push_back(TagType(tag, false, true));
                 } else {
-                    myQueue.push_back(TagType(tag, false, false, false));
+                    myQueue.push_back(TagType(tag, false, false));
                 }
             } else {
-                myQueue.push_back(TagType(tag, false, false, false));
+                myQueue.push_back(TagType(tag, false, false));
             }
             break;
         default:
             // try to parse additional or demand element
             if (myAdditionalHandler.beginParseAttributes(tag, attrs)) {
-                myQueue.push_back(TagType(tag, false, true, false));
+                myQueue.push_back(TagType(tag, true, false));
             } else if (myDemandHandler.beginParseAttributes(tag, attrs)) {
-                myQueue.push_back(TagType(tag, false, false, true));
+                myQueue.push_back(TagType(tag, false, true));
             } else {
-                myQueue.push_back(TagType(tag, false, false, false));
+                myQueue.push_back(TagType(tag, false, false));
             }
             break;
     }
@@ -99,9 +95,7 @@ GNEGeneralHandler::beginTag(SumoXMLTag tag, const SUMOSAXAttributes& attrs) {
 void
 GNEGeneralHandler::endTag() {
     // check tagType
-    if (myQueue.back().network) {
-        // currently ignored (will be implemented in the future)
-    } else if (myQueue.back().additional) {
+    if (myQueue.back().additional) {
         // end parse additional elements
         myAdditionalHandler.endParseAttributes();
     } else if (myQueue.back().demand) {
@@ -113,9 +107,8 @@ GNEGeneralHandler::endTag() {
 }
 
 
-GNEGeneralHandler::TagType::TagType(SumoXMLTag tag_, const bool network_, const bool additional_, const bool demand_) :
+GNEGeneralHandler::TagType::TagType(SumoXMLTag tag_, const bool additional_, const bool demand_) :
     tag(tag_),
-    network(network_),
     additional(additional_),
     demand(demand_) {
 }

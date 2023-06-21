@@ -32,8 +32,9 @@
 
 GNEClosingLaneReroute::GNEClosingLaneReroute(GNENet* net) :
     GNEAdditional("", net, GLO_REROUTER_CLOSINGLANEREROUTE, SUMO_TAG_CLOSING_LANE_REROUTE, "",
-{}, {}, {}, {}, {}, {}),
-myClosedLane(nullptr),
+{}, {}, {}, {}, {}, {}, {}, {},
+std::map<std::string, std::string>()),
+    myClosedLane(nullptr),
 myPermissions(0) {
     // reset default values
     resetDefaultValues();
@@ -42,7 +43,8 @@ myPermissions(0) {
 
 GNEClosingLaneReroute::GNEClosingLaneReroute(GNEAdditional* rerouterIntervalParent, GNELane* closedLane, SVCPermissions permissions) :
     GNEAdditional(rerouterIntervalParent->getNet(), GLO_REROUTER_CLOSINGLANEREROUTE, SUMO_TAG_CLOSING_LANE_REROUTE, "",
-{}, {}, {}, {rerouterIntervalParent}, {}, {}),
+{}, {}, {}, {rerouterIntervalParent}, {}, {}, {}, {},
+std::map<std::string, std::string>()),
 myClosedLane(closedLane),
 myPermissions(permissions) {
     // update boundary of rerouter parent
@@ -127,7 +129,7 @@ std::string
 GNEClosingLaneReroute::getAttribute(SumoXMLAttr key) const {
     switch (key) {
         case SUMO_ATTR_ID:
-            return getMicrosimID();
+            return getID();
         case SUMO_ATTR_LANE:
             return myClosedLane->getID();
         case SUMO_ATTR_ALLOW:
@@ -149,12 +151,6 @@ GNEClosingLaneReroute::getAttribute(SumoXMLAttr key) const {
 double
 GNEClosingLaneReroute::getAttributeDouble(SumoXMLAttr key) const {
     throw InvalidArgument(getTagStr() + " doesn't have a double attribute of type '" + toString(key) + "'");
-}
-
-
-const Parameterised::Map&
-GNEClosingLaneReroute::getACParametersMap() const {
-    return PARAMETERS_EMPTY;
 }
 
 
@@ -190,6 +186,12 @@ GNEClosingLaneReroute::isValid(SumoXMLAttr key, const std::string& value) {
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
+}
+
+
+bool
+GNEClosingLaneReroute::isAttributeEnabled(SumoXMLAttr /* key */) const {
+    return true;
 }
 
 

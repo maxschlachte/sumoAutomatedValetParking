@@ -303,10 +303,9 @@ MSE3Collector::MSE3Collector(const std::string& id,
                              double haltingSpeedThreshold,
                              SUMOTime haltingTimeThreshold,
                              const std::string& vTypes,
-                             const std::string& nextEdges,
                              int detectPersons,
                              bool openEntry) :
-    MSDetectorFileOutput(id, vTypes, nextEdges, detectPersons),
+    MSDetectorFileOutput(id, vTypes, detectPersons),
     myEntries(entries),
     myExits(exits),
     myHaltingTimeThreshold(haltingTimeThreshold), myHaltingSpeedThreshold(haltingSpeedThreshold),
@@ -377,7 +376,7 @@ MSE3Collector::enter(const SUMOTrafficObject& veh, const double entryTimestep, c
     v.haltings = 0;
     v.intervalHaltings = 0;
     if (veh.getSpeed() < myHaltingSpeedThreshold) {
-        if (TIME2STEPS(fractionTimeOnDet) > myHaltingTimeThreshold) {
+        if (fractionTimeOnDet > myHaltingTimeThreshold) {
             v.haltings++;
             v.intervalHaltings++;
         }
@@ -629,20 +628,8 @@ MSE3Collector::detectorUpdate(const SUMOTime step) {
     if (myEnteredContainer.size() == 0) {
         myCurrentMeanSpeed = -1;
     } else {
-        myCurrentMeanSpeed /= (double)myEnteredContainer.size();
+        myCurrentMeanSpeed /= myEnteredContainer.size();
     }
-}
-
-
-const CrossSectionVector&
-MSE3Collector::getEntries() const {
-    return myEntries;
-}
-
-
-const CrossSectionVector&
-MSE3Collector::getExits() const {
-    return myExits;
 }
 
 
@@ -675,7 +662,7 @@ MSE3Collector::getCurrentVehicleIDs() const {
 }
 
 void
-MSE3Collector::clearState(SUMOTime /* step */) {
+MSE3Collector::clearState() {
     myEnteredContainer.clear();
 }
 

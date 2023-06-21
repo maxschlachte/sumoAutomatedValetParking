@@ -88,12 +88,14 @@ protected:
      * @param[in] edges The edges the rerouter is placed at
      * @param[in] prob The probability the rerouter reoutes vehicles with
      * @param[in] prio The priority the rerouter reoutes vehicles with (cre)
+     * @param[in] file The file to read the reroute definitions from
      */
     virtual MSTriggeredRerouter* buildRerouter(MSNet& net,
             const std::string& id, MSEdgeVector& edges,
             double prob,
             // (cre): add prio parameter
-            double prio, bool off, SUMOTime timeThreshold,
+            double prio, const std::string& file, bool off,
+            SUMOTime timeThreshold,
             const std::string& vTypes) override;
 
 

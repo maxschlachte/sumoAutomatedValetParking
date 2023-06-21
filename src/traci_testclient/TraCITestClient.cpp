@@ -27,8 +27,6 @@
  * ======================================================================= */
 #ifdef _MSC_VER
 #define _CRT_SECURE_NO_WARNINGS
-// Avoid some noisy warnings with Visual Studio
-#pragma warning(disable:4820 4514 5045 4710)
 #endif
 #include <vector>
 #include <iostream>
@@ -868,14 +866,6 @@ TraCITestClient::testAPI() {
         answerLog << "      veh=" << vd.id << " length=" << vd.length << " entered=" << vd.entryTime << " left=" << vd.leaveTime << " type=" << vd.typeID << "\n";
     }
 
-    // multi-entry/-exit detector
-    // answerLog << "  multi-entry/-exit detector:\n";
-    // answerLog << "    getLastStepVehicleIDs: " << joinToString(multientryexit.getLastStepVehicleIDs("det2"), " ") << "\n";
-    // answerLog << "    getEntryLanes: " << joinToString(multientryexit.getEntryLanes("det2"), " ") << "\n";
-    // answerLog << "    getExitLanes: " << joinToString(multientryexit.getExitLanes("det2"), " ") << "\n";
-    // answerLog << "    getEntryPositions: " << joinToString(multientryexit.getEntryPositions("det2"), " ") << "\n";
-    // answerLog << "    getExitPositions: " << joinToString(multientryexit.getExitPositions("det2"), " ") << "\n";
-
     // simulation
     answerLog << "  simulation:\n";
     answerLog << "    convert2D: " << simulation.convert2D("e_m5", 0).getString() << "\n";
@@ -1049,19 +1039,6 @@ TraCITestClient::testAPI() {
     answerLog << "    stateSet=" << trafficlights.getRedYellowGreenState("n_m4") << "\n";
     answerLog << "    program: " << trafficlights.getProgram("n_m4") << "\n";
 
-    answerLog << "  gui:\n";
-    try {
-        answerLog << "    setScheme: \n";
-        gui.setSchema("View #0", "real world");
-        answerLog << "    getScheme: " << gui.getSchema("View #0") << "\n";
-        gui.setZoom("View #0", 50);
-        answerLog << "    getZoom: " << gui.getZoom() << "\n";
-        answerLog << "    take screenshot: \n";
-        gui.screenshot("View #0", "image.png", 500, 500);
-    } catch (libsumo::TraCIException&) {
-        answerLog << "    no support for gui commands\n";
-    }
-
     answerLog << "  load:\n";
     std::vector<std::string> args;
     args.push_back("-n");
@@ -1076,4 +1053,17 @@ TraCITestClient::testAPI() {
     answerLog << "    getCurrentTime: " << simulation.getCurrentTime() << "\n";
     vehicle.subscribe("0", vars, 0, 100);
     edge.subscribeContext("e_u1", libsumo::CMD_GET_VEHICLE_VARIABLE, 100, vars2, 0, 100);
+
+    answerLog << "  gui:\n";
+    try {
+        answerLog << "    setScheme: \n";
+        gui.setSchema("View #0", "real world");
+        answerLog << "    getScheme: " << gui.getSchema("View #0") << "\n";
+        gui.setZoom("View #0", 50);
+        answerLog << "    getZoom: " << gui.getZoom() << "\n";
+        answerLog << "    take screenshot: \n";
+        gui.screenshot("View #0", "image.png", 500, 500);
+    } catch (libsumo::TraCIException&) {
+        answerLog << "    no support for gui commands\n";
+    }
 }

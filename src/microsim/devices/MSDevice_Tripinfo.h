@@ -204,7 +204,7 @@ protected:
                             const double meanSpeedVehicleOnLane,
                             const double travelledDistanceFrontOnLane,
                             const double travelledDistanceVehicleOnLane,
-                            const double meanLengthOnLane);
+                            const double /* meanLengthOnLane */);
 
     /// @brief update stopping time after parking
     void updateParkingStopTime();
@@ -266,8 +266,8 @@ private:
     static std::set<const MSDevice_Tripinfo*, ComparatorNumericalIdLess> myPendingOutput;
 
     /// @brief global tripinfo statistics
-    static int myVehicleCount;
-    static int myUndepartedVehicleCount;
+    static long myVehicleCount;
+    static long myUndepartedVehicleCount;
     static double myTotalRouteLength;
     static double myTotalSpeed;
     static SUMOTime myTotalDuration;
@@ -277,14 +277,14 @@ private:
     static SUMOTime myWaitingDepartDelay;
 
     /// @brief separate values for bicycles
-    static int myBikeCount;
+    static long myBikeCount;
     static double myTotalBikeRouteLength;
     static double myTotalBikeSpeed;
     static SUMOTime myTotalBikeDuration;
     static SUMOTime myTotalBikeWaitingTime;
     static SUMOTime myTotalBikeTimeLoss;
 
-    static int myWalkCount;
+    static long myWalkCount;
     static double myTotalWalkRouteLength;
     static SUMOTime myTotalWalkDuration;
     static SUMOTime myTotalWalkTimeLoss;
@@ -295,7 +295,7 @@ private:
     static std::vector<int> myRideTaxiCount;
     static std::vector<int> myRideBikeCount;
     static std::vector<int> myRideAbortCount;
-    static std::vector<SUMOTime> myTotalRideWaitingTime;
+    static std::vector<double> myTotalRideWaitingTime;
     static std::vector<double> myTotalRideRouteLength;
     static std::vector<SUMOTime> myTotalRideDuration;
 

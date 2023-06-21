@@ -22,8 +22,6 @@
 #include <config.h>
 
 #include <netedit/frames/GNEFrame.h>
-#include <netedit/frames/GNEOverlappedInspection.h>
-#include <netedit/frames/GNEElementTree.h>
 
 // ===========================================================================
 // class declaration
@@ -66,15 +64,6 @@ public:
         /// @brief refresh netedit attributes
         void refreshNeteditAttributesEditor(bool forceRefresh);
 
-        /// @brief check if we're selecting a new parent
-        bool isSelectingParent() const;
-
-        /// @brief set new parent
-        void setNewParent(GNEAttributeCarrier* clickedAC);
-
-        /// @brief stop select new parent
-        void stopSelectParent();
-
         /// @name FOX-callbacks
         /// @{
         /// @brief Called when user change the current GEO Attribute
@@ -95,17 +84,14 @@ public:
         /// @brief pointer to inspector frame parent
         GNEInspectorFrame* myInspectorFrameParent;
 
-        /// @brief button for set element as front button
-        FXButton* myMarkFrontElementButton;
+        /// @frame horizontal frame for replace the parent additional
+        FXHorizontalFrame* myHorizontalFrameParentAdditional;
 
         /// @brief Label for parent additional
         FXLabel* myLabelParentAdditional;
 
         /// @brief pointer for replace the parent additional
         FXTextField* myTextFieldParentAdditional;
-
-        /// @brief button for set new parent
-        MFXCheckableButton* mySetNewParentButton;
 
         /// @frame horizontal frame for close shape
         FXHorizontalFrame* myHorizontalFrameCloseShape;
@@ -115,6 +101,9 @@ public:
 
         /// @brief pointer to check box "Block movement"
         FXCheckButton* myCheckBoxCloseShape;
+
+        /// @brief button for set element as front button
+        FXButton* myMarkFrontElementButton;
 
         /// @brief button for help
         FXButton* myHelpButton;
@@ -210,9 +199,6 @@ public:
 
         /// @brief set edge template
         void setEdgeTemplate(const GNEEdge* edge);
-
-        /// @brief update edge template
-        void updateEdgeTemplate();
 
         /// @brief set template (used by shortcut)
         void setTemplate();
@@ -409,11 +395,11 @@ public:
     /// @brief get template editor
     TemplateEditor* getTemplateEditor() const;
 
-    /// @brief get GNEOverlappedInspection modul
-    GNEOverlappedInspection* getOverlappedInspection() const;
+    /// @brief get OverlappedInspection modul
+    GNEFrameModules::OverlappedInspection* getOverlappedInspection() const;
 
-    /// @brief get GNEElementTree modul
-    GNEElementTree* getHierarchicalElementTree() const;
+    /// @brief get HierarchicalElementTree modul
+    GNEFrameModules::HierarchicalElementTree* getHierarchicalElementTree() const;
 
     /// @name FOX-callbacks
     /// @{
@@ -425,7 +411,7 @@ public:
     /// @brief function called after undo/redo in the current frame (can be reimplemented in frame children)
     void updateFrameAfterUndoRedo();
 
-    /// @brief open GNEAttributesCreator extended dialog (can be reimplemented in frame children)
+    /// @brief open AttributesCreator extended dialog (can be reimplemented in frame children)
     void selectedOverlappedElement(GNEAttributeCarrier* AC);
 
 protected:
@@ -440,7 +426,7 @@ protected:
 
 private:
     /// @brief Overlapped Inspection
-    GNEOverlappedInspection* myOverlappedInspection;
+    GNEFrameModules::OverlappedInspection* myOverlappedInspection;
 
     /// @brief Attribute editor
     GNEFrameAttributeModules::AttributesEditor* myAttributesEditor;
@@ -461,7 +447,7 @@ private:
     TemplateEditor* myTemplateEditor;
 
     /// @brief Attribute Carrier Hierarchy
-    GNEElementTree* myHierarchicalElementTree;
+    GNEFrameModules::HierarchicalElementTree* myHierarchicalElementTree;
 
     /// @brief Back Button
     FXButton* myBackButton;

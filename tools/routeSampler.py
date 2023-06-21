@@ -24,6 +24,7 @@ from __future__ import print_function
 
 import os
 import sys
+import random
 from collections import defaultdict
 # multiprocessing imports
 import multiprocessing
@@ -46,7 +47,7 @@ def _run_func(args):
     return num, func(interval=interval, **kwargs)
 
 
-def multi_process(cpu_num, interval_list, func, outf, mismatchf, **kwargs):
+def multi_process(cpu_num, seed, interval_list, func, outf, mismatchf, **kwargs):
     cpu_count = min(cpu_num, multiprocessing.cpu_count()-1, len(interval_list))
     interval_split = np.array_split(interval_list, cpu_count)
     # pool = multiprocessing.Pool(processes=cpu_count)
@@ -101,7 +102,7 @@ def get_options(args=None):
     parser.add_argument("--geh-ok", dest="gehOk", type=float, default=5,
                         help="threshold for acceptable GEH values")
     parser.add_argument("-f", "--write-flows", dest="writeFlows",
-                        help="write flows with the give style instead of vehicles [number|probability|poisson]")
+                        help="write flows with the give style instead of vehicles [number|probability]")
     parser.add_argument("-I", "--write-route-ids", dest="writeRouteIDs", action="store_true", default=False,
                         help="write routes with ids")
     parser.add_argument("-u", "--write-route-distribution", dest="writeRouteDist",
@@ -128,8 +129,8 @@ def get_options(args=None):
     if options.writeRouteIDs and options.writeRouteDist:
         sys.stderr.write("Only one of the options --write-route-ids and --write-route-distribution may be used")
         sys.exit()
-    if options.writeFlows not in [None, "number", "probability", "poisson"]:
-        sys.stderr.write("Options --write-flows only accepts arguments 'number', 'probability' and 'poisson'")
+    if options.writeFlows not in [None, "number", "probability"]:
+        sys.stderr.write("Options --write-flows only accepts arguments 'number' and 'probability'")
         sys.exit()
 
     options.routeFiles = options.routeFiles.split(',')
@@ -200,7 +201,7 @@ class CountData:
         cands = list(self.routeSet.intersection(openRoutes))
         assert (cands)
         probs = [routeCounts[i] for i in cands]
-        x = rng.rand() * sum(probs)
+        x = rng.random() * sum(probs)
         seen = 0
         for route, prob in zip(cands, probs):
             seen += prob
@@ -307,11 +308,11 @@ def hasCapacity(dataIndices, countData):
 
 
 def updateOpenRoutes(openRoutes, routeUsage, countData):
-    return list(filter(lambda r: hasCapacity(routeUsage[r], countData), openRoutes))
+    return set(filter(lambda r: hasCapacity(routeUsage[r], countData), openRoutes))
 
 
 def updateOpenCounts(openCounts, countData, openRoutes):
-    return list(filter(lambda i: countData[i].routeSet.intersection(openRoutes), openCounts))
+    return set(filter(lambda i: countData[i].routeSet.intersection(openRoutes), openCounts))
 
 
 def optimize(options, countData, routes, usedRoutes, routeUsage):
@@ -328,6 +329,7 @@ def optimize(options, countData, routes, usedRoutes, routeUsage):
     """
     import scipy.optimize as opt
     import scipy.version
+    import numpy as np
 
     m = len(countData)
 
@@ -365,7 +367,7 @@ def optimize(options, countData, routes, usedRoutes, routeUsage):
     # minimization objective [routeCounts] + [slack]
     c = [options.minimizeVehs] * k + [1] * m
 
-    # set x to prior counts and slack to deficit (otherwise solver may fail to find any solution
+    # set x to prior counts and slack to deficit (otherwise solver may fail to find any soluton
     x0 = priorRelevantRouteCounts + [cd.origCount - cd.count for cd in countData]
 
     # print("k=%s" % k)
@@ -429,15 +431,8 @@ class Routes:
         self.edgeIDs = {}
         self.withProb = 0
         for routefile in routefiles:
-            warned = False
-            # not all routes may have specified probability, in this case use their number of occurrences
-            for r in sumolib.xml.parse(routefile, ['route', 'walk'], heterogeneous=True):
-                if r.edges is None:
-                    if not warned:
-                        print("Warning: Ignoring walk in file '%s' because it does not contain edges." % routefile,
-                              file=sys.stderr)
-                        warned = True
-                    continue
+            # not all routes may have specified probability, in this case use their number of occurence
+            for r in sumolib.xml.parse(routefile, 'route', heterogeneous=True):
                 edges = tuple(r.edges.split())
                 self.all.append(edges)
                 prob = float(r.getAttributeSecure("probability", 1))
@@ -486,7 +481,9 @@ def getRouteUsage(routes, countData):
 
 
 def main(options):
-    rng = np.random.RandomState(options.seed)
+    if options.seed:
+        random.seed(options.seed)
+        np.random.seed(options.seed)
 
     routes = Routes(options.routeFiles)
 
@@ -538,7 +535,7 @@ def main(options):
         sumolib.writeXMLHeader(outf, "$Id$", "routes", options=options)  # noqa
         if options.threads > 1:
             # call the multiprocessing function
-            results = multi_process(options.threads, intervals,
+            results = multi_process(options.threads, options.seed, intervals,
                                     _solveIntervalMP, outf, mismatchf, options=options, routes=routes)
             # handle the uFlow, oFlow and GEH
             for _, result in results:
@@ -549,8 +546,7 @@ def main(options):
         else:
             for begin, end in intervals:
                 intervalPrefix = "" if len(intervals) == 1 else "%s_" % int(begin)
-                uFlow, oFlow, gehOK, _ = solveInterval(options, routes, begin, end,
-                                                       intervalPrefix, outf, mismatchf, rng)
+                uFlow, oFlow, gehOK, _ = solveInterval(options, routes, begin, end, intervalPrefix, outf, mismatchf)
                 underflowSummary.add(uFlow, begin)
                 overflowSummary.add(oFlow, begin)
                 gehSummary.add(gehOK, begin)
@@ -566,6 +562,11 @@ def main(options):
         print(gehSummary)
 
 
+def _sample(sampleSet, rng):
+    population = tuple(sampleSet)
+    return population[(int)(rng.random() * len(population))]
+
+
 def _sample_skewed(sampleSet, rng, probabilityMap):
     # build cumulative distribution function for weighted sampling
     cdf = []
@@ -575,13 +576,14 @@ def _sample_skewed(sampleSet, rng, probabilityMap):
         total += probabilityMap[element]
         cdf.append(total)
 
-    value = rng.rand() * total
+    value = random.random() * total
     return population[np.searchsorted(cdf, value)]
 
 
 def _solveIntervalMP(options, routes, interval, cpuIndex):
     output_list = []
-    rng = np.random.RandomState(options.seed + cpuIndex)
+    rng = random.Random()
+    rng.seed(options.seed + cpuIndex)
     for begin, end in interval:
         local_outf = StringIO()
         local_mismatch_outf = StringIO() if options.mismatchOut else None
@@ -594,7 +596,7 @@ def _solveIntervalMP(options, routes, interval, cpuIndex):
     return output_lst
 
 
-def solveInterval(options, routes, begin, end, intervalPrefix, outf, mismatchf, rng):
+def solveInterval(options, routes, begin, end, intervalPrefix, outf, mismatchf, rng=random):
     # store which routes are passing each counting location (using route index)
     countData = (parseDataIntervals(parseTurnCounts, options.turnFiles, begin, end, routes, options.turnAttr,
                                     options=options)
@@ -617,9 +619,11 @@ def solveInterval(options, routes, begin, end, intervalPrefix, outf, mismatchf, 
 
     # pick a random counting location and select a new route that passes it until
     # all counts are satisfied or no routes can be used anymore
-    openRoutes = updateOpenRoutes(range(0, routes.number), routeUsage, countData)
-    openCounts = updateOpenCounts(range(0, len(countData)), countData, openRoutes)
-    openRoutes = [r for r in openRoutes if r not in unrestricted]
+    openRoutes = set(range(0, routes.number))
+    openCounts = set(range(0, len(countData)))
+    openRoutes = updateOpenRoutes(openRoutes, routeUsage, countData)
+    openCounts = updateOpenCounts(openCounts, countData, openRoutes)
+    openRoutes = openRoutes.difference(unrestricted)
 
     usedRoutes = []
     if options.optimizeInput:
@@ -633,8 +637,8 @@ def solveInterval(options, routes, begin, end, intervalPrefix, outf, mismatchf, 
                 # sampling equally among open counting locations appears to
                 # improve GEH but it would also introduce a bias in the loaded
                 # route probabilities
-                cd = countData[rng.choice(openCounts)]
-                routeIndex = rng.choice([r for r in openRoutes if r in cd.routeSet])
+                cd = countData[_sample(openCounts, rng)]
+                routeIndex = _sample(cd.routeSet.intersection(openRoutes), rng)
             usedRoutes.append(routeIndex)
             for dataIndex in routeUsage[routeIndex]:
                 countData[dataIndex].count -= 1
@@ -649,7 +653,7 @@ def solveInterval(options, routes, begin, end, intervalPrefix, outf, mismatchf, 
         optimize(options, countData, routes, usedRoutes, routeUsage)
         resetCounts(usedRoutes, routeUsage, countData)
     # avoid bias from sampling order / optimization
-    rng.shuffle(usedRoutes)
+    random.shuffle(usedRoutes, rng.random)
 
     if usedRoutes:
         outf.write('<!-- begin="%s" end="%s" -->\n' % (begin, end))
@@ -711,15 +715,13 @@ def solveInterval(options, routes, begin, end, intervalPrefix, outf, mismatchf, 
                 totalCount = sum(routeCounts)
                 probability = totalCount / (end - begin)
                 flowID = options.prefix + intervalPrefix + options.writeRouteDist
-                if options.writeFlows == "poisson":
-                    repeat = 'period="exp(%.4f)"' % probability
-                elif options.writeFlows == "number" or probability > 1.00004:
+                if options.writeFlows == "number" or probability > 1.001:
                     repeat = 'number="%s"' % totalCount
                     if options.writeFlows == "probability":
-                        sys.stderr.write("Warning: could not write flow %s with probability %.5f\n" %
+                        sys.stderr.write("Warning: could not write flow %s with probability %.2f\n" %
                                          (flowID, probability))
                 else:
-                    repeat = 'probability="%.4f"' % probability
+                    repeat = 'probability="%s"' % probability
                 outf.write('    <flow id="%s" begin="%.2f" end="%.2f" %s route="%s"%s/>\n' % (
                     flowID, begin, end, repeat,
                     options.writeRouteDist, options.vehattrs))
@@ -732,15 +734,13 @@ def solveInterval(options, routes, begin, end, intervalPrefix, outf, mismatchf, 
                     fEnd = max(routeDeparts[routeIndex] + [fBegin + 1.0])
                     probability = routeCounts[routeIndex] / (fEnd - fBegin)
                     flowID = "%s%s%s" % (options.prefix, intervalPrefix, routeIndex)
-                    if options.writeFlows == "poisson":
-                        repeat = 'period="exp(%.4f)"' % probability
-                    elif options.writeFlows == "number" or probability > 1.00004:
+                    if options.writeFlows == "number" or probability > 1.001:
                         repeat = 'number="%s"' % routeCounts[routeIndex]
                         if options.writeFlows == "probability":
-                            sys.stderr.write("Warning: could not write flow %s with probability %.5f\n" % (
+                            sys.stderr.write("Warning: could not write flow %s with probability %.2f\n" % (
                                 flowID, probability))
                     else:
-                        repeat = 'probability="%.4f"' % probability
+                        repeat = 'probability="%s"' % probability
                     if options.writeRouteIDs:
                         if options.pedestrians:
                             outf2.write('    <personFlow id="%s" begin="%.2f" end="%.2f" %s%s>\n' % (

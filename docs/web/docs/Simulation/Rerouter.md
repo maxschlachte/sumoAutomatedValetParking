@@ -55,32 +55,31 @@ The {{AdditionalFile}} looks like this:
 The {{AdditionalFile}} looks like this:
 
 ```
-<additional>   
-   <rerouter id="<REROUTER_ID>" edges="<EDGE_ID>[;<EDGE_ID>]*" [probability="<PROBABILITY>"]>
-     <include href="definitions.xml"/>      
-   </rerouter>
+<additional>
+   <rerouter id="<REROUTER_ID>" edges="<EDGE_ID>[;<EDGE_ID>]*" file="<DEFINITION_FILE>" [probability="<PROBABILITY>"]/>
 
    ... further rerouters ...
 </additional>
 ```
 
-And the file `definitions.xml` (which describes the actions over time) looks
+And the <DEFINITION_FILE\> (which describes the actions over time) looks
 like this:
 
 ```
+<rerouter>
    <interval begin="<BEGIN_TIME>" end="<END_TIME>">
       ... action description ...
    </interval>
 
    ... further intervals ...
+
+</rerouter>
 ```
 
-Note, that the definition file has no root-level element
+Note, that the name of the root-level element (`<rerouter>` in this case) is
+arbitrary.
 
-All the following examples use the [everything-in-one-file](#everything_in_one_file)-syntax.
-
-!!! caution
-    Support for rerouter attribute `file` to include additional definitions was removed in version 1.13.0 
+All the following examples use the separate file syntax.
 
 ## Closing a Street
 
@@ -267,7 +266,7 @@ permit parking.
 
 In this case the vehicle either waits on the road until a parking space
 becomes available or it may reroute to an alternative parking area. For
-the latter behavior a `parkingAreaReroute`-definition must be specified. This rerouter
+the latter behaviour a `parkingAreaReroute`-definition must be specified. This rerouter
 definition defines a set of parking areas that may be mutually used as
 alternatives. Rerouting to another parking area is triggered in two
 cases:
@@ -340,14 +339,6 @@ vType](../Simulation/GenericParameters.md):
 | parking.timefrom.weight     | 0             | The assumed travel time from the parking area to the vehicle destination | no                         |
 
 When 'parking.probability.weight' is set to a positive value, a random number between 0 and attribute 'probability' is drawn for each candidate parkingArea. This value is then normalized to then range [0,1] by dividing with the maximum probability value of all parkingAreaReroute elements. The negative normalized value is then multiplied with parking.probability.weight to enter into the candidate score.
-
-### Further parameters to affect parking behavior
-
-Parameter Name         | Default value | Description                                                              | 
-| -------------------- | ------------- | ------------------------------------------------------------------------ |
-| parking.anywhere     | -1            | permit using any free parkingArea along the way after doing unsuccessful parkingAreaReroute x times (-1 disables this behavior) |
-| parking.frustration  | 100           | increases the preference for visibly free parkingAreas over time (after x unsuccessfull parkingAreaReroutes, targets with unknown occupancy will assumed to be *almost* full)                                 | 
-| parking.knowledge    | 0             | Let driver "guess" the exact occupancy of invisible parkingAreas with probability x                   |
 
 ### Destination after rerouting
 

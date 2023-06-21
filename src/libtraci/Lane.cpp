@@ -68,11 +68,6 @@ Lane::getMaxSpeed(std::string laneID) {
     return Dom::getDouble(libsumo::VAR_MAXSPEED, laneID);
 }
 
-double
-Lane::getFriction(std::string laneID) {
-    return Dom::getDouble(libsumo::VAR_FRICTION, laneID);
-}
-
 
 int
 Lane::getLinkNumber(std::string laneID) {
@@ -291,11 +286,6 @@ Lane::setDisallowed(std::string laneID, std::vector<std::string> disallowedClass
 void
 Lane::setMaxSpeed(std::string laneID, double speed) {
     Dom::setDouble(libsumo::VAR_MAXSPEED, laneID, speed);
-}
-
-void
-Lane::setFriction(std::string laneID, double friction) {
-    Dom::setDouble(libsumo::VAR_FRICTION, laneID, friction);
 }
 
 

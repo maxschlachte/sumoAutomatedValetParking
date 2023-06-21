@@ -48,6 +48,9 @@ public:
     class Iterator {
 
     public:
+        /// @brief constructor for GNEUndoList
+        Iterator(const GNEUndoList* undoList);
+
         /// @brief destructor
         ~Iterator();
 
@@ -66,14 +69,7 @@ public:
         /// @brief increment operator
         Iterator& operator++(int);
 
-    protected:
-        /// @brief constructor for GNEUndoList
-        Iterator(GNEChange* change);
-
     private:
-        /// @brief default constructor
-        Iterator();
-
         /// @brief current change
         GNEChange* myCurrentChange;
 
@@ -81,21 +77,6 @@ public:
         int myIndex;
     };
 
-    /// @brief undo iterator
-    class UndoIterator : public Iterator {
-
-    public:
-        /// @brief constructor for GNEUndoList
-        UndoIterator(const GNEUndoList* undoList);
-    };
-
-    /// @brief redo iterator
-    class RedoIterator : public Iterator {
-
-    public:
-        /// @brief constructor for GNEUndoList
-        RedoIterator(const GNEUndoList* undoList);
-    };
 
     /// @brief constructor
     GNEUndoList(GNEApplicationWindow* parent);

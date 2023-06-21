@@ -68,7 +68,7 @@ public:
                               const SUMOTime offset,
                               const TrafficLightType logicType,
                               const Phases& phases, int step, SUMOTime delay,
-                              const Parameterised::Map& parameters);
+                              const std::map<std::string, std::string>& parameters);
 
 
     /// @brief Destructor
@@ -81,7 +81,7 @@ public:
      * @return The time of the next switch
      * @see MSTrafficLightLogic::trySwitch
      */
-    virtual SUMOTime trySwitch() override;
+    virtual SUMOTime trySwitch();
     /// @}
 
 
@@ -93,14 +93,14 @@ public:
      * @return The number of this tls program's phases
      * @see MSTrafficLightLogic::getPhaseNumber
      */
-    int getPhaseNumber() const override;
+    int getPhaseNumber() const;
 
 
     /** @brief Returns the phases of this tls program
      * @return The phases of this tls program
      * @see MSTrafficLightLogic::getPhases
      */
-    const Phases& getPhases() const override;
+    const Phases& getPhases() const;
 
 
     /** @brief Returns the phases of this tls program
@@ -115,7 +115,7 @@ public:
      * @return The definition of the phase at the given position
      * @see MSTrafficLightLogic::getPhase
      */
-    const MSPhaseDefinition& getPhase(int givenstep) const override;
+    const MSPhaseDefinition& getPhase(int givenstep) const;
 
     /** @brief Returns the type of the logic as a string
      * @return The type of the logic
@@ -134,14 +134,14 @@ public:
      * @return The index of the current phase within the tls
      * @see MSTrafficLightLogic::getCurrentPhaseIndex
      */
-    int getCurrentPhaseIndex() const override;
+    int getCurrentPhaseIndex() const;
 
 
     /** @brief Returns the definition of the current phase
      * @return The current phase
      * @see MSTrafficLightLogic::getCurrentPhaseDef
      */
-    const MSPhaseDefinition& getCurrentPhaseDef() const override;
+    const MSPhaseDefinition& getCurrentPhaseDef() const;
     /// @}
 
 
@@ -153,7 +153,7 @@ public:
      * @return The (estimated) index of the tls at the given simulation time step
      * @see MSTrafficLightLogic::getPhaseIndexAtTime
      */
-    SUMOTime getPhaseIndexAtTime(SUMOTime simStep) const override;
+    SUMOTime getPhaseIndexAtTime(SUMOTime simStep) const;
 
 
     /** @brief Returns the position (start of a phase during a cycle) from of a given step
@@ -161,7 +161,7 @@ public:
      * @return The begin time of the phase
      * @see MSTrafficLightLogic::getOffsetFromIndex
      */
-    SUMOTime getOffsetFromIndex(int index) const override;
+    SUMOTime getOffsetFromIndex(int index) const;
 
 
     /** @brief Returns the step (the phasenumber) of a given position of the cycle
@@ -169,7 +169,7 @@ public:
      * @return The according phase
      * @see MSTrafficLightLogic::getIndexFromOffset
      */
-    int getIndexFromOffset(SUMOTime offset) const override;
+    int getIndexFromOffset(SUMOTime offset) const;
     /// @}
 
 
@@ -185,7 +185,7 @@ public:
      * @see MSTrafficLightLogic::changeStepAndDuration
      */
     virtual void changeStepAndDuration(MSTLLogicControl& tlcontrol, SUMOTime simStep,
-                                       int step, SUMOTime stepDuration) override;
+                                       int step, SUMOTime stepDuration);
 
     /** @brief Replaces the phases and set the phase index
      */
@@ -194,15 +194,9 @@ public:
 
     /** @brief Saves the current tls states into the given stream
         */
-    virtual void saveState(OutputDevice& out) const override;
+    virtual void saveState(OutputDevice& /*out*/) const;
 
-    virtual SUMOTime mapTimeInCycle(SUMOTime t) const override;
-
-    /**@brief gets a parameter */
-    virtual const std::string getParameter(const std::string& key, const std::string defaultValue = "") const override;
-
-    /**@brief Sets a parameter and updates internal constants */
-    virtual void setParameter(const std::string& key, const std::string& value) override;
+    virtual SUMOTime mapTimeInCycle(SUMOTime t) const;
 
 protected:
 

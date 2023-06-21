@@ -346,11 +346,6 @@ Simulation::getCollisions() {
 }
 
 
-double
-Simulation::getScale() {
-    return Dom::getDouble(libsumo::VAR_SCALE, "");
-}
-
 
 double
 Simulation::getDeltaT() {
@@ -520,11 +515,6 @@ Simulation::findIntermodalRoute(const std::string& fromEdge, const std::string& 
 }
 
 LIBTRACI_PARAMETER_IMPLEMENTATION(Simulation, SIM)
-
-void
-Simulation::setScale(double value) {
-    Dom::setDouble(libsumo::VAR_SCALE, "", value);
-}
 
 void
 Simulation::clearPending(const std::string& routeID) {

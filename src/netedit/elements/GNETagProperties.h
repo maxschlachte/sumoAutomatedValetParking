@@ -43,40 +43,37 @@ public:
         // basic types
         NETWORKELEMENT =    1 << 0,  // Network elements (Edges, Junctions, Lanes...)
         ADDITIONALELEMENT = 1 << 1,  // Additional elements (Bus Stops, Charging Stations, Detectors...)
-        DEMANDELEMENT =     1 << 2,  // Demand elements (Routes, Vehicles, Trips...)
-        DATAELEMENT =       1 << 3,  // Data elements (DataSets, Data Intervals, EdgeData...)
+        SHAPE =             1 << 2,  // Shapes (Polygons and POIs)
+        TAZELEMENT =        1 << 3,  // Traffic Assignment Zones
+        DEMANDELEMENT =     1 << 4,  // Demand elements (Routes, Vehicles, Trips...)
+        DATAELEMENT =       1 << 5,  // Data elements (DataSets, Data Intervals, EdgeData...)
         // sub additional elements
-        STOPPINGPLACE =     1 << 4,  // StoppingPlaces (BusStops, ChargingStations...)
-        DETECTOR =          1 << 5,  // Detectors (E1, E2...)
-        CALIBRATOR =        1 << 6,  // Calibrators
-        SHAPE =             1 << 7,  // Shapes (Polygons and POIs)
-        TAZELEMENT =        1 << 8,  // Traffic Assignment Zones
-        WIRE =              1 << 9,  // Wire elements
+        STOPPINGPLACE =     1 << 6,  // StoppingPlaces (BusStops, ChargingStations...)
+        DETECTOR =          1 << 7,  // Detectors (E1, E2...)
         // sub demand elements
-        VTYPE =             1 << 10, // Vehicle types (vType and vTypeDistribution)
-        VEHICLE =           1 << 11, // Vehicles (Vehicles, trips, flows...)
-        ROUTE =             1 << 12, // Routes and embedded routes
-        STOP =              1 << 13, // Stops
-        WAYPOINT =          1 << 14, // Waypoints (note: All waypoints are also Stops)
-        FLOW =              1 << 15, // Flows
+        VTYPE =             1 << 8,  // Vehicle types (vType and vTypeDistribution)
+        VEHICLE =           1 << 9,  // Vehicles (Vehicles, trips, flows...)
+        ROUTE =             1 << 10, // Routes and embedded routes
+        STOP =              1 << 11, // Stops
+        FLOW =              1 << 12, // Flows
         // persons
-        PERSON =            1 << 16, // Persons (Persons and personFlows)
-        PERSONPLAN =        1 << 17, // Person plans (Walks, rides, personTrips and stopPersons)
-        PERSONTRIP =        1 << 18, // Person Trips
-        WALK =              1 << 19, // Walks
-        RIDE =              1 << 20, // Rides
-        STOPPERSON =        1 << 21, // Person stops
+        PERSON =            1 << 13, // Persons (Persons and personFlows)
+        PERSONPLAN =        1 << 14, // Person plans (Walks, rides, personTrips and stopPersons)
+        PERSONTRIP =        1 << 15, // Person Trips
+        WALK =              1 << 16, // Walks
+        RIDE =              1 << 17, // Rides
+        STOPPERSON =        1 << 18, // Person stops
         // containers
-        CONTAINER =         1 << 22, // Containers (Containers and personFlows)
-        CONTAINERPLAN =     1 << 23, // Container plans (tranship and transport)
-        TRANSPORT =         1 << 24, // Transport
-        TRANSHIP =          1 << 25, // Tranship
-        STOPCONTAINER =     1 << 26, // Container stops
+        CONTAINER =         1 << 19, // Containers (Containers and personFlows)
+        CONTAINERPLAN =     1 << 20, // Container plans (tranship and transport)
+        TRANSPORT =         1 << 21, // Transport
+        TRANSHIP =          1 << 22, // Tranship
+        STOPCONTAINER =     1 << 23, // Container stops
         // sub data elements
-        GENERICDATA =       1 << 27, // Generic data (GNEEdgeData, GNELaneData...)
+        GENERICDATA =       1 << 24, // Generic data (GNEEdgeData, GNELaneData...)
         // other
-        SYMBOL =            1 << 28, // Symbol elements (VSSSymbols, RerouterSymbols...)
-        INTERNALLANE =      1 << 29, // Internal Lane
+        SYMBOL =            1 << 25, // Symbol elements (VSSSymbols, RerouterSymbols...)
+        INTERNALLANE =      1 << 26, // Internal Lane
     };
 
     enum TagProperty {
@@ -85,15 +82,16 @@ public:
         GEOSHAPE =                  1 << 2,     // Element's shape acn be defined using a GEO Shape
         DIALOG =                    1 << 3,     // Element can be edited using a dialog (GNECalibratorDialog, GNERerouterDialog...)
         CHILD =                     1 << 4,     // Element is child of another element and will be writed in XML without id (Example: E3Entry -> E3Detector...)
-        REPARENT =                  1 << 5,     // Element can be reparent
-        NOTSELECTABLE =             1 << 6,     // Element cannot be selected
-        MASKSTARTENDPOS =           1 << 7,     // Element mask attributes StartPos and EndPos as "length" (Only used in the appropiate GNEFrame)
-        NOPARAMETERS =              1 << 8,     // Element doesn't accept parameters "key1=value1|key2=value2|...|keyN=valueN" (by default all tags supports parameters)
-        RTREE =                     1 << 9,     // Element is placed in RTREE
-        CENTERAFTERCREATION =       1 << 10,    // Camera is moved after element creation
-        EMBEDDED_ROUTE =            1 << 11,    // Element has an embedded route
-        REQUIRE_PROJ =              1 << 12,    // Element require a geo-projection defined in network
-        VCLASS_ICON =               1 << 13,    // Element returns icon depending of their vClass
+        MINIMUMCHILDREN =           1 << 5,     // Element will be only writed in XML if has a minimum number of children
+        REPARENT =                  1 << 6,     // Element can be reparent
+        NOTSELECTABLE =             1 << 7,     // Element cannot be selected
+        MASKSTARTENDPOS =           1 << 8,     // Element mask attributes StartPos and EndPos as "length" (Only used in the appropiate GNEFrame)
+        WRITECHILDRENSEPARATE =     1 << 9,     // Element writes their children in a separated filename
+        NOPARAMETERS =              1 << 10,    // Element doesn't accept parameters "key1=value1|key2=value2|...|keyN=valueN" (by default all tags supports parameters)
+        RTREE =                     1 << 11,    // Element is placed in RTREE
+        CENTERAFTERCREATION =       1 << 12,    // Camera is moved after element creation
+        EMBEDDED_ROUTE =            1 << 13,    // Element has an embedded route
+        REQUIERE_PROJ  =            1 << 14,    // Element requiere a geo-projection defined in network
     };
 
     /// @brief default constructor
@@ -120,6 +118,9 @@ public:
 
     /// @brief add attribute (duplicated attributed aren't allowed)
     void addAttribute(const GNEAttributeProperties& attributeProperty);
+
+    /// @brief add deprecated Attribute
+    void addDeprecatedAttribute(SumoXMLAttr attr);
 
     /// @brief get field string (by default tag in string format)
     const std::string& getFieldString() const;
@@ -163,11 +164,14 @@ public:
     /// @brief return true if tag correspond to a network element
     bool isNetworkElement() const;
 
-    /// @brief return true if tag correspond to an additional element (note: this include TAZ, shapes and wires)
+    /// @brief return true if tag correspond to an additional element
     bool isAdditionalElement() const;
 
-    /// @brief return true if tag correspond to a pure additional element
-    bool isAdditionalPureElement() const;
+    /// @brief return true if tag correspond to a shape
+    bool isShape() const;
+
+    /// @brief return true if tag correspond to a TAZ element
+    bool isTAZElement() const;
 
     /// @brief return true if tag correspond to a demand element
     bool isDemandElement() const;
@@ -181,18 +185,6 @@ public:
     /// @brief return true if tag correspond to a shape (Only used to group all detectors in the XML)
     bool isDetector() const;
 
-    /// @brief return true if tag correspond to a calibrator (Only used to group all detectors in the XML)
-    bool isCalibrator() const;
-
-    /// @brief return true if tag correspond to a shape
-    bool isShapeElement() const;
-
-    /// @brief return true if tag correspond to a TAZ element
-    bool isTAZElement() const;
-
-    /// @brief return true if tag correspond to a Wire element
-    bool isWireElement() const;
-
     /// @brief return true if tag correspond to a vehicle type element
     bool isVehicleType() const;
 
@@ -204,9 +196,6 @@ public:
 
     /// @brief return true if tag correspond to a stop element
     bool isStop() const;
-
-    /// @brief return true if tag correspond to a waypoint element
-    bool isWaypoint() const;
 
     /// @brief return true if tag correspond to a flow element
     bool isFlow() const;
@@ -271,6 +260,9 @@ public:
     /// @brief return true if tag correspond to an element that can be edited using a dialog
     bool hasDialog() const;
 
+    /// @brief return true if tag correspond to an element that only have a limited number of children
+    bool hasMinimumNumberOfChildren() const;
+
     /// @brief return true if Tag correspond to an element that supports parameters "key1=value1|key2=value2|...|keyN=valueN"
     bool hasParameters() const;
 
@@ -280,6 +272,9 @@ public:
     /// @brief return true if tag correspond to an element that can be reparent
     bool canBeReparent() const;
 
+    /// @brief return true if tag correspond to an element that can write their child in a different file
+    bool canWriteChildrenSeparate() const;
+
     /// @brief return true if tag correspond to an element that can mask the attributes "start" and "end" position as attribute "length"
     bool canMaskStartEndPos() const;
 
@@ -287,13 +282,13 @@ public:
     bool canCenterCameraAfterCreation() const;
 
     /// @brief return true if tag correspond to an element that owns a embebbed route
-    bool hasEmbebbedRoute() const;
+    bool embebbedRoute() const;
 
     /// @brief return true if tag correspond to an element that requires a geo projection
     bool requireProj() const;
 
-    /// @brief return true if tag correspond to an element that has vClass icons
-    bool vClassIcon() const;
+    /// @brief return true if attribute of this tag is deprecated
+    bool isAttributeDeprecated(SumoXMLAttr attr) const;
 
 private:
     /// @brief Sumo XML Tag vinculated wit this tag Property
@@ -319,6 +314,9 @@ private:
 
     /// @brief vector with master tags (used by child elements)
     std::vector<SumoXMLTag> myParentTags;
+
+    /// @brief List with the deprecated Attributes
+    std::vector<SumoXMLAttr> myDeprecatedAttributes;
 
     /// @brief field string
     std::string myFieldString;

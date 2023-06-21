@@ -51,12 +51,11 @@ class Statistics:
         self.num_persons = 0
         self.num_flows = 0
         self.num_returned = 0
-        self.missingEdgeOccurrences = defaultdict(lambda: 0)
+        self.missingEdgeOccurences = defaultdict(lambda: 0)
         # routes which enter the sub-scenario multiple times
         self.multiAffectedRoutes = 0
         self.teleportFactorSum = 0.0
         self.too_short = 0
-        self.broken = 0
 
     def total(self):
         return self.num_vehicles + self.num_persons + self.num_flows
@@ -85,10 +84,6 @@ extrapolated based on edge-lengths and maximum speeds multiplied with --speed-fa
                               "(default 1.0)")
     optParser.add_option("--default.stop-duration", type='float', default=0.0, dest="defaultStopDuration",
                          help="default duration for stops in stand-alone routes")
-    optParser.add_option("--default.departLane", default="best", dest="defaultDepartLane",
-                         help="default departure lane for cut routes")
-    optParser.add_option("--default.departSpeed", default="max", dest="defaultDepartSpeed",
-                         help="default departure speed for cut routes")
     optParser.add_option("--orig-net", help="complete network for retrieving edge lengths")
     optParser.add_option("-b", "--big", action="store_true", default=False,
                          help="Perform out-of-memory sort using module sort_routes (slower but more memory efficient)")
@@ -152,7 +147,7 @@ def _cutEdgeList(areaEdges, oldDepart, exitTimes, edges, orig_net, options, stat
     # check for connectivity
     route_parts = [(firstIndex + i, firstIndex + j)
                    for i, j in missingEdges(areaEdges, edges[firstIndex:(lastIndex + 1)],
-                                            stats.missingEdgeOccurrences)]
+                                            stats.missingEdgeOccurences)]
     if len(route_parts) > 1:
         stats.multiAffectedRoutes += 1
         if disconnected_action == 'discard':
@@ -173,14 +168,10 @@ def _cutEdgeList(areaEdges, oldDepart, exitTimes, edges, orig_net, options, stat
         if (exitTimes is None) or (newDepart == -1):
             if orig_net is not None:
                 # extrapolate new departure using default speed
-                newDepart = parseTime(oldDepart)
-                for e in edges[startIdx:fromIndex]:
-                    if orig_net.hasEdge(e):
-                        edge = orig_net.getEdge(e)
-                        newDepart += edge.getLength() / (edge.getSpeed() * options.speed_factor)
-                    else:
-                        stats.broken += 1
-                        return None
+                newDepart = (parseTime(oldDepart) +
+                             sum([(orig_net.getEdge(e).getLength() /
+                                   (orig_net.getEdge(e).getSpeed() * options.speed_factor))
+                                  for e in edges[startIdx:fromIndex]]))
             else:
                 newDepart = parseTime(oldDepart)
         result.append((newDepart, edges[fromIndex:toIndex + 1]))
@@ -374,9 +365,6 @@ def cut_routes(aEdges, orig_net, options, busStopEdges=None, ptRoutes=None, oldP
                         routeRef.edges = " ".join(remaining)
                         yield -1, routeRef
                     else:
-                        if ix_part > 0 or old_route.edges.split()[0] != remaining[0]:
-                            moving.setAttribute("departLane", options.defaultDepartLane)
-                            moving.setAttribute("departSpeed", options.defaultDepartSpeed)
                         newDepart = max(newDepart, departShift)
                         old_route.edges = " ".join(remaining)
                     if moving.name == 'vehicle':
@@ -408,10 +396,10 @@ def cut_routes(aEdges, orig_net, options, busStopEdges=None, ptRoutes=None, oldP
         if options.min_air_dist > 0:
             msg += " or the air-line distance between start and end is less than %s" % options.min_air_dist
         print(msg)
-    print("Number of disconnected routes: %s, broken routes: %s." % (stats.multiAffectedRoutes, stats.broken))
+    print("Number of disconnected routes: %s." % stats.multiAffectedRoutes)
     if options.missing_edges > 0:
         print("Most frequent missing edges:")
-        counts = sorted([(v, k) for k, v in stats.missingEdgeOccurrences.items()], reverse=True)
+        counts = sorted([(v, k) for k, v in stats.missingEdgeOccurences.items()], reverse=True)
         for count, edge in itertools.islice(counts, options.missing_edges):
             print(count, edge)
 
@@ -453,7 +441,7 @@ def getFirstIndex(areaEdges, edges):
     return None
 
 
-def missingEdges(areaEdges, edges, missingEdgeOccurrences):
+def missingEdges(areaEdges, edges, missingEdgeOccurences):
     '''
     Returns a list of intervals corresponding to the overlapping parts of the route with the area
     '''
@@ -468,7 +456,7 @@ def missingEdges(areaEdges, edges, missingEdgeOccurrences):
                 route_intervals.append((start, j - 1))
 #                 print("edge '%s' not in area."%edge)
                 lastEdgePresent = False
-            missingEdgeOccurrences[edge] += 1
+            missingEdgeOccurences[edge] += 1
         else:
             if not lastEdgePresent:
                 # this is a start of a present interval
@@ -484,10 +472,6 @@ def write_trip(file, vehicle):
     edges = vehicle.route[0].edges.split()
     file.write(u'    <trip depart="%s" id="%s" from="%s" to="%s" type="%s"' %
                (vehicle.depart, vehicle.id, edges[0], edges[-1], vehicle.type))
-    if vehicle.departLane:
-        file.write(u' departLane="%s"' % vehicle.departLane)
-    if vehicle.departSpeed:
-        file.write(u' departSpeed="%s"' % vehicle.departSpeed)
     if vehicle.stop:
         file.write(u'>\n')
         for stop in vehicle.stop:

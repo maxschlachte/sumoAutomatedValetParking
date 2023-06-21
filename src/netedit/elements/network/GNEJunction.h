@@ -22,7 +22,6 @@
 #include <config.h>
 
 #include <netedit/elements/GNECandidateElement.h>
-#include <utils/gui/globjects/GUIPolygon.h>
 #include <netbuild/NBNode.h>
 
 #include "GNENetworkElement.h"
@@ -99,7 +98,7 @@ public:
      */
     GUIGLObjectPopupMenu* getPopUpMenu(GUIMainWindow& app, GUISUMOAbstractView& parent);
 
-    /// @brief return exaggeration associated with this GLObject
+    /// @brief return exaggeration asociated with this GLObject
     double getExaggeration(const GUIVisualizationSettings& s) const;
 
     /// @brief update centering boundary (implies change in RTREE)
@@ -110,9 +109,6 @@ public:
      * @see GUIGlObject::drawGL
      */
     void drawGL(const GUIVisualizationSettings& s) const;
-
-    /// @brief update GLObject (geometry, ID, etc.)
-    void updateGLObject();
     /// @}
 
     /// @brief Return net build node
@@ -141,9 +137,6 @@ public:
 
     /// @brief Returns GNECrossings
     const std::vector<GNECrossing*>& getGNECrossings() const;
-
-    /// @brief Returns GNEWalkingAreas
-    const std::vector<GNEWalkingArea*>& getGNEWalkingAreas() const;
 
     /// @brief Returns all GNEConnections vinculated with this junction
     std::vector<GNEConnection*> getGNEConnections() const;
@@ -174,7 +167,7 @@ public:
 
     /* @brief method for checking if the key and their correspond attribute are valids
      * @param[in] key The attribute key
-     * @param[in] value The value associated to key key
+     * @param[in] value The value asociated to key key
      * @return true if the value is valid, false in other case
      */
     bool isValid(SumoXMLAttr key, const std::string& value);
@@ -191,7 +184,7 @@ public:
     /// @}
 
     /// @brief get parameters map
-    const Parameterised::Map& getACParametersMap() const;
+    const std::map<std::string, std::string>& getACParametersMap() const;
 
     /// @brief set responsibility for deleting internal structures
     void setResponsible(bool newVal);
@@ -239,23 +232,8 @@ public:
     /// @brief get GNECrossing if exist, and if not create it if create is enabled
     GNECrossing* retrieveGNECrossing(NBNode::Crossing* NBNodeCrossing, bool createIfNoExist = true);
 
-    /// @brief get GNEWalkingArea if exist, and if not create it if create is enabled
-    GNEWalkingArea* retrieveGNEWalkingArea(const std::string& NBNodeWalkingAreaID, bool createIfNoExist = true);
-
     /// @brief mark connections as deprecated
     void markConnectionsDeprecated(bool includingNeighbours);
-
-    /// @brief set junction Type (using undo/redo)
-    void setJunctionType(const std::string& value, GNEUndoList* undoList);
-
-    /// @brief get the maximum size (in either x-, or y-dimension) for determining whether to draw or not
-    double getMaxDrawingSize() const;
-
-    /// @brief clear walking areas
-    void clearWalkingAreas();
-
-    /// @brief rebuilds WalkingAreas objects for this junction
-    void rebuildGNEWalkingAreas();
 
 protected:
     /// @brief A reference to the represented junction
@@ -269,9 +247,6 @@ protected:
 
     /// @brief the built crossing objects
     std::vector<GNECrossing*> myGNECrossings;
-
-    /// @brief the built walkingArea objects
-    std::vector<GNEWalkingArea*> myGNEWalkingAreas;
 
     /// @brief The maximum size (in either x-, or y-dimension) for determining whether to draw or not
     double myMaxDrawingSize;
@@ -295,21 +270,12 @@ protected:
     /// @brief whether this junction probably should have some connections but doesn't
     bool myColorForMissingConnections;
 
-    /// @brief An object that stores the shape and its tesselation
-    mutable TesselatedPolygon myTesselation;
-
-    /// @brief exaggeration used in tesselation
-    mutable double myExaggeration;
-
 private:
     /// @brief draw TLS icon
     void drawTLSIcon(const GUIVisualizationSettings& s) const;
 
     /// @brief draw junction childs
     void drawJunctionChildren(const GUIVisualizationSettings& s) const;
-
-    /// @brief draw dotted contours
-    void drawDottedContours(const GUIVisualizationSettings& s, const bool drawShape, const bool drawBubble, const double junctionExaggeration, const double bubbleRadius) const;
 
     /// @brief method for setting the attribute and nothing else (used in GNEChange_Attribute)
     void setAttribute(SumoXMLAttr key, const std::string& value);

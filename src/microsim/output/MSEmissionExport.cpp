@@ -26,7 +26,6 @@
 #include <utils/emissions/PollutantsInterface.h>
 #include <utils/emissions/HelpersHarmonoise.h>
 #include <utils/geom/GeomHelper.h>
-#include <utils/geom/GeoConvHelper.h>
 #include <microsim/MSLane.h>
 #include <microsim/MSNet.h>
 #include <microsim/MSVehicle.h>
@@ -41,12 +40,10 @@
 // ===========================================================================
 void
 MSEmissionExport::write(OutputDevice& of, SUMOTime timestep, int precision) {
-    const OptionsCont& oc = OptionsCont::getOptions();
-    const SUMOTime period = string2time(oc.getString("device.emissions.period"));
-    const SUMOTime begin = string2time(oc.getString("device.emissions.begin"));
-    const bool scaled = oc.getBool("emission-output.step-scaled");
-    const bool useGeo = oc.getBool("emission-output.geo");
-    if ((period > 0 && (timestep - begin) % period != 0) || timestep < begin) {
+    const SUMOTime period = string2time(OptionsCont::getOptions().getString("device.emissions.period"));
+    const SUMOTime begin = string2time(OptionsCont::getOptions().getString("begin"));
+    const bool scaled = OptionsCont::getOptions().getBool("emission-output.step-scaled");
+    if (period > 0 && (timestep - begin) % period != 0) {
         return;
     }
     of.openTag("timestep").writeAttr("time", time2string(timestep));
@@ -81,19 +78,8 @@ MSEmissionExport::write(OutputDevice& of, SUMOTime timestep, int precision) {
                 of.writeAttr("waiting", microVeh->getWaitingSeconds());
                 of.writeAttr("lane", microVeh->getLane()->getID());
             }
-            of.writeAttr("pos", veh->getPositionOnLane());
-            of.writeAttr("speed", veh->getSpeed());
-            of.writeAttr("angle", GeomHelper::naviDegree(veh->getAngle()));
-
-            Position pos = veh->getPosition();
-            if (useGeo) {
-                of.setPrecision(MAX2(gPrecisionGeo, precision));
-                GeoConvHelper::getFinal().cartesian2geo(pos);
-            }
-            of.writeAttr(SUMO_ATTR_X, pos.x());
-            of.writeAttr(SUMO_ATTR_Y, pos.y());
-            of.setPrecision(precision);
-
+            of.writeAttr("pos", veh->getPositionOnLane()).writeAttr("speed", veh->getSpeed());
+            of.writeAttr("angle", GeomHelper::naviDegree(veh->getAngle())).writeAttr("x", veh->getPosition().x()).writeAttr("y", veh->getPosition().y());
             of.closeTag();
         }
     }

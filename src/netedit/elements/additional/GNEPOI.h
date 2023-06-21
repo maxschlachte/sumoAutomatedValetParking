@@ -23,7 +23,7 @@
 #include <utils/shapes/PointOfInterest.h>
 #include <utils/xml/CommonXMLStructure.h>
 
-#include "GNEAdditional.h"
+#include "GNEShape.h"
 
 // ===========================================================================
 // class declarations
@@ -40,11 +40,11 @@ class GNELane;
  *  is computed using the junction's position to which an offset of 1m to each
  *  side is added.
  */
-class GNEPOI : public PointOfInterest, public GNEAdditional {
+class GNEPOI : public PointOfInterest, public GNEShape {
 
 public:
-    /// @brief needed to avoid diamond problem between PointOfInterest and GNEAdditional
-    using GNEAdditional::getID;
+    /// @brief needed to avoid diamond problem between PointOfInterest and GNEShape
+    using GNEShape::getID;
 
     /// @brief Constructor
     GNEPOI(SumoXMLTag tag, GNENet* net);
@@ -69,7 +69,7 @@ public:
     GNEPOI(GNENet* net, const std::string& id, const std::string& type, const RGBColor& color, const double xLon,
            const double yLat, const bool geo, const double layer, const double angle, const std::string& imgFile,
            const bool relativePath, const double width, const double height, const std::string& name,
-           const Parameterised::Map& parameters);
+           const std::map<std::string, std::string>& parameters);
 
     /**@brief Constructor
      * @param[in] net net in which this polygon is placed
@@ -90,7 +90,7 @@ public:
      */
     GNEPOI(GNENet* net, const std::string& id, const std::string& type, const RGBColor& color, GNELane* lane, const double posOverLane, const bool friendlyPos,
            const double posLat, const double layer, const double angle, const std::string& imgFile, const bool relativePath, const double width,
-           const double height, const std::string& name, const Parameterised::Map& parameters);
+           const double height, const std::string& name, const std::map<std::string, std::string>& parameters);
 
     /// @brief Destructor
     ~GNEPOI();
@@ -98,39 +98,41 @@ public:
     /**@brief get move operation
     * @note returned GNEMoveOperation can be nullptr
     */
-    GNEMoveOperation* getMoveOperation() override;
+    GNEMoveOperation* getMoveOperation();
 
     /// @brief remove geometry point in the clicked position
-    void removeGeometryPoint(const Position clickedPosition, GNEUndoList* undoList) override;
+    void removeGeometryPoint(const Position clickedPosition, GNEUndoList* undoList);
 
     /// @brief gererate a new ID for an element child
     std::string generateChildID(SumoXMLTag childTag);
 
+    /**@brief Sets a parameter
+     * @param[in] key The parameter's name
+     * @param[in] value The parameter's value
+     */
+    void setParameter(const std::string& key, const std::string& value);
+
     /// @brief get SUMOBaseObject with all POIattributes
     CommonXMLStructure::SumoBaseObject* getSumoBaseObject() const;
 
-    /// @name inherited from GNEAdditional
+    /// @name inherited from GNEShape
     /// @{
     /// @brief update pre-computed geometry information
-    void updateGeometry() override;
+    void updateGeometry();
 
     /// @brief Returns position of shape in view
-    Position getPositionInView() const override;
+    Position getPositionInView() const;
 
-    /// @brief return exaggeration associated with this GLObject
-    double getExaggeration(const GUIVisualizationSettings& s) const override;
+    /// @brief return exaggeration asociated with this GLObject
+    double getExaggeration(const GUIVisualizationSettings& s) const;
 
     /// @brief update centering boundary (implies change in RTREE)
-    void updateCenteringBoundary(const bool updateGrid) override;
+    void updateCenteringBoundary(const bool updateGrid);
 
-    /// @brief split geometry
-    void splitEdgeGeometry(const double splitPosition, const GNENetworkElement* originalElement,
-                           const GNENetworkElement* newElement, GNEUndoList* undoList) override;
-
-    /**@brief write additional element into a xml file
+    /**@brief writte shape element into a xml file
      * @param[in] device device in which write parameters of additional element
      */
-    void writeAdditional(OutputDevice& device) const override;
+    void writeShape(OutputDevice& device);
 
     /// @brief Returns the numerical id of the object
     GUIGlID getGlID() const;
@@ -142,7 +144,7 @@ public:
     /**@brief Returns the name of the parent object
      * @return This object's parent id
      */
-    std::string getParentName() const override;
+    std::string getParentName() const;
 
     /**@brief Returns an own popup-menu
      *
@@ -151,17 +153,22 @@ public:
      * @return The built popup-menu
      * @see GUIGlObject::getPopUpMenu
      */
-    GUIGLObjectPopupMenu* getPopUpMenu(GUIMainWindow& app, GUISUMOAbstractView& parent) override;
+    GUIGLObjectPopupMenu* getPopUpMenu(GUIMainWindow& app, GUISUMOAbstractView& parent);
+
+    /**@brief Returns an own parameter window
+     *
+     * @param[in] app The application needed to build the parameter window
+     * @param[in] parent The parent window needed to build the parameter window
+     * @return The built parameter window
+     * @see GUIGlObject::getParameterWindow
+     */
+    GUIParameterTableWindow* getParameterWindow(GUIMainWindow& app, GUISUMOAbstractView& parent);
 
     /**@brief Draws the object
      * @param[in] s The settings for the current view (may influence drawing)
      * @see GUIGlObject::drawGL
      */
-    void drawGL(const GUIVisualizationSettings& s) const override;
-
-    double getClickPriority() const override {
-        return getShapeLayer();
-    }
+    void drawGL(const GUIVisualizationSettings& s) const;
     /// @}
 
     /// @name inherited from GNEAttributeCarrier
@@ -170,42 +177,30 @@ public:
      * @param[in] key The attribute key
      * @return string with the value associated to key
      */
-    std::string getAttribute(SumoXMLAttr key) const override;
-
-    /* @brief method for getting the Attribute of an XML key in double format (to avoid unnecessary parse<double>(...) for certain attributes)
-     * @param[in] key The attribute key
-     * @return double with the value associated to key
-     */
-    double getAttributeDouble(SumoXMLAttr key) const override;
-
-    /// @brief get parameters map
-    const Parameterised::Map& getACParametersMap() const override;
+    std::string getAttribute(SumoXMLAttr key) const;
 
     /**@brief method for setting the attribute and letting the object perform additional changes
      * @param[in] key The attribute key
      * @param[in] value The new value
      * @param[in] undoList The undoList on which to register changes
      */
-    void setAttribute(SumoXMLAttr key, const std::string& value, GNEUndoList* undoList) override;
+    void setAttribute(SumoXMLAttr key, const std::string& value, GNEUndoList* undoList);
 
     /**@brief method for checking if the key and their correspond attribute are valids
      * @param[in] key The attribute key
-     * @param[in] value The value associated to key key
+     * @param[in] value The value asociated to key key
      * @return true if the value is valid, false in other case
      */
-    bool isValid(SumoXMLAttr key, const std::string& value) override;
+    bool isValid(SumoXMLAttr key, const std::string& value);
 
     /* @brief method for check if the value for certain attribute is set
      * @param[in] key The attribute key
      */
-    bool isAttributeEnabled(SumoXMLAttr key) const override;
+    bool isAttributeEnabled(SumoXMLAttr key) const;
     /// @}
 
-    /// @brief get PopPup ID (Used in AC Hierarchy)
-    std::string getPopUpID() const override;
-
-    /// @brief get Hierarchy Name (Used in AC Hierarchy)
-    std::string getHierarchyName() const override;
+    /// @brief get parameters map
+    const std::map<std::string, std::string>& getACParametersMap() const;
 
 protected:
     /// @brief shape width of POI
@@ -216,13 +211,13 @@ protected:
 
 private:
     /// @brief set attribute after validation
-    void setAttribute(SumoXMLAttr key, const std::string& value) override;
+    void setAttribute(SumoXMLAttr key, const std::string& value);
 
     /// @brief set move shape
-    void setMoveShape(const GNEMoveResult& moveResult) override;
+    void setMoveShape(const GNEMoveResult& moveResult);
 
     /// @brief commit move shape
-    void commitMoveShape(const GNEMoveResult& moveResult, GNEUndoList* undoList) override;
+    void commitMoveShape(const GNEMoveResult& moveResult, GNEUndoList* undoList);
 
     /// @brief Invalidated copy constructor.
     GNEPOI(const GNEPOI&) = delete;

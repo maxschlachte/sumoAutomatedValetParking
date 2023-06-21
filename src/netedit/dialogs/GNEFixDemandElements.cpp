@@ -50,7 +50,7 @@ FXIMPLEMENT(GNEFixDemandElements, FXDialogBox, GNEFixDemandElementsMap, ARRAYNUM
 // ---------------------------------------------------------------------------
 
 GNEFixDemandElements::GNEFixDemandElements(GNEViewNet* viewNet, const std::vector<GNEDemandElement*>& invalidDemandElements) :
-    FXDialogBox(viewNet->getApp(), "Fix demand elements problems", GUIDesignDialogBoxExplicitStretchable(800, 620)),
+    FXDialogBox(viewNet->getApp(), "Fix demand elements problems", GUIDesignDialogBoxExplicit(800, 620)),
     myViewNet(viewNet) {
     // set busStop icon for this dialog
     setIcon(GUIIconSubSys::getIcon(GUIIcon::SUPERMODEDEMAND));
@@ -143,7 +143,6 @@ GNEFixDemandElements::FixOptions::FixOptions(FXVerticalFrame* frameParent, const
     myViewNet(viewNet) {
     // Create table
     myTable = new FXTable(this, this, MID_TABLE, GUIDesignTableFixElements);
-    myTable->disable();
     // create horizontal frame
     FXHorizontalFrame* horizontalFrame = new FXHorizontalFrame(this, GUIDesignAuxiliarHorizontalFrame);
     // create vertical frames
@@ -190,10 +189,10 @@ GNEFixDemandElements::FixOptions::setInvalidElements(const std::vector<GNEDemand
     // check if enable or disable options
     if (invalidElements.size() > 0) {
         enableOptions();
-        toggleSaveButton(true);
+        toogleSaveButton(true);
     } else {
         disableOptions();
-        toggleSaveButton(false);
+        toogleSaveButton(false);
     }
 }
 
@@ -215,11 +214,11 @@ GNEFixDemandElements::FixOptions::saveContents() const {
         // close output device
         dev.close();
         // write warning if netedit is running in testing mode
-        WRITE_DEBUG("Opening FXMessageBox 'Saving list of conflicted items successfully'");
+        WRITE_DEBUG("Opening FXMessageBox 'Saving list of conflicted items sucesfully'");
         // open message box error
-        FXMessageBox::information(myTable, MBOX_OK, "Saving successfully", "%s", "List of conflicted items was successfully saved");
+        FXMessageBox::information(myTable, MBOX_OK, "Saving sucesfully", "%s", "List of conflicted items was sucesfully saved");
         // write warning if netedit is running in testing mode
-        WRITE_DEBUG("Closed FXMessageBox 'Saving list of conflicted items successfully' with 'OK'");
+        WRITE_DEBUG("Closed FXMessageBox 'Saving list of conflicted items sucesfully' with 'OK'");
     } catch (IOError& e) {
         // write warning if netedit is running in testing mode
         WRITE_DEBUG("Opening FXMessageBox 'error saving list of conflicted items'");
@@ -282,12 +281,7 @@ GNEFixDemandElements::FixRouteOptions::fixElements(bool& abortSaving) {
             myViewNet->getUndoList()->begin(GUIIcon::ROUTE, "delete invalid routes");
             // iterate over invalid routes to delete it
             for (const auto& invalidRoute : myInvalidElements) {
-                // special case for embedded routes
-                if (invalidRoute->getTagProperty().getTag() == GNE_TAG_ROUTE_EMBEDDED) {
-                    myViewNet->getNet()->deleteDemandElement(invalidRoute->getParentDemandElements().front(), myViewNet->getUndoList());
-                } else {
-                    myViewNet->getNet()->deleteDemandElement(invalidRoute, myViewNet->getUndoList());
-                }
+                myViewNet->getNet()->deleteDemandElement(invalidRoute, myViewNet->getUndoList());
             }
             // end undo list
             myViewNet->getUndoList()->end();
@@ -390,8 +384,8 @@ GNEFixDemandElements::FixVehicleOptions::fixElements(bool& abortSaving) {
     if (myInvalidElements.size() > 0) {
         if (removeInvalidVehicles->getCheck() == TRUE) {
             // begin undo list
-            myViewNet->getUndoList()->begin(GUIIcon::ROUTE, "delete invalid vehicles");
-            // iterate over invalid vehicles to delete it
+            myViewNet->getUndoList()->begin(GUIIcon::ROUTE, "delete invalid routes");
+            // iterate over invalid routes to delete it
             for (const auto& invalidVehicle : myInvalidElements) {
                 myViewNet->getNet()->deleteDemandElement(invalidVehicle, myViewNet->getUndoList());
             }

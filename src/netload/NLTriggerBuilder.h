@@ -116,9 +116,11 @@ public:
      *
      * @param[in] net The network the rerouter belongs to
      * @param[in] attrs SAX-attributes which define the trigger
+     * @param[in] base The base path
      * @exception InvalidArgument If a parameter (edge) is not valid
      */
-    void parseAndBuildRerouter(MSNet& net, const SUMOSAXAttributes& attrs);
+    void parseAndBuildRerouter(MSNet& net, const SUMOSAXAttributes& attrs,
+                               const std::string& base);
 
 
     /** @brief Parses the values and builds a stopping places for busses, trains or container vehicles
@@ -171,6 +173,7 @@ public:
      * @param[in] length Length of the lot rectangle
      * @param[in] angle Angle of the lot rectangle
      * @param[in] slope Slope of the lot rectangle
+     * @param[in] chargingSpace chargingSpace holding the parameters and methods needed for charging
      * @exception InvalidArgument If the current parking area is 0
      */
     void addLotEntry(double x, double y, double z,
@@ -205,14 +208,12 @@ public:
      */
     void parseAndAddLotEntry(const SUMOSAXAttributes& attrs);
 
-
     // (qpk): method for parsing subspace tags to subspaces
     /** @brief Parses its values and adds a sub lot entry to current parking area
      *
      * @param[in] attrs SAX-attributes which define the lot entry
      */
     void parseAndAddSubspace(const SUMOSAXAttributes& attrs);
-
 
     /** @brief End a parking area
      *
@@ -435,12 +436,14 @@ protected:
      * @param[in] edges The edges the rerouter is placed at
      * @param[in] prob The probability the rerouter reoutes vehicles with
      * @param[in] prio The priority the rerouter reroutes vehicles with (utl)
+     * @param[in] file The file to read the reroute definitions from
      */
     virtual MSTriggeredRerouter* buildRerouter(MSNet& net,
             const std::string& id, MSEdgeVector& edges,
             double prob,
             // (utl): add prio parameter
-            double prio, bool off, SUMOTime timeThreshold,
+            double prio, const std::string& file, bool off,
+            SUMOTime timeThreshold,
             const std::string& vTypes);
     //@}
 

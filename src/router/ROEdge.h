@@ -461,7 +461,7 @@ public:
             const SUMOVTypeParameter* const type = veh->getType();
             const double vMax = MIN2(type->maxSpeed, edge->mySpeed);
             const double accel = type->getCFParam(SUMO_ATTR_ACCEL, SUMOVTypeParameter::getDefaultAccel(type->vehicleClass)) * type->getCFParam(SUMO_ATTR_SIGMA, SUMOVTypeParameter::getDefaultImperfection(type->vehicleClass)) / 2.;
-            ret = PollutantsInterface::computeDefault(type->emissionClass, ET, vMax, accel, 0, edge->getTravelTime(veh, time), nullptr); // @todo: give correct slope
+            ret = PollutantsInterface::computeDefault(type->emissionClass, ET, vMax, accel, 0, edge->getTravelTime(veh, time)); // @todo: give correct slope
         }
         return ret;
     }
@@ -483,6 +483,11 @@ public:
 
     /** @brief Returns all ROEdges */
     static const ROEdgeVector& getAllEdges();
+
+    /// @brief Returns the number of edges
+    static int dictSize() {
+        return (int)myEdges.size();
+    };
 
     static void setGlobalOptions(const bool interpolate) {
         myInterpolate = interpolate;

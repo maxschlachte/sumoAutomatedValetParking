@@ -108,7 +108,7 @@ GUIBusStop::getPopUpMenu(GUIMainWindow& app,
     buildNameCopyPopupEntry(ret);
     buildSelectionPopupEntry(ret);
     buildShowParamsPopupEntry(ret);
-    buildPositionCopyEntry(ret, app);
+    buildPositionCopyEntry(ret, false);
     return ret;
 }
 

@@ -118,12 +118,6 @@ NLHandler::myStartElement(int element,
             case SUMO_TAG_CONDITION:
                 addCondition(attrs);
                 break;
-            case SUMO_TAG_ASSIGNMENT:
-                addAssignment(attrs);
-                break;
-            case SUMO_TAG_FUNCTION:
-                addFunction(attrs);
-                break;
             case SUMO_TAG_CONNECTION:
                 addConnection(attrs);
                 break;
@@ -170,7 +164,7 @@ NLHandler::myStartElement(int element,
                 myTriggerBuilder.parseAndBuildCalibrator(myNet, attrs, getFileName());
                 break;
             case SUMO_TAG_REROUTER:
-                myTriggerBuilder.parseAndBuildRerouter(myNet, attrs);
+                myTriggerBuilder.parseAndBuildRerouter(myNet, attrs, getFileName());
                 break;
             case SUMO_TAG_BUS_STOP:
             case SUMO_TAG_TRAIN_STOP:
@@ -335,9 +329,6 @@ NLHandler::myEndElement(int element) {
             }
             myAmParsingTLLogicOrJunction = false;
             break;
-        case SUMO_TAG_FUNCTION:
-            closeFunction();
-            break;
         case SUMO_TAG_WAUT:
             closeWAUT();
             break;
@@ -413,10 +404,10 @@ NLHandler::beginEdgeParsing(const SUMOSAXAttributes& attrs) {
         return;
     }
     // parse the function
-    const SumoXMLEdgeFunc func = attrs.getOpt<SumoXMLEdgeFunc>(SUMO_ATTR_FUNCTION, id.c_str(), ok, SumoXMLEdgeFunc::NORMAL);
+    const SumoXMLEdgeFunc func = attrs.getEdgeFunc(ok);
     if (!ok) {
+        WRITE_ERROR("Edge '" + id + "' has an invalid type.");
         myCurrentIsBroken = true;
-        return;
     }
     // omit internal edges if not wished
     if (id[0] == ':') {
@@ -510,7 +501,6 @@ NLHandler::addLane(const SUMOSAXAttributes& attrs) {
         return;
     }
     const double maxSpeed = attrs.get<double>(SUMO_ATTR_SPEED, id.c_str(), ok);
-    const double friction = attrs.getOpt<double>(SUMO_ATTR_FRICTION, id.c_str(), ok, (double)(1.), false);
     const double length = attrs.get<double>(SUMO_ATTR_LENGTH, id.c_str(), ok);
     const std::string allow = attrs.getOpt<std::string>(SUMO_ATTR_ALLOW, id.c_str(), ok, "", false);
     const std::string disallow = attrs.getOpt<std::string>(SUMO_ATTR_DISALLOW, id.c_str(), ok, "");
@@ -540,7 +530,7 @@ NLHandler::addLane(const SUMOSAXAttributes& attrs) {
     myCurrentIsBroken |= !ok;
     if (!myCurrentIsBroken) {
         try {
-            MSLane* lane = myEdgeControlBuilder.addLane(id, maxSpeed, friction, length, shape, width, permissions, changeLeft, changeRight, index, isRampAccel, type);
+            MSLane* lane = myEdgeControlBuilder.addLane(id, maxSpeed, length, shape, width, permissions, changeLeft, changeRight, index, isRampAccel, type);
             // insert the lane into the lane-dictionary, checking
             if (!MSLane::dictionary(id, lane)) {
                 delete lane;
@@ -579,7 +569,12 @@ NLHandler::openJunction(const SUMOSAXAttributes& attrs) {
     double x = attrs.get<double>(SUMO_ATTR_X, id.c_str(), ok);
     double y = attrs.get<double>(SUMO_ATTR_Y, id.c_str(), ok);
     double z = attrs.getOpt<double>(SUMO_ATTR_Z, id.c_str(), ok, 0);
-    const SumoXMLNodeType type = attrs.get<SumoXMLNodeType>(SUMO_ATTR_TYPE, id.c_str(), ok);
+    bool typeOK = true;
+    SumoXMLNodeType type = attrs.getNodeType(typeOK);
+    if (!typeOK) {
+        WRITE_ERROR("An unknown or invalid junction type occurred in junction '" + id + "'.");
+        ok = false;
+    }
     std::string key = attrs.getOpt<std::string>(SUMO_ATTR_KEY, id.c_str(), ok, "");
     std::string name = attrs.getOpt<std::string>(SUMO_ATTR_NAME, id.c_str(), ok, "");
     // incoming lanes
@@ -635,6 +630,7 @@ NLHandler::addParam(const SUMOSAXAttributes& attrs) {
     // set
     if (ok && myAmParsingTLLogicOrJunction) {
         assert(key != "");
+        assert(val != "");
         myJunctionControlBuilder.addParam(key, val);
     }
 }
@@ -811,15 +807,13 @@ NLHandler::addPhase(const SUMOSAXAttributes& attrs) {
     // if the traffic light is an actuated traffic light, try to get
     //  the minimum and maximum durations
     phase->minDuration = attrs.getOptSUMOTimeReporting(SUMO_ATTR_MINDURATION, id.c_str(), ok, duration);
-    // if minDur is set but not maxDur, assume high maxDur (avoid using the absolute max in case we do some arithmetic later)
-    SUMOTime defaultMaxDur = attrs.hasAttribute(SUMO_ATTR_MINDURATION) ? std::numeric_limits<int>::max() : duration;
-    phase->maxDuration = attrs.getOptSUMOTimeReporting(SUMO_ATTR_MAXDURATION, id.c_str(), ok, defaultMaxDur);
+    phase->maxDuration = attrs.getOptSUMOTimeReporting(SUMO_ATTR_MAXDURATION, id.c_str(), ok, duration);
     phase->earliestEnd = attrs.getOptSUMOTimeReporting(SUMO_ATTR_EARLIEST_END, id.c_str(), ok, tDefault);
     phase->latestEnd = attrs.getOptSUMOTimeReporting(SUMO_ATTR_LATEST_END, id.c_str(), ok, tDefault);
-    phase->nextPhases = attrs.getOpt<std::vector<int> >(SUMO_ATTR_NEXT, id.c_str(), ok);
-    phase->earlyTarget = attrs.getOpt<std::string>(SUMO_ATTR_EARLY_TARGET, id.c_str(), ok);
-    phase->finalTarget = attrs.getOpt<std::string>(SUMO_ATTR_FINAL_TARGET, id.c_str(), ok);
-    phase->name = attrs.getOpt<std::string>(SUMO_ATTR_NAME, id.c_str(), ok);
+    phase->nextPhases = attrs.getOptIntVector(SUMO_ATTR_NEXT, id.c_str(), ok);
+    phase->earlyTarget = attrs.getOpt<std::string>(SUMO_ATTR_EARLY_TARGET, id.c_str(), ok, "");
+    phase->finalTarget = attrs.getOpt<std::string>(SUMO_ATTR_FINAL_TARGET, id.c_str(), ok, "");
+    phase->name = attrs.getOpt<std::string>(SUMO_ATTR_NAME, id.c_str(), ok, "");
 
     phase->vehext = attrs.getOptSUMOTimeReporting(SUMO_ATTR_VEHICLEEXTENSION, id.c_str(), ok, tDefault);
     phase->yellow = attrs.getOptSUMOTimeReporting(SUMO_ATTR_YELLOW, id.c_str(), ok, tDefault);
@@ -882,29 +876,6 @@ NLHandler::addCondition(const SUMOSAXAttributes& attrs) {
 
 
 void
-NLHandler::addAssignment(const SUMOSAXAttributes& attrs) {
-    bool ok = true;
-    const std::string id = attrs.get<std::string>(SUMO_ATTR_ID, nullptr, ok);
-    const std::string check = attrs.get<std::string>(SUMO_ATTR_CHECK, nullptr, ok);
-    const std::string value = attrs.get<std::string>(SUMO_ATTR_VALUE, id.c_str(), ok);
-    myJunctionControlBuilder.addAssignment(id, check, value);
-}
-
-
-void
-NLHandler::addFunction(const SUMOSAXAttributes& attrs) {
-    bool ok = true;
-    const std::string id = attrs.get<std::string>(SUMO_ATTR_ID, nullptr, ok);
-    const int nArgs = attrs.get<int>(SUMO_ATTR_NARGS, nullptr, ok);
-    myJunctionControlBuilder.addFunction(id, nArgs);
-}
-
-void
-NLHandler::closeFunction() {
-    myJunctionControlBuilder.closeFunction();
-}
-
-void
 NLHandler::addE1Detector(const SUMOSAXAttributes& attrs) {
     myCurrentIsBroken = false;
     bool ok = true;
@@ -914,12 +885,10 @@ NLHandler::addE1Detector(const SUMOSAXAttributes& attrs) {
         myCurrentIsBroken = true;
         return;
     }
-    const SUMOTime period = attrs.getOptPeriod(id.c_str(), ok, SUMOTime_MAX_PERIOD);
+    const SUMOTime frequency = attrs.getSUMOTimeReporting(SUMO_ATTR_FREQUENCY, id.c_str(), ok);
     const double position = attrs.get<double>(SUMO_ATTR_POSITION, id.c_str(), ok);
-    const double length = attrs.getOpt<double>(SUMO_ATTR_LENGTH, id.c_str(), ok, 0);
     const bool friendlyPos = attrs.getOpt<bool>(SUMO_ATTR_FRIENDLY_POS, id.c_str(), ok, false);
     const std::string vTypes = attrs.getOpt<std::string>(SUMO_ATTR_VTYPES, id.c_str(), ok, "");
-    const std::string nextEdges = attrs.getOpt<std::string>(SUMO_ATTR_NEXT_EDGES, id.c_str(), ok, "");
     const std::string lane = attrs.get<std::string>(SUMO_ATTR_LANE, id.c_str(), ok);
     const std::string file = attrs.get<std::string>(SUMO_ATTR_FILE, id.c_str(), ok);
     const std::string detectPersonsString = attrs.getOpt<std::string>(SUMO_ATTR_DETECT_PERSONS, id.c_str(), ok, "");
@@ -938,9 +907,9 @@ NLHandler::addE1Detector(const SUMOSAXAttributes& attrs) {
         return;
     }
     try {
-        Parameterised* det = myDetectorBuilder.buildInductLoop(id, lane, position, length, period,
+        Parameterised* det = myDetectorBuilder.buildInductLoop(id, lane, position, frequency,
                              FileHelpers::checkForRelativity(file, getFileName()),
-                             friendlyPos, vTypes, nextEdges, detectPersons);
+                             friendlyPos, vTypes, detectPersons);
         myLastParameterised.push_back(det);
     } catch (InvalidArgument& e) {
         myCurrentIsBroken = true;
@@ -967,13 +936,12 @@ NLHandler::addInstantE1Detector(const SUMOSAXAttributes& attrs) {
     const std::string lane = attrs.get<std::string>(SUMO_ATTR_LANE, id.c_str(), ok);
     const std::string file = attrs.get<std::string>(SUMO_ATTR_FILE, id.c_str(), ok);
     const std::string vTypes = attrs.getOpt<std::string>(SUMO_ATTR_VTYPES, id.c_str(), ok, "");
-    const std::string nextEdges = attrs.getOpt<std::string>(SUMO_ATTR_NEXT_EDGES, id.c_str(), ok, "");
     if (!ok) {
         myCurrentIsBroken = true;
         return;
     }
     try {
-        Parameterised* det = myDetectorBuilder.buildInstantInductLoop(id, lane, position, FileHelpers::checkForRelativity(file, getFileName()), friendlyPos, vTypes, nextEdges);
+        Parameterised* det = myDetectorBuilder.buildInstantInductLoop(id, lane, position, FileHelpers::checkForRelativity(file, getFileName()), friendlyPos, vTypes);
         myLastParameterised.push_back(det);
     } catch (InvalidArgument& e) {
         WRITE_ERROR(e.what());
@@ -989,14 +957,14 @@ NLHandler::addVTypeProbeDetector(const SUMOSAXAttributes& attrs) {
     WRITE_WARNING("VTypeProbes are deprecated. Use fcd-output devices (assigned to the vType) instead.");
     bool ok = true;
     std::string id = attrs.get<std::string>(SUMO_ATTR_ID, nullptr, ok);
-    SUMOTime period = attrs.getOptPeriod(id.c_str(), ok, SUMOTime_MAX_PERIOD);
+    SUMOTime frequency = attrs.getSUMOTimeReporting(SUMO_ATTR_FREQUENCY, id.c_str(), ok);
     std::string type = attrs.getStringSecure(SUMO_ATTR_TYPE, "");
     std::string file = attrs.get<std::string>(SUMO_ATTR_FILE, id.c_str(), ok);
     if (!ok) {
         return;
     }
     try {
-        myDetectorBuilder.buildVTypeProbe(id, type, period, FileHelpers::checkForRelativity(file, getFileName()));
+        myDetectorBuilder.buildVTypeProbe(id, type, frequency, FileHelpers::checkForRelativity(file, getFileName()));
     } catch (InvalidArgument& e) {
         WRITE_ERROR(e.what());
     } catch (IOError& e) {
@@ -1009,7 +977,7 @@ void
 NLHandler::addRouteProbeDetector(const SUMOSAXAttributes& attrs) {
     bool ok = true;
     std::string id = attrs.get<std::string>(SUMO_ATTR_ID, nullptr, ok);
-    SUMOTime period = attrs.getOptPeriod(id.c_str(), ok, SUMOTime_MAX_PERIOD);
+    SUMOTime frequency = attrs.getSUMOTimeReporting(SUMO_ATTR_FREQUENCY, id.c_str(), ok);
     SUMOTime begin = attrs.getOptSUMOTimeReporting(SUMO_ATTR_BEGIN, id.c_str(), ok, -1);
     std::string edge = attrs.get<std::string>(SUMO_ATTR_EDGE, id.c_str(), ok);
     std::string file = attrs.get<std::string>(SUMO_ATTR_FILE, id.c_str(), ok);
@@ -1018,7 +986,7 @@ NLHandler::addRouteProbeDetector(const SUMOSAXAttributes& attrs) {
         return;
     }
     try {
-        myDetectorBuilder.buildRouteProbe(id, edge, period, begin,
+        myDetectorBuilder.buildRouteProbe(id, edge, frequency, begin,
                                           FileHelpers::checkForRelativity(file, getFileName()), vTypes);
     } catch (InvalidArgument& e) {
         WRITE_ERROR(e.what());
@@ -1051,7 +1019,6 @@ NLHandler::addE2Detector(const SUMOSAXAttributes& attrs) {
     std::string lane = attrs.getOpt<std::string>(SUMO_ATTR_LANE, id.c_str(), ok, "");
     const std::string file = attrs.get<std::string>(SUMO_ATTR_FILE, id.c_str(), ok);
     const std::string vTypes = attrs.getOpt<std::string>(SUMO_ATTR_VTYPES, id.c_str(), ok, "");
-    const std::string nextEdges = attrs.getOpt<std::string>(SUMO_ATTR_NEXT_EDGES, id.c_str(), ok, "");
 
     double endPosition = attrs.getOpt<double>(SUMO_ATTR_ENDPOS, id.c_str(), ok, std::numeric_limits<double>::max());
     const std::string lanes = attrs.getOpt<std::string>(SUMO_ATTR_LANES, id.c_str(), ok, ""); // lanes has priority to lane
@@ -1168,17 +1135,17 @@ NLHandler::addE2Detector(const SUMOSAXAttributes& attrs) {
         }
     }
 
-    // Period
+    // Frequency
 
-    SUMOTime period;
+    SUMOTime frequency;
     if (!lsaGiven) {
-        period = attrs.getOptPeriod(id.c_str(), ok, SUMOTime_MAX_PERIOD);
+        frequency = attrs.getSUMOTimeReporting(SUMO_ATTR_FREQUENCY, id.c_str(), ok);
         if (!ok) {
             myCurrentIsBroken = true;
             return;
         }
     } else {
-        period = attrs.getPeriod(id.c_str(), ok, false);
+        frequency = attrs.getSUMOTimeReporting(SUMO_ATTR_FREQUENCY, id.c_str(), ok, false);
     }
 
     // TLS
@@ -1188,9 +1155,9 @@ NLHandler::addE2Detector(const SUMOSAXAttributes& attrs) {
         if (tlls->getActive() == nullptr) {
             throw InvalidArgument("The detector '" + id + "' refers to an unknown lsa '" + lsaid + "'.");
         }
-        if (period != -1) {
-            WRITE_WARNING("Ignoring argument 'period' for E2Detector '" + id + "' since argument 'tl' was given.");
-            period = -1;
+        if (frequency != -1) {
+            WRITE_WARNING("Ignoring argument 'frequency' for E2Detector '" + id + "' since argument 'tl' was given.");
+            frequency = -1;
         }
     }
 
@@ -1212,15 +1179,15 @@ NLHandler::addE2Detector(const SUMOSAXAttributes& attrs) {
     // Build detector
     if (lanesGiven) {
         // specification by a lane sequence
-        det = myDetectorBuilder.buildE2Detector(id, clanes, position, endPosition, filename, period,
+        det = myDetectorBuilder.buildE2Detector(id, clanes, position, endPosition, filename, frequency,
                                                 haltingTimeThreshold, haltingSpeedThreshold, jamDistThreshold,
-                                                vTypes, nextEdges, detectPersons, friendlyPos, showDetector,
+                                                vTypes, detectPersons, friendlyPos, showDetector,
                                                 tlls, cToLane);
     } else {
         // specification by start or end lane
-        det = myDetectorBuilder.buildE2Detector(id, clane, position, endPosition, length, filename, period,
+        det = myDetectorBuilder.buildE2Detector(id, clane, position, endPosition, length, filename, frequency,
                                                 haltingTimeThreshold, haltingSpeedThreshold, jamDistThreshold,
-                                                vTypes, nextEdges, detectPersons, friendlyPos, showDetector,
+                                                vTypes, detectPersons, friendlyPos, showDetector,
                                                 tlls, cToLane);
     }
     myLastParameterised.push_back(det);
@@ -1232,12 +1199,11 @@ NLHandler::beginE3Detector(const SUMOSAXAttributes& attrs) {
     myCurrentIsBroken = false;
     bool ok = true;
     std::string id = attrs.get<std::string>(SUMO_ATTR_ID, nullptr, ok);
-    const SUMOTime period = attrs.getOptPeriod(id.c_str(), ok, SUMOTime_MAX_PERIOD);
+    const SUMOTime frequency = attrs.getSUMOTimeReporting(SUMO_ATTR_FREQUENCY, id.c_str(), ok);
     const SUMOTime haltingTimeThreshold = attrs.getOptSUMOTimeReporting(SUMO_ATTR_HALTING_TIME_THRESHOLD, id.c_str(), ok, TIME2STEPS(1));
     const double haltingSpeedThreshold = attrs.getOpt<double>(SUMO_ATTR_HALTING_SPEED_THRESHOLD, id.c_str(), ok, 5.0f / 3.6f);
     const std::string file = attrs.get<std::string>(SUMO_ATTR_FILE, id.c_str(), ok);
     const std::string vTypes = attrs.getOpt<std::string>(SUMO_ATTR_VTYPES, id.c_str(), ok, "");
-    const std::string nextEdges = attrs.getOpt<std::string>(SUMO_ATTR_NEXT_EDGES, id.c_str(), ok, "");
     const bool openEntry = attrs.getOpt<bool>(SUMO_ATTR_OPEN_ENTRY, id.c_str(), ok, false);
     const std::string detectPersonsString = attrs.getOpt<std::string>(SUMO_ATTR_DETECT_PERSONS, id.c_str(), ok, "");
     int detectPersons = 0;
@@ -1257,7 +1223,7 @@ NLHandler::beginE3Detector(const SUMOSAXAttributes& attrs) {
     try {
         Parameterised* det = myDetectorBuilder.beginE3Detector(id,
                              FileHelpers::checkForRelativity(file, getFileName()),
-                             period, haltingSpeedThreshold, haltingTimeThreshold, vTypes, nextEdges, detectPersons, openEntry);
+                             frequency, haltingSpeedThreshold, haltingTimeThreshold, vTypes, detectPersons, openEntry);
         myLastParameterised.push_back(det);
     } catch (InvalidArgument& e) {
         myCurrentIsBroken = true;
@@ -1310,12 +1276,9 @@ NLHandler::addEdgeLaneMeanData(const SUMOSAXAttributes& attrs, int objecttype) {
     const std::string type = attrs.getOpt<std::string>(SUMO_ATTR_TYPE, id.c_str(), ok, "performance");
     std::string vtypes = attrs.getOpt<std::string>(SUMO_ATTR_VTYPES, id.c_str(), ok, "");
     const std::string writeAttributes = attrs.getOpt<std::string>(SUMO_ATTR_WRITE_ATTRIBUTES, id.c_str(), ok, "");
-    const SUMOTime period = attrs.getOptPeriod(id.c_str(), ok, -1);
+    const SUMOTime frequency = attrs.getOptSUMOTimeReporting(SUMO_ATTR_FREQUENCY, id.c_str(), ok, -1);
     const SUMOTime begin = attrs.getOptSUMOTimeReporting(SUMO_ATTR_BEGIN, id.c_str(), ok, string2time(OptionsCont::getOptions().getString("begin")));
     const SUMOTime end = attrs.getOptSUMOTimeReporting(SUMO_ATTR_END, id.c_str(), ok, string2time(OptionsCont::getOptions().getString("end")));
-    std::vector<std::string> edgeIDs = attrs.getOpt<std::vector<std::string> >(SUMO_ATTR_EDGES, id.c_str(), ok);
-    const std::string edgesFile = attrs.getOpt<std::string>(SUMO_ATTR_EDGESFILE, id.c_str(), ok, "");
-    const bool aggregate = attrs.getOpt<bool>(SUMO_ATTR_AGGREGATE, id.c_str(), ok, false);
     if (!ok) {
         return;
     }
@@ -1328,38 +1291,13 @@ NLHandler::addEdgeLaneMeanData(const SUMOSAXAttributes& attrs, int objecttype) {
             return;
         }
     }
-    if (edgesFile != "") {
-        std::ifstream strm(edgesFile.c_str());
-        if (!strm.good()) {
-            throw ProcessError("Could not load names of edges for edgeData defintion '" + id + "' from '" + edgesFile + "'.");
-        }
-        while (strm.good()) {
-            std::string name;
-            strm >> name;
-            // maybe we're loading an edge-selection
-            if (StringUtils::startsWith(name, "edge:")) {
-                edgeIDs.push_back(name.substr(5));
-            } else if (name != "") {
-                edgeIDs.push_back(name);
-            }
-        }
-    }
-    std::vector<MSEdge*> edges;
-    for (const std::string& edgeID : edgeIDs) {
-        MSEdge* edge = MSEdge::dictionary(edgeID);
-        if (edge == nullptr) {
-            WRITE_ERROR("Unknown edge '" + edgeID + "' in edgeData definition '" + id + "'");
-            return;
-        }
-        edges.push_back(edge);
-    }
     try {
-        myDetectorBuilder.createEdgeLaneMeanData(id, period, begin, end,
+        myDetectorBuilder.createEdgeLaneMeanData(id, frequency, begin, end,
                 type, objecttype == SUMO_TAG_MEANDATA_LANE,
                 // equivalent to TplConvert::_2bool used in SUMOSAXAttributes::getBool
                 excludeEmpty[0] != 't' && excludeEmpty[0] != 'T' && excludeEmpty[0] != '1' && excludeEmpty[0] != 'x',
                 excludeEmpty == "defaults", withInternal, trackVehicles, detectPersons,
-                maxTravelTime, minSamples, haltingSpeedThreshold, vtypes, writeAttributes, edges, aggregate,
+                maxTravelTime, minSamples, haltingSpeedThreshold, vtypes, writeAttributes,
                 FileHelpers::checkForRelativity(file, getFileName()));
     } catch (InvalidArgument& e) {
         WRITE_ERROR(e.what());
@@ -1395,12 +1333,11 @@ NLHandler::addConnection(const SUMOSAXAttributes& attrs) {
         std::string tlID = attrs.getOpt<std::string>(SUMO_ATTR_TLID, nullptr, ok, "");
         std::string viaID = attrs.getOpt<std::string>(SUMO_ATTR_VIA, nullptr, ok, "");
 
-        MSEdge* from = MSEdge::dictionaryHint(fromID, myPreviousEdgeIdx);
+        MSEdge* from = MSEdge::dictionary(fromID);
         if (from == nullptr) {
             WRITE_ERROR("Unknown from-edge '" + fromID + "' in connection.");
             return;
         }
-        myPreviousEdgeIdx = from->getNumericalID();
         MSEdge* to = MSEdge::dictionary(toID);
         if (to == nullptr) {
             WRITE_ERROR("Unknown to-edge '" + toID + "' in connection.");
@@ -1530,49 +1467,31 @@ NLHandler::addDistrict(const SUMOSAXAttributes& attrs) {
         return;
     }
     try {
-        const std::string sinkID = myCurrentDistrictID + "-sink";
-        const std::string sourceID = myCurrentDistrictID + "-source";
-
-        MSEdge* sink = myEdgeControlBuilder.buildEdge(sinkID, SumoXMLEdgeFunc::CONNECTOR, "", "", -1, 0);
-        if (!MSEdge::dictionary(sinkID, sink)) {
+        MSEdge* sink = myEdgeControlBuilder.buildEdge(myCurrentDistrictID + "-sink", SumoXMLEdgeFunc::CONNECTOR, "", "", -1, 0);
+        if (!MSEdge::dictionary(myCurrentDistrictID + "-sink", sink)) {
             delete sink;
-            if (OptionsCont::getOptions().getBool("junction-taz")
-                    && myNet.getJunctionControl().get(myCurrentDistrictID) != nullptr) {
-                // overwrite junction taz
-                sink = MSEdge::dictionary(sinkID);
-                sink->resetTAZ(myNet.getJunctionControl().get(myCurrentDistrictID));
-                WRITE_WARNINGF("Replacing junction-taz '%' with loaded TAZ.", myCurrentDistrictID);
-            } else {
-                throw InvalidArgument("Another edge with the id '" + sinkID + "' exists.");
-            }
-        } else {
-            sink->initialize(new std::vector<MSLane*>());
+            throw InvalidArgument("Another edge with the id '" + myCurrentDistrictID + "-sink' exists.");
         }
-        MSEdge* source = myEdgeControlBuilder.buildEdge(sourceID, SumoXMLEdgeFunc::CONNECTOR, "", "", -1, 0);
-        if (!MSEdge::dictionary(sourceID, source)) {
+        sink->initialize(new std::vector<MSLane*>());
+        MSEdge* source = myEdgeControlBuilder.buildEdge(myCurrentDistrictID + "-source", SumoXMLEdgeFunc::CONNECTOR, "", "", -1, 0);
+        if (!MSEdge::dictionary(myCurrentDistrictID + "-source", source)) {
             delete source;
-            if (OptionsCont::getOptions().getBool("junction-taz")
-                    && myNet.getJunctionControl().get(myCurrentDistrictID) != nullptr) {
-                // overwrite junction taz
-                source = MSEdge::dictionary(sourceID);
-                source->resetTAZ(myNet.getJunctionControl().get(myCurrentDistrictID));
-            } else {
-                throw InvalidArgument("Another edge with the id '" + sourceID + "' exists.");
-            }
-        } else {
-            source->initialize(new std::vector<MSLane*>());
+            throw InvalidArgument("Another edge with the id '" + myCurrentDistrictID + "-source' exists.");
         }
+        source->initialize(new std::vector<MSLane*>());
         sink->setOtherTazConnector(source);
         source->setOtherTazConnector(sink);
-        const std::vector<std::string>& desc = attrs.getOpt<std::vector<std::string> >(SUMO_ATTR_EDGES, myCurrentDistrictID.c_str(), ok);
-        for (const std::string& eID : desc) {
-            MSEdge* edge = MSEdge::dictionary(eID);
-            // check whether the edge exists
-            if (edge == nullptr) {
-                throw InvalidArgument("The edge '" + eID + "' within district '" + myCurrentDistrictID + "' is not known.");
+        if (attrs.hasAttribute(SUMO_ATTR_EDGES)) {
+            std::vector<std::string> desc = attrs.getStringVector(SUMO_ATTR_EDGES);
+            for (std::vector<std::string>::const_iterator i = desc.begin(); i != desc.end(); ++i) {
+                MSEdge* edge = MSEdge::dictionary(*i);
+                // check whether the edge exists
+                if (edge == nullptr) {
+                    throw InvalidArgument("The edge '" + *i + "' within district '" + myCurrentDistrictID + "' is not known.");
+                }
+                source->addSuccessor(edge);
+                edge->addSuccessor(sink);
             }
-            source->addSuccessor(edge);
-            edge->addSuccessor(sink);
         }
         RGBColor color = attrs.getOpt<RGBColor>(SUMO_ATTR_COLOR, myCurrentDistrictID.c_str(), ok, RGBColor::parseColor("1.0,.33,.33"));
         const std::string name = attrs.getOpt<std::string>(SUMO_ATTR_NAME, myCurrentDistrictID.c_str(), ok, "");
@@ -1619,17 +1538,18 @@ NLHandler::addDistrictEdge(const SUMOSAXAttributes& attrs, bool isSource) {
 
 void
 NLHandler::addRoundabout(const SUMOSAXAttributes& attrs) {
-    bool ok = true;
-    const std::vector<std::string>& edgeIDs = attrs.get<std::vector<std::string> >(SUMO_ATTR_EDGES, nullptr, ok);
-    if (ok) {
-        for (const std::string& eID : edgeIDs) {
-            MSEdge* edge = MSEdge::dictionary(eID);
+    if (attrs.hasAttribute(SUMO_ATTR_EDGES)) {
+        std::vector<std::string> edgeIDs = attrs.getStringVector(SUMO_ATTR_EDGES);
+        for (std::vector<std::string>::iterator it = edgeIDs.begin(); it != edgeIDs.end(); ++it) {
+            MSEdge* edge = MSEdge::dictionary(*it);
             if (edge == nullptr) {
-                WRITE_ERROR("Unknown edge '" + eID + "' in roundabout");
+                WRITE_ERROR("Unknown edge '" + (*it) + "' in roundabout");
             } else {
                 edge->markAsRoundabout();
             }
         }
+    } else {
+        WRITE_ERROR("Empty edges in roundabout.");
     }
 }
 
@@ -1716,7 +1636,6 @@ NLHandler::addPredecessorConstraint(int element, const SUMOSAXAttributes& attrs,
     const std::string foesString = attrs.get<std::string>(SUMO_ATTR_FOES, nullptr, ok);
     const std::vector<std::string> foes = StringTokenizer(foesString).getVector();
     const int limit = attrs.getOpt<int>(SUMO_ATTR_LIMIT, nullptr, ok, (int)foes.size());
-    const bool active = attrs.getOpt<bool>(SUMO_ATTR_ACTIVE, nullptr, ok, true);
 
     if (!MSNet::getInstance()->getTLSControl().knows(signalID)) {
         throw InvalidArgument("Rail signal '" + signalID + "' in railSignalConstraints is not known");
@@ -1727,7 +1646,7 @@ NLHandler::addPredecessorConstraint(int element, const SUMOSAXAttributes& attrs,
     }
     if (ok) {
         for (const std::string& foe : foes) {
-            MSRailSignalConstraint* c = new MSRailSignalConstraint_Predecessor(signal, foe, limit, active);
+            MSRailSignalConstraint* c = new MSRailSignalConstraint_Predecessor(signal, foe, limit);
             if (element == SUMO_TAG_PREDECESSOR) {
                 rs->addConstraint(tripId, c);
             } else if (element == SUMO_TAG_INSERTION_PREDECESSOR) {

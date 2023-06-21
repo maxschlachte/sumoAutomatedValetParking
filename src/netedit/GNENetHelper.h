@@ -58,6 +58,8 @@ class GNELane;
 class GNENetworkElement;
 class GNEPOI;
 class GNEPoly;
+class GNEShape;
+class GNETAZElement;
 class GNEUndoList;
 class GNEViewNet;
 
@@ -173,32 +175,6 @@ struct GNENetHelper {
 
         /// @brief get number of selected crossings
         int getNumberOfSelectedCrossings() const;
-
-        /// @}
-
-        /// @name function for walkingAreas
-        /// @{
-        /**@brief get WalkingArea by AC
-        * @param[in] AC The attribute carrier related with the walkingArea
-        * @param[in] hardFail Whether attempts to retrieve a nonexisting WalkingArea should result in an exception
-        * @throws UnknownElement
-        */
-        GNEWalkingArea* retrieveWalkingArea(GNEAttributeCarrier* AC, bool hardFail = true) const;
-
-        /// @brief get walkingAreas
-        const std::set<GNEWalkingArea*>& getWalkingAreas() const;
-
-        /// @brief return all selected walkingAreas
-        std::vector<GNEWalkingArea*> getSelectedWalkingAreas() const;
-
-        /// @brief insert walkingArea
-        void insertWalkingArea(GNEWalkingArea* walkingArea);
-
-        /// @brief delete walkingArea
-        void deleteWalkingArea(GNEWalkingArea* walkingArea);
-
-        /// @brief get number of selected walkingAreas
-        int getNumberOfSelectedWalkingAreas() const;
 
         /// @}
 
@@ -360,23 +336,49 @@ struct GNENetHelper {
         /// @brief get selected additionals
         std::vector<GNEAdditional*> getSelectedAdditionals() const;
 
-        /// @brief get selected shapes
-        std::vector<GNEAdditional*> getSelectedShapes() const;
-
-        /// @brief get number of additionals
+        /// @brief get number of additonals
         int getNumberOfAdditionals() const;
 
         /// @brief clear additionals
         void clearAdditionals();
 
+        /// @brief get number of selected additionals
+        int getNumberOfSelectedAdditionals() const;
+
         /// @brief generate additional id
         std::string generateAdditionalID(SumoXMLTag type) const;
 
-        /// @brief get number of selected additionals (Including POIs, Polygons, TAZs and Wires)
-        int getNumberOfSelectedAdditionals() const;
+        /// @}
 
-        /// @brief get number of selected pure additionals (Except POIs, Polygons, TAZs and Wires)
-        int getNumberOfSelectedPureAdditionals() const;
+        /// @name function for shapes
+        /// @{
+        /**@brief Returns the named shape
+         * @param[in] type tag with the type of shape
+         * @param[in] id The id of the shape to return.
+         * @param[in] hardFail Whether attempts to retrieve a nonexisting shape should result in an exception
+         */
+        GNEShape* retrieveShape(SumoXMLTag, const std::string& id, bool hardFail = true) const;
+
+        /**@brief Returns the named shape
+         * @param[in] id The attribute carrier related with the additional element
+         * @param[in] hardFail Whether attempts to retrieve a nonexisting shape should result in an exception
+         */
+        GNEShape* retrieveShape(GNEAttributeCarrier* AC, bool hardFail = true) const;
+
+        /// @brief get selected shapes
+        std::vector<GNEShape*> getSelectedShapes();
+
+        /// @brief get shapes
+        const std::map<SumoXMLTag, std::set<GNEShape*> >& getShapes() const;
+
+        /// @brief generate Shape ID
+        std::string generateShapeID(SumoXMLTag shapeTag) const;
+
+        /// @brief Returns the number of shapes
+        int getNumberOfShapes() const;
+
+        /// @brief clear shapes
+        void clearShapes();
 
         /// @brief get number of selected polygons
         int getNumberOfSelectedPolygons() const;
@@ -384,17 +386,46 @@ struct GNENetHelper {
         /// @brief get number of selected POIs
         int getNumberOfSelectedPOIs() const;
 
+        /// @}
+
+        /// @name function for TAZElements
+        /// @{
+        /**@brief Returns the named TAZElement
+         * @param[in] type tag with the type of TAZElement
+         * @param[in] id The id of the TAZElement to return.
+         * @param[in] hardFail Whether attempts to retrieve a nonexisting TAZElement should result in an exception
+         */
+        GNETAZElement* retrieveTAZElement(SumoXMLTag type, const std::string& id, bool hardFail = true) const;
+
+        /**@brief Returns the named TAZElement
+         * @param[in] id The attribute carrier related with the additional element
+         * @param[in] hardFail Whether attempts to retrieve a nonexisting TAZElement should result in an exception
+         */
+        GNETAZElement* retrieveTAZElement(GNEAttributeCarrier* AC, bool hardFail = true) const;
+
+        /// @brief get selected TAZElements
+        std::vector<GNETAZElement*> getSelectedTAZElements() const;
+
+        /// @brief get TAZElements
+        const std::map<SumoXMLTag, std::set<GNETAZElement*> >& getTAZElements() const;
+
+        /// @brief clear TAZElements
+        void clearTAZElements();
+
+        /**@brief Returns the number of TAZElements of the net
+         * @param[in] type type of TAZElement to count. SUMO_TAG_NOTHING will count all TAZElements
+         * @return Number of TAZElements of the net
+         */
+        int getNumberOfTAZElements() const;
+
         /// @brief get number of selected TAZs
         int getNumberOfSelectedTAZs() const;
 
-        /// @brief get number of selected TAZSources
-        int getNumberOfSelectedTAZSources() const;
+        /// @brief return true if given TAZElement exist
+        bool TAZElementExist(const GNETAZElement* TAZElement) const;
 
-        /// @brief get number of selected TAZSinks
-        int getNumberOfSelectedTAZSinks() const;
-
-        /// @brief get number of selected Wires
-        int getNumberOfSelectedWires() const;
+        /// @brief generate TAZElement ID
+        std::string generateTAZElementID(SumoXMLTag TAZElementTag) const;
 
         /// @}
 
@@ -433,9 +464,6 @@ struct GNENetHelper {
 
         /// @brief add default VTypes
         void addDefaultVTypes();
-
-        /// @brief get (and update) stop index
-        int getStopIndex();
 
         /// @brief get number of selected demand elements
         int getNumberOfSelectedDemandElements() const;
@@ -607,6 +635,37 @@ struct GNENetHelper {
 
         /// @}
 
+        /// @name Insertion and erasing of GNEShapes items
+        /// @{
+
+        /// @brief return true if given shape exist
+        bool shapeExist(const GNEShape* shape) const;
+
+        /**@brief Insert a shape element int GNENet container.
+         * @throw processError if route was already inserted
+         */
+        void insertShape(GNEShape* shape);
+
+        /**@brief delete shape element of GNENet container
+         * @throw processError if shape wasn't previously inserted
+         */
+        void deleteShape(GNEShape* shape);
+
+        /// @name Insertion and erasing of GNETAZElements items
+        /// @{
+
+        /**@brief Insert a TAZElement element int GNENet container.
+         * @throw processError if route was already inserted
+         */
+        void insertTAZElement(GNETAZElement* TAZElement);
+
+        /**@brief delete TAZElement element of GNENet container
+         * @throw processError if TAZElement wasn't previously inserted
+         */
+        void deleteTAZElement(GNETAZElement* TAZElement);
+
+        /// @}
+
         /// @name Insertion and erasing of GNEDemandElements items
         /// @{
 
@@ -647,17 +706,11 @@ struct GNENetHelper {
         /// @brief pointer to net
         GNENet* myNet;
 
-        /// @brief stop index
-        int myStopIndex;
-
         /// @brief map with the ID and pointer to junctions of net
         std::map<std::string, GNEJunction*> myJunctions;
 
         /// @brief set with crossings
         std::set<GNECrossing*> myCrossings;
-
-        /// @brief set with walkingAreas
-        std::set<GNEWalkingArea*> myWalkingAreas;
 
         /// @brief map with the ID and pointer to edgeTypes of net
         std::map<std::string, GNEEdgeType*> myEdgeTypes;
@@ -673,6 +726,12 @@ struct GNENetHelper {
 
         /// @brief map with the tag and pointer to additional elements of net
         std::map<SumoXMLTag, std::set<GNEAdditional*> > myAdditionals;
+
+        /// @brief map with the tag and pointer to shape elements of net
+        std::map<SumoXMLTag, std::set<GNEShape*> > myShapes;
+
+        /// @brief map with the tag and pointer to TAZElement elements of net
+        std::map<SumoXMLTag, std::set<GNETAZElement*> > myTAZElements;
 
         /// @brief map with the tag and pointer to demand elements of net
         std::map<SumoXMLTag, std::set<GNEDemandElement*> > myDemandElements;

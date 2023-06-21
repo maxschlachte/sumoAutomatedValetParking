@@ -26,12 +26,11 @@
 #include <utils/vehicle/SUMOVehicle.h>
 #include <utils/geom/Position.h>
 #include <utils/common/RGBColor.h>
-#include <microsim/transportables/MSTransportable.h>
 #include <microsim/MSGlobals.h>
 #include <microsim/MSVehicleType.h>
 #include <microsim/MSNet.h>
-#include <microsim/MSLane.h>
-#include <microsim/MSStop.h>
+#include "MSLane.h"
+#include <microsim/transportables/MSTransportable.h>
 #include "MSStoppingPlace.h"
 
 // ===========================================================================
@@ -48,9 +47,7 @@ MSStoppingPlace::MSStoppingPlace(const std::string& id,
     Named(id),
     myElement(element),
     myLines(lines), myLane(lane),
-    myBegPos(begPos), myEndPos(endPos),
-    myLastFreePos(endPos),
-    myLastParking(nullptr),
+    myBegPos(begPos), myEndPos(endPos), myLastFreePos(endPos),
     myName(name),
     myTransportableCapacity(capacity),
     myParkingFactor(parkingLength <= 0 ? 1 : (endPos - begPos) / parkingLength),
@@ -102,14 +99,9 @@ MSStoppingPlace::enter(SUMOVehicle* veh, bool parking) {
 
 double
 MSStoppingPlace::getLastFreePos(const SUMOVehicle& forVehicle, double /*brakePos*/) const {
-    if (getStoppedVehicleNumber() > 0) {
+    if (myLastFreePos != myEndPos) {
         const double vehGap = forVehicle.getVehicleType().getMinGap();
         double pos = myLastFreePos - vehGap;
-        if (myParkingFactor < 1 && myLastParking != nullptr && forVehicle.hasStops() && !forVehicle.getStops().front().pars.parking
-                && myLastParking->remainingStopDuration() < forVehicle.getStops().front().getMinDuration(SIMSTEP)) {
-            // stop far back enough so that the previous vehicle can leave
-            pos = myLastParking->getPositionOnLane() - myLastParking->getLength() - vehGap - NUMERICAL_EPS;
-        }
         if (forVehicle.getLane() == &myLane && forVehicle.getPositionOnLane() < myEndPos && forVehicle.getPositionOnLane() > myBegPos && forVehicle.getSpeed() <= SUMO_const_haltingSpeed) {
             return forVehicle.getPositionOnLane();
         }
@@ -253,14 +245,9 @@ MSStoppingPlace::leaveFrom(SUMOVehicle* what) {
 void
 MSStoppingPlace::computeLastFreePos() {
     myLastFreePos = myEndPos;
-    myLastParking = nullptr;
-    for (auto item : myEndPositions) {
-        // vehicle might be stopped beyond myEndPos
-        if (myLastFreePos >= item.second.second || myLastFreePos == myEndPos) {
-            myLastFreePos = item.second.second;
-            if (item.first->isStoppedParking()) {
-                myLastParking = item.first;
-            }
+    for (auto i = myEndPositions.begin(); i != myEndPositions.end(); i++) {
+        if (myLastFreePos > (*i).second.second) {
+            myLastFreePos = (*i).second.second;
         }
     }
 }
@@ -347,7 +334,7 @@ void
 MSStoppingPlace::clearState() {
     myEndPositions.clear();
     myWaitingTransportables.clear();
-    computeLastFreePos();
+    myLastFreePos = myEndPos;
 }
 
 

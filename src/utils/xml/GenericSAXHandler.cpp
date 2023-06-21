@@ -40,8 +40,7 @@ GenericSAXHandler::GenericSAXHandler(
     StringBijection<int>::Entry* tags, int terminatorTag,
     StringBijection<int>::Entry* attrs, int terminatorAttr,
     const std::string& file, const std::string& expectedRoot)
-    : myParentHandler(nullptr), myParentIndicator(SUMO_TAG_NOTHING), myFileName(file),
-      myExpectedRoot(expectedRoot), myNextSectionStart(-1, nullptr) {
+    : myParentHandler(nullptr), myParentIndicator(SUMO_TAG_NOTHING), myFileName(file), myExpectedRoot(expectedRoot), myRootSeen(false) {
     int i = 0;
     while (tags[i].key != terminatorTag) {
         myTagMap.insert(TagMap::value_type(tags[i].str, tags[i].key));
@@ -66,7 +65,6 @@ GenericSAXHandler::~GenericSAXHandler() {
     for (AttrMap::iterator i1 = myPredefinedTags.begin(); i1 != myPredefinedTags.end(); i1++) {
         delete[](*i1);
     }
-    delete myNextSectionStart.second;
 }
 
 
@@ -105,18 +103,8 @@ GenericSAXHandler::startElement(const XMLCh* const /*uri*/,
         WRITE_WARNING("Found root element '" + name + "' in file '" + getFileName() + "' (expected '" + myExpectedRoot + "').");
     }
     myRootSeen = true;
+    int element = convertTag(name);
     myCharactersVector.clear();
-    const int element = convertTag(name);
-    if (mySectionSeen && !mySectionOpen && element != mySection) {
-        mySectionEnded = true;
-        myNextSectionStart.first = element;
-        myNextSectionStart.second = new SUMOSAXAttributesImpl_Xerces(attrs, myPredefinedTags, myPredefinedTagsMML, name);
-        return;
-    }
-    if (element == mySection) {
-        mySectionSeen = true;
-        mySectionOpen = true;
-    }
     SUMOSAXAttributesImpl_Xerces na(attrs, myPredefinedTags, myPredefinedTagsMML, name);
     if (element == SUMO_TAG_INCLUDE) {
         std::string file = na.getString(SUMO_ATTR_HREF);
@@ -160,9 +148,6 @@ GenericSAXHandler::endElement(const XMLCh* const /*uri*/,
         }
         delete[] buf;
     }
-    if (element == mySection) {
-        mySectionOpen = false;
-    }
     if (element != SUMO_TAG_INCLUDE) {
         myEndElement(element);
         if (myParentHandler && myParentIndicator == element) {
@@ -185,9 +170,7 @@ GenericSAXHandler::registerParent(const int tag, GenericSAXHandler* handler) {
 void
 GenericSAXHandler::characters(const XMLCh* const chars,
                               const XERCES3_SIZE_t length) {
-    if (myCollectCharacterData) {
-        myCharactersVector.push_back(StringUtils::transcode(chars, (int)length));
-    }
+    myCharactersVector.push_back(StringUtils::transcode(chars, (int)length));
 }
 
 
@@ -243,11 +226,5 @@ GenericSAXHandler::myCharacters(int, const std::string&) {}
 void
 GenericSAXHandler::myEndElement(int) {}
 
-void
-GenericSAXHandler::callParentEnd(int element) {
-    if (myParentHandler) {
-        myParentHandler->myEndElement(element);
-    }
-}
 
 /****************************************************************************/

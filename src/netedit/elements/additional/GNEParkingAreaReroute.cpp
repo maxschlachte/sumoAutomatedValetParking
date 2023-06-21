@@ -31,8 +31,9 @@
 
 GNEParkingAreaReroute::GNEParkingAreaReroute(GNENet* net):
     GNEAdditional("", net, GLO_REROUTER, SUMO_TAG_PARKING_AREA_REROUTE, "",
-{}, {}, {}, {}, {}, {}),
-myProbability(0),
+{}, {}, {}, {}, {}, {}, {}, {},
+std::map<std::string, std::string>()),
+    myProbability(0),
 myVisible(0) {
     // reset default values
     resetDefaultValues();
@@ -41,7 +42,8 @@ myVisible(0) {
 
 GNEParkingAreaReroute::GNEParkingAreaReroute(GNEAdditional* rerouterIntervalParent, GNEAdditional* newParkingArea, double probability, bool visible):
     GNEAdditional(rerouterIntervalParent->getNet(), GLO_REROUTER, SUMO_TAG_PARKING_AREA_REROUTE, "",
-{}, {}, {}, {rerouterIntervalParent, newParkingArea}, {}, {}),
+{}, {}, {}, {rerouterIntervalParent, newParkingArea}, {}, {}, {}, {},
+std::map<std::string, std::string>()),
 myProbability(probability),
 myVisible(visible) {
     // update boundary of rerouter parent
@@ -125,7 +127,7 @@ std::string
 GNEParkingAreaReroute::getAttribute(SumoXMLAttr key) const {
     switch (key) {
         case SUMO_ATTR_ID:
-            return getMicrosimID();
+            return getID();
         case SUMO_ATTR_PARKING:
             return getParentAdditionals().at(1)->getID();
         case SUMO_ATTR_PROB:
@@ -145,12 +147,6 @@ GNEParkingAreaReroute::getAttribute(SumoXMLAttr key) const {
 double
 GNEParkingAreaReroute::getAttributeDouble(SumoXMLAttr key) const {
     throw InvalidArgument(getTagStr() + " doesn't have a double attribute of type '" + toString(key) + "'");
-}
-
-
-const Parameterised::Map&
-GNEParkingAreaReroute::getACParametersMap() const {
-    return PARAMETERS_EMPTY;
 }
 
 
@@ -189,6 +185,12 @@ GNEParkingAreaReroute::isValid(SumoXMLAttr key, const std::string& value) {
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
+}
+
+
+bool
+GNEParkingAreaReroute::isAttributeEnabled(SumoXMLAttr /* key */) const {
+    return true;
 }
 
 

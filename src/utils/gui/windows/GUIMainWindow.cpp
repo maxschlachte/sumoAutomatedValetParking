@@ -37,6 +37,7 @@
 #include <utils/foxtools/MFXImageHelper.h>
 #include <utils/gui/images/GUITexturesHelper.h>
 #include <utils/options/OptionsCont.h>
+#include "GUIAppEnum.h"
 #include "GUIMainWindow.h"
 #include "GUIGlChildWindow.h"
 
@@ -85,7 +86,6 @@ GUIMainWindow::~GUIMainWindow() {
     delete myBottomDock;
     delete myLeftDock;
     delete myRightDock;
-    //myInstance = nullptr;
 }
 
 
@@ -166,13 +166,13 @@ GUIMainWindow::getViews() const {
 
 
 void
-GUIMainWindow::updateChildren(int msg) {
+GUIMainWindow::updateChildren() {
     // inform views
-    myMDIClient->forallWindows(this, FXSEL(SEL_COMMAND, msg), nullptr);
+    myMDIClient->forallWindows(this, FXSEL(SEL_COMMAND, MID_SIMSTEP), nullptr);
     // inform other windows
     myTrackerLock.lock();
     for (int i = 0; i < (int)myTrackerWindows.size(); i++) {
-        myTrackerWindows[i]->handle(this, FXSEL(SEL_COMMAND, msg), nullptr);
+        myTrackerWindows[i]->handle(this, FXSEL(SEL_COMMAND, MID_SIMSTEP), nullptr);
     }
     myTrackerLock.unlock();
 }
@@ -184,21 +184,15 @@ GUIMainWindow::getGLVisual() const {
 }
 
 
-FXLabel*
+FXLabel&
 GUIMainWindow::getCartesianLabel() {
-    return myCartesianCoordinate;
+    return *myCartesianCoordinate;
 }
 
 
-FXLabel*
+FXLabel&
 GUIMainWindow::getGeoLabel() {
-    return myGeoCoordinate;
-}
-
-
-FXLabel*
-GUIMainWindow::getTestLabel() {
-    return myTestCoordinate;
+    return *myGeoCoordinate;
 }
 
 

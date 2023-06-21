@@ -296,7 +296,7 @@ GNESingleParametersDialog::ParametersOperations::onCmdLoadParameters(FXObject*, 
     FXFileDialog opendialog(this, "Open Parameter Template");
     opendialog.setIcon(GUIIconSubSys::getIcon(GUIIcon::GREENVEHICLE));
     opendialog.setSelectMode(SELECTFILE_EXISTING);
-    opendialog.setPatternList(" Parameter Template files (*.xml,*.xml.gz)\nAll files (*)");
+    opendialog.setPatternList(" Parameter Template files (*.xml)\nAll files (*)");
     if (gCurrentFolder.length() != 0) {
         opendialog.setDirectory(gCurrentFolder);
     }
@@ -623,7 +623,7 @@ GNESingleParametersDialog::onCmdAccept(FXObject*, FXSelector, void*) {
         myAttributeCarrier->getNet()->getViewNet()->getUndoList()->end();
     } else if (myTLDef) {
         // declare parametersMap
-        Parameterised::Map parametersMap;
+        std::map<std::string, std::string> parametersMap;
         // Generate an string using the following structure: "key1=value1|key2=value2|...
         for (const auto& parameter : parameters) {
             parametersMap[parameter.first] = parameter.second;

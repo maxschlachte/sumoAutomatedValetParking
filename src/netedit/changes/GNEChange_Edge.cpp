@@ -41,9 +41,11 @@ GNEChange_Edge::GNEChange_Edge(GNEEdge* edge, bool forward):
     edge->incRef("GNEChange_Edge");
     // save all hierarchical elements of edge's lane
     for (const auto& lane : edge->getLanes()) {
+        myLaneParentShapes.push_back(lane->getParentShapes());
         myLaneParentAdditionals.push_back(lane->getParentAdditionals());
         myLaneParentDemandElements.push_back(lane->getParentDemandElements());
         myLaneParentGenericData.push_back(lane->getParentGenericDatas());
+        myChildLaneShapes.push_back(lane->getChildShapes());
         myChildLaneAdditionals.push_back(lane->getChildAdditionals());
         myChildLaneDemandElements.push_back(lane->getChildDemandElements());
         myChildLaneGenericData.push_back(lane->getChildGenericDatas());
@@ -156,6 +158,9 @@ GNEChange_Edge::addEdgeLanes() {
     // iterate over edge lanes
     for (int i = 0; i < (int)myEdge->getLanes().size(); i++) {
         // add lane's edge in parent elements
+        for (const auto& j : myLaneParentShapes.at(i)) {
+            j->addChildElement(myEdge->getLanes().at(i));
+        }
         for (const auto& j : myLaneParentAdditionals.at(i)) {
             j->addChildElement(myEdge->getLanes().at(i));
         }
@@ -166,6 +171,9 @@ GNEChange_Edge::addEdgeLanes() {
             j->addChildElement(myEdge->getLanes().at(i));
         }
         // add lane's edge in child elements
+        for (const auto& j : myChildLaneShapes.at(i)) {
+            j->addParentElement(myEdge->getLanes().at(i));
+        }
         for (const auto& j : myChildLaneAdditionals.at(i)) {
             j->addParentElement(myEdge->getLanes().at(i));
         }
@@ -184,6 +192,9 @@ GNEChange_Edge::removeEdgeLanes() {
     // iterate over edge lanes
     for (int i = 0; i < (int)myEdge->getLanes().size(); i++) {
         // Remove every lane's edge from parent elements
+        for (const auto& j : myLaneParentShapes.at(i)) {
+            j->removeChildElement(myEdge->getLanes().at(i));
+        }
         for (const auto& j : myLaneParentAdditionals.at(i)) {
             j->removeChildElement(myEdge->getLanes().at(i));
         }
@@ -194,6 +205,9 @@ GNEChange_Edge::removeEdgeLanes() {
             j->removeChildElement(myEdge->getLanes().at(i));
         }
         // Remove every lane's edge from child elements
+        for (const auto& j : myChildLaneShapes.at(i)) {
+            j->removeParentElement(myEdge->getLanes().at(i));
+        }
         for (const auto& j : myChildLaneAdditionals.at(i)) {
             j->removeParentElement(myEdge->getLanes().at(i));
         }

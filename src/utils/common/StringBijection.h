@@ -128,17 +128,9 @@ public:
 
     std::vector<std::string> getStrings() const {
         std::vector<std::string> result;
-        for (auto item : myT2String) {
-            result.push_back(item.second);
-        }
-        return result;
-    }
-
-
-    std::vector<T> getValues() const {
-        std::vector<T> result;
-        for (auto item : myT2String) {
-            result.push_back(item.first);
+        typename std::map<T, std::string>::const_iterator it; // learn something new every day
+        for (it = myT2String.begin(); it != myT2String.end(); it++) {
+            result.push_back(it->second);
         }
         return result;
     }

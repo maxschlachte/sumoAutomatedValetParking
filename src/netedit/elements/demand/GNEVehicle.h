@@ -19,6 +19,7 @@
 /****************************************************************************/
 #pragma once
 #include <config.h>
+#include <utils/vehicle/SUMOVehicleParameter.h>
 #include <utils/gui/globjects/GUIGLObjectPopupMenu.h>
 
 #include "GNEDemandElement.h"
@@ -182,7 +183,7 @@ public:
      */
     std::string getBegin() const;
 
-    /**@brief write demand element element into a xml file
+    /**@brief writte demand element element into a xml file
      * @param[in] device device in which write parameters of demand element element
      */
     void writeDemandElement(OutputDevice& device) const;
@@ -231,7 +232,7 @@ public:
      */
     std::string getParentName() const;
 
-    /// @brief return exaggeration associated with this GLObject
+    /// @brief return exaggeration asociated with this GLObject
     double getExaggeration(const GUIVisualizationSettings& s) const;
 
     /**@brief Returns the boundary to which the view shall be centered in order to show the object
@@ -342,7 +343,7 @@ public:
     /// @}
 
     /// @brief get parameters map
-    const Parameterised::Map& getACParametersMap() const;
+    const std::map<std::string, std::string>& getACParametersMap() const;
 
 protected:
     /// @brief sets the color according to the currente settings
@@ -356,7 +357,7 @@ private:
     void setAttribute(SumoXMLAttr key, const std::string& value);
 
     /// @brief method for enable or disable the attribute and nothing else (used in GNEChange_EnableAttribute)
-    void toggleAttribute(SumoXMLAttr key, const bool value);
+    void toogleAttribute(SumoXMLAttr key, const bool value, const int previousParameters);
 
     /// @brief set move shape
     void setMoveShape(const GNEMoveResult& moveResult);
@@ -370,7 +371,7 @@ private:
     /// @brief draw flow label
     void drawFlowLabel(const Position& vehiclePosition, const double vehicleRotation, const double width, const double length, const double exaggeration) const;
 
-    /// @brief draw line between junctions
+    /// @brief draw junction line
     void drawJunctionLine() const;
 
     /// @brief Invalidated copy constructor.

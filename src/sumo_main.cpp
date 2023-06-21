@@ -100,10 +100,6 @@ main(int argc, char** argv) {
             } else {
                 break;
             }
-            // flush warnings and prepare reinit of all outputs
-            MsgHandler::getWarningInstance()->clear();
-            OutputDevice::closeAll();
-            MsgHandler::cleanupOnEnd();
         }
     } catch (const ProcessError& e) {
         if (std::string(e.what()) != std::string("Process Error") && std::string(e.what()) != std::string("")) {

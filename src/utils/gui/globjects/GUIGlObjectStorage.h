@@ -58,32 +58,37 @@ public:
 
     /** @brief Registers an object
      *
-     * This is done within the constructor of the GUIGlObject.
-     * The next free id is calculated as well.
+     * This done within the constructor of the GUIGlObject; The object's "setGLID"
+     *  method is called giving the next free id.
      *
      * @param[in] object The object to register
+     * @param[in] fullName The full name of the object to register
+     * @return the GUIGlObject under which the object has been registered
      */
-    GUIGlID registerObject(GUIGlObject* object);
+    GUIGlID registerObject(GUIGlObject* object, const std::string& fullName);
 
-    void changeName(GUIGlObject* object, const std::string& fullName);
-
-    /** @brief Returns the object from the container locking it
-     *
-     * The lock prevents the object from being deleted while it is accessed.
-     *
-     * @param[in] id The id of the object to return
-     * @return The object with the given id or nullptr if no such object is known
-     */
-    GUIGlObject* getObjectBlocking(GUIGlID id) const;
 
     /** @brief Returns the object from the container locking it
      *
      * The lock prevents the object from being deleted while it is accessed.
+     * The object is moved from "myMap" to "myBlocked".
      *
      * @param[in] id The id of the object to return
-     * @return The object with the given id or nullptr if no such object is known
+     * @return The object with the given id or 0 if no such object is known
      */
-    GUIGlObject* getObjectBlocking(const std::string& fullName) const;
+    GUIGlObject* getObjectBlocking(GUIGlID id);
+
+
+    /** @brief Returns the object from the container locking it
+     *
+     * The lock prevents the object from being deleted while it is accessed.
+     * The object is moved from "myMap" to "myBlocked".
+     *
+     * @param[in] id The id of the object to return
+     * @return The object with the given id or 0 if no such object is known
+     */
+    GUIGlObject* getObjectBlocking(const std::string& fullName);
+
 
     /** @brief Removes the named object from this container
      *
@@ -95,6 +100,7 @@ public:
      * @return Whether the object could be removed (and may be deleted)
      */
     bool remove(GUIGlID id);
+
 
     /** @brief Clears this container
      *
@@ -118,6 +124,7 @@ public:
         myNetObject = object;
     }
 
+
     /** @brief Returns the network object
      * @return The network object
      */
@@ -125,21 +132,35 @@ public:
         return myNetObject;
     }
 
-    /// @brief A single static instance of this class
+
+    /** @brief A single static instance of this class
+     */
     static GUIGlObjectStorage gIDStorage;
 
-    /// @brief Returns the set of all known objects
-    const std::vector<GUIGlObject*>& getAllGLObjects() const;
+
+    /** @brief Returns the set of all known ids
+     */
+    std::set<GUIGlID> getAllIDs() const;
 
 private:
-    /// @brief The known objects
-    std::vector<GUIGlObject*> myObjects;
+    /// @brief Definition of a container from numerical ids to objects
+    typedef std::map<GUIGlID, GUIGlObject*> ObjectMap;
 
-    /// @brief The known objects by their full name
-    std::map<std::string, GUIGlObject*> myFullNameMap;
+    /// @brief The known objects which are not accessed currently
+    ObjectMap myMap;
 
-    /// @brief The next id to give; initially one, increased by one with each object registration
-    GUIGlID myNextID;
+    /* @brief The known objects by their fill name (used when loading selection
+     * from file */
+    std::map<std::string, GUIGlObject*>  myFullNameMap;
+
+    /// @brief The currently accessed objects
+    ObjectMap myBlocked;
+
+    /// @brief Objects to delete
+    ObjectMap my2Delete;
+
+    /// @brief The next id to give; initially zero, increased by one with each object registration
+    GUIGlID myAktID;
 
     /// @brief A lock to avoid parallel access on the storages
     mutable FXMutex myLock;
@@ -147,10 +168,13 @@ private:
     /// @brief The network object
     GUIGlObject* myNetObject;
 
+
 private:
     /// @brief invalidated copy constructor
-    GUIGlObjectStorage(const GUIGlObjectStorage& s) = delete;
+    GUIGlObjectStorage(const GUIGlObjectStorage& s);
 
     /// @brief invalidate assignment operator
-    GUIGlObjectStorage& operator=(const GUIGlObjectStorage& s) = delete;
+    GUIGlObjectStorage& operator=(const GUIGlObjectStorage& s);
+
+
 };

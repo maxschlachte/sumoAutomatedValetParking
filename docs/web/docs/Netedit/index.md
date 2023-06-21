@@ -20,7 +20,7 @@ title: netedit
 
 - [additional simulation infrastructure](elementsAdditional.md)
 - [traffic (vehicles, persons, vTypes, routes)](elementsDemand.md)
-- [network/TAZ related data](editModesData.md)
+- [network related data](elementsData.md)
 - [shape data](elementsShape.md)
 
 ## Input
@@ -119,18 +119,12 @@ title: netedit
 | Online documentation | F1   | Open the online documentation in the web browser |
 | About                | F12  | Open the about dialog                            |
 
-| Text editing shortcuts | Key      | Description                                      |
+| Text edition shortcuts | Key      | Description                                      |
 | ---------------------- | -------- | ------------------------------------------------ |
 | Cut                    | Ctrl + X | Cut selected text of a text field                |
 | Copy                   | Ctrl + C | Copy selected text of a text field               |
 | Paste                  | Ctrl + V | Paste previously cut/copied text in a text field |
 | Select all text        | Ctrl + A | Select all text in a text field                  |
-
-| Miscellaneous shortcuts | Key      | Description                                      |
-| ----------------------- | -------- | ------------------------------------------------ |
-| Grid  | Ctrl + G        | Toggle background grid
-| Grid+ | Ctrl + PageUp   | Increase grid spacing               |
-| Grid- | Ctrl + PageDown | Reduce grid spacing               |
 
 
 **Toolbar shortcuts**   
@@ -251,6 +245,7 @@ Netedit is used to create and edit a variety of different objects. Each object m
 - [Shape Elements](elementsShape.md)
 - [TAZ elements](elementsTAZ.md)
 - [Demand elements](elementsDemand.md)
+- [Data elements](elementsData.md)
 
 # [Popup-Menu functions](neteditPopupFunctions.md)
 

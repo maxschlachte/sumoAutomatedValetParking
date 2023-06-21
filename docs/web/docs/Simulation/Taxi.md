@@ -83,7 +83,7 @@ algorithms are available
 
 - routeExtension: like greedy but can pick up any passenger along the route and also extend the original route (within personCapacity limit).
 
-- traci: Dispatch is deferred to [traci control](#traci). The algorithm only keeps track of pending reservations
+- traci: Dispatch is defered to [traci control](#traci). The algorithm only keeps track of pending reservations
 
 !!! note
     User-contributed dispatch algorithms are welcome.
@@ -107,9 +107,6 @@ By default, vehicles will leave the simulation after reaching the end of their f
 - "stop" (default): stop at the current location (off-road) after delivering the last customer of the current service request.
 - "randomCircling": continue driving to random edges until the next request is received. (caution: taxi might get stuck in a cul-de-sac if the network has those)
 
-!!! note
-    When using "randomCircling", the default value for parameter "device.taxi.end" is 8 hours after vehicle departure.
-
 ## Customer Stops
 
 Taxis will stop to pick-up and drop-off customers. The 'actType' attribute of a stop indicates the purpose ('pickup' / 'dropOff') as well as the ids of the customers and their reservation id. Stop attributes can be configured using [generic parameters]() `<vType>` or `<vehicle>` definition of the taxi:
@@ -123,8 +120,8 @@ Taxis will stop to pick-up and drop-off customers. The 'actType' attribute of a 
     </vType>
 ```
 
-- duration for pick-up stop can be configured with vType/vehicle param "device.taxi.pickupDuration" (default "0")
-- duration for drop-off stop can be configured with vType/vehicle param "device.taxi.dropOffDuration" (default "60")
+- duration for pick-up stop can be configurd with vType/vehicle param "device.taxi.pickupDuration" (default "0")
+- duration for drop-off stop can be configurd with vType/vehicle param "device.taxi.dropOffDuration" (default "60")
 
 By default, vehicle stops will have attribute `parking="true"` which means that the taxi will not block a driving lane. This can be changed by setting
 param "device.taxi.parking" to "false".
@@ -173,7 +170,7 @@ When calling `traci.person.getTaxiReservations(reservationState)` the following 
 
 A taxi can be in any of the following states:
 
-- 0 (empty) : taxi is idle
+- 0 (emtpy) : taxi is idle
 - 1 (pickup):  taxi is en-route to pick up a customer
 - 2 (occupied): taxi has customer on board and is driving to drop-off
 - 3 (pickup + occupied): taxi has customer on board but will pick up more customers
@@ -191,7 +188,7 @@ when calling `traci.vehicle.getTaxiFleet(taxiState)` the following arguments for
 If a taxi is empty, the following dispatch calls are supported
 
 - dispatchTaxi(vehID, [reservationID]): pickup and drop-off persons belonging to the given reservation ID
-- If more than one reservation ID is given, each individual reservation ID must occur exactly twice in the list for complete pickup and drop-off. The first occurrence of an ID denotes pick-up and the second occurrence denotes drop-off.
+- If more than one reservation ID is given, each individual reservation ID must occur exactly twice in the list for complete pickup and drop-off. The first occurence of an ID denotes pick-up and the second occurence denotes drop-off.
 
 Example 1:  dispatchTaxi(vehID, [a]) means: pick up and drop off a.
 
@@ -201,7 +198,7 @@ If a taxi is not in state empty the following re-dispatch calls are supported
 
 - new reservations have no overlap with previous reservation: append new reservations to the previous reservations
 - new reservations include all previous unique reservation ids exactly twice: reset current route and stops and treat as complete new dispatch. If one of the persons of the earlier reservation is already picked up, ignore the first occurrence of the reservation in the reservation list
-- new reservations mentions include all previous unique reservation ids once or twice, all customers that are mentioned once are already picked up: reset current route and stops, use the single-occurrence ids as as drop-of
+- new reservations mentions include all previous unique reservation ids once or twice, all customers that are mentioned once are already picked up: reset current route and stops, use the single-occurence ids as as drop-of
 
 # Outputs
 

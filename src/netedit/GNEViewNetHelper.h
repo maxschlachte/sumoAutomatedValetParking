@@ -20,7 +20,6 @@
 #pragma once
 #include <config.h>
 
-#include <utils/foxtools/MFXButtonTooltip.h>
 #include <utils/foxtools/MFXCheckableButton.h>
 #include <utils/gui/globjects/GUIGlObject.h>
 #include <utils/gui/globjects/GUIGlObjectTypes.h>
@@ -65,11 +64,9 @@ enum class NetworkEditMode {
     ///@brief Mode for editing TAZ
     NETWORK_TAZ,
     ///@brief Mode for editing Polygons
-    NETWORK_SHAPE,
+    NETWORK_POLYGON,
     ///@brief Mode for editing connection prohibitions
-    NETWORK_PROHIBITION,
-    ///@brief Mode for editing wires
-    NETWORK_WIRE
+    NETWORK_PROHIBITION
 };
 
 /// @brie enum for demand edit modes
@@ -134,17 +131,17 @@ class GNEEdge;
 class GNELane;
 class GNEConnection;
 class GNECrossing;
-class GNEWalkingArea;
 class GNEInternalLane;
 // additional elements
 class GNEAdditional;
+class GNETAZElement;
+class GNEShape;
 class GNEPoly;
 class GNEPOI;
 class GNETAZ;
 // demand elements
 class GNEDemandElement;
 // data elements
-class GNEDataSet;
 class GNEGenericData;
 class GNEEdgeData;
 class GNEEdgeRelData;
@@ -186,6 +183,12 @@ struct GNEViewNetHelper {
         /// @brief get front additional element or a pointer to nullptr
         GNEAdditional* getAdditionalFront() const;
 
+        /// @brief get front shape element or a pointer to nullptr
+        GNEShape* getShapeFront() const;
+
+        /// @brief get front TAZElement or a pointer to nullptr
+        GNETAZElement* getTAZElementFront() const;
+
         /// @brief get front demand element or a pointer to nullptr
         GNEDemandElement* getDemandElementFront() const;
 
@@ -206,9 +209,6 @@ struct GNEViewNetHelper {
 
         /// @brief get front crossing or a pointer to nullptr
         GNECrossing* getCrossingFront() const;
-
-        /// @brief get front walkingArea or a pointer to nullptr
-        GNEWalkingArea* getWalkingAreaFront() const;
 
         /// @brief get front connection or a pointer to nullptr
         GNEConnection* getConnectionFront() const;
@@ -234,9 +234,6 @@ struct GNEViewNetHelper {
         /// @brief get vector with clicked ACs
         const std::vector<GNEAttributeCarrier*>& getClickedAttributeCarriers() const;
 
-        /// @brief get vector with clicked Demand Elements
-        const std::vector<GNEDemandElement*>& getClickedDemandElements() const;
-
     protected:
         /// @brief objects container
         class ObjectsContainer {
@@ -260,6 +257,12 @@ struct GNEViewNetHelper {
             /// @brief vector with the clicked additional elements
             std::vector<GNEAdditional*> additionals;
 
+            /// @brief vector with the clicked shape elements (Poly and POIs)
+            std::vector<GNEShape*> shapes;
+
+            /// @brief vector with the clicked TAZ elements
+            std::vector<GNETAZElement*> TAZElements;
+
             /// @brief vector with the clicked demand elements
             std::vector<GNEDemandElement*> demandElements;
 
@@ -277,9 +280,6 @@ struct GNEViewNetHelper {
 
             /// @brief vector with the clicked crossings
             std::vector<GNECrossing*> crossings;
-
-            /// @brief vector with the clicked walkingAreas
-            std::vector<GNEWalkingArea*> walkingAreas;
 
             /// @brief vector with the clicked connections
             std::vector<GNEConnection*> connections;
@@ -335,11 +335,11 @@ struct GNEViewNetHelper {
         /// @brief update additional elements
         void updateAdditionalElements(ObjectsContainer& container, GNEAttributeCarrier* AC);
 
-        /// @brief update shape elements
-        void updateShapeElements(ObjectsContainer& container, GNEAttributeCarrier* AC);
-
         /// @brief update TAZ elements
         void updateTAZElements(ObjectsContainer& container, GNEAttributeCarrier* AC);
+
+        /// @brief update shape elements
+        void updateShapeElements(ObjectsContainer& container, GNEAttributeCarrier* AC);
 
         /// @brief update demand elements
         void updateDemandElements(ObjectsContainer& container, GNEAttributeCarrier* AC);
@@ -404,20 +404,20 @@ struct GNEViewNetHelper {
         /// @brief build save buttons
         void buildSaveElementsButtons();
 
-        /// @brief checkable button for save all
-        MFXButtonTooltip* saveAll;
+        /// @brief chekable button for save all
+        FXButton* saveAll;
 
-        /// @brief checkable button for save network
-        MFXButtonTooltip* saveNetwork;
+        /// @brief chekable button for save network
+        FXButton* saveNetwork;
 
-        /// @brief checkable button for save additional elements
-        MFXButtonTooltip* saveAdditionalElements;
+        /// @brief chekable button for save additional elements
+        FXButton* saveAdditionalElements;
 
-        /// @brief checkable button for save demand elements
-        MFXButtonTooltip* saveDemandElements;
+        /// @brief chekable button for save demand elements
+        FXButton* saveDemandElements;
 
-        /// @brief checkable button for save data elements
-        MFXButtonTooltip* saveDataElements;
+        /// @brief chekable button for save data elements
+        FXButton* saveDataElements;
 
     private:
         /// @brief pointer to net
@@ -472,13 +472,13 @@ struct GNEViewNetHelper {
         /// @brief the current Data edit mode
         DataEditMode dataEditMode;
 
-        /// @brief checkable button for supermode Network
+        /// @brief chekable button for supermode Network
         MFXCheckableButton* networkButton;
 
-        /// @brief checkable button for supermode Demand
+        /// @brief chekable button for supermode Demand
         MFXCheckableButton* demandButton;
 
-        /// @brief checkable button for supermode Data
+        /// @brief chekable button for supermode Data
         MFXCheckableButton* dataButton;
 
     private:
@@ -522,17 +522,11 @@ struct GNEViewNetHelper {
         /// @brief check if show sub-additionals
         bool showSubAdditionals() const;
 
-        /// @brief check if show TAZ Elements
-        bool showTAZElements() const;
-
         /// @brief check if we're editing elevation
         bool editingElevation() const;
 
         /// @brief checkable button to show grid button
         MFXCheckableButton* menuCheckToggleGrid;
-
-        /// @brief checkable button to show junction shapes
-        MFXCheckableButton* menuCheckToggleDrawJunctionShape;
 
         /// @brief checkable button to draw vehicles in begin position or spread in lane
         MFXCheckableButton* menuCheckDrawSpreadVehicles;
@@ -552,9 +546,6 @@ struct GNEViewNetHelper {
         /// @brief checkable button to show additional sub-elements
         MFXCheckableButton* menuCheckShowAdditionalSubElements;
 
-        /// @brief checkable button to show TAZ elements
-        MFXCheckableButton* menuCheckShowTAZElements;
-
         /// @brief checkable button to extend to edge nodes
         MFXCheckableButton* menuCheckExtendSelection;
 
@@ -564,7 +555,7 @@ struct GNEViewNetHelper {
         /// @brief checkable button to we should warn about merging junctions
         MFXCheckableButton* menuCheckWarnAboutMerge;
 
-        /// @brief checkable button to show connection as bubble in "Move" mode.
+        /// @brief checkable button to show connection as buuble in "Move" mode.
         MFXCheckableButton* menuCheckShowJunctionBubble;
 
         /// @brief checkable button to apply movement to elevation
@@ -644,9 +635,6 @@ struct GNEViewNetHelper {
         /// @brief menu check to show grid button
         MFXCheckableButton* menuCheckToggleGrid;
 
-        /// @brief checkable button to show junction shapes
-        MFXCheckableButton* menuCheckToggleDrawJunctionShape;
-
         /// @brief menu check to draw vehicles in begin position or spread in lane
         MFXCheckableButton* menuCheckDrawSpreadVehicles;
 
@@ -715,20 +703,17 @@ struct GNEViewNetHelper {
         /// @brief check if show demand elements checkbox is enabled
         bool showDemandElements() const;
 
-        /// @brief check if toggle TAZRel drawing checkbox is enabled
+        /// @brief check if toogle TAZRel drawing checkbox is enabled
         bool TAZRelDrawing() const;
 
-        /// @brief check if toggle TAZ draw fill checkbox is enabled
+        /// @brief check if toogle TAZ draw fill checkbox is enabled
         bool TAZDrawFill() const;
 
-        /// @brief check if toggle TAZRel only from checkbox is enabled
+        /// @brief check if toogle TAZRel only from checkbox is enabled
         bool TAZRelOnlyFrom() const;
 
-        /// @brief check if toggle TAZRel only to checkbox is enabled
+        /// @brief check if toogle TAZRel only to checkbox is enabled
         bool TAZRelOnlyTo() const;
-
-        /// @brief checkable button to show junction shapes
-        MFXCheckableButton* menuCheckToggleDrawJunctionShape;
 
         /// @brief menu check to show Additionals
         MFXCheckableButton* menuCheckShowAdditionals;
@@ -739,17 +724,17 @@ struct GNEViewNetHelper {
         /// @brief menu check to show Demand Elements
         MFXCheckableButton* menuCheckShowDemandElements;
 
-        /// @brief menu check to toggle TAZ Rel drawing
-        MFXCheckableButton* menuCheckToggleTAZRelDrawing;
+        /// @brief menu check to toogle TAZ Rel drawing
+        MFXCheckableButton* menuCheckToogleTAZRelDrawing;
 
-        /// @brief menu check to toggle TAZ draw fill
-        MFXCheckableButton* menuCheckToggleTAZDrawFill;
+        /// @brief menu check to toogle TAZ draw fill
+        MFXCheckableButton* menuCheckToogleTAZDrawFill;
 
-        /// @brief menu check to toggle TAZRel only from
-        MFXCheckableButton* menuCheckToggleTAZRelOnlyFrom;
+        /// @brief menu check to toogle TAZRel only from
+        MFXCheckableButton* menuCheckToogleTAZRelOnlyFrom;
 
-        /// @brief menu check to toggle TAZRel only to
-        MFXCheckableButton* menuCheckToggleTAZRelOnlyTo;
+        /// @brief menu check to toogle TAZRel only to
+        MFXCheckableButton* menuCheckToogleTAZRelOnlyTo;
 
     private:
         /// @brief pointer to net
@@ -772,6 +757,18 @@ struct GNEViewNetHelper {
         /// @brief build interval bar elements
         void buildIntervalBarElements();
 
+        /// @brief enable interval bar
+        void enableIntervalBar();
+
+        /// @brief disable interval bar
+        void disableIntervalBar();
+
+        /// @brief enable interval bar update
+        void enableIntervalBarUpdate();
+
+        /// @brief enable interval bar update
+        void disableIntervalBarUpdate();
+
         /// @brief show interval option bar
         void showIntervalBar();
 
@@ -781,26 +778,23 @@ struct GNEViewNetHelper {
         /// @brief update interval bar
         void updateIntervalBar();
 
-        // @brief mark for update
-        void markForUpdate();
-
         /// @name get functions (called by GNEViewNet)
         /// @{
 
         /// @brief get generic data type
-        SumoXMLTag getGenericDataType() const;
+        std::string getGenericDataTypeStr() const;
 
         /// @brief get dataSet
-        GNEDataSet* getDataSet() const;
+        std::string getDataSetStr() const;
 
         /// @brief get begin
-        double getBegin() const;
+        std::string getBeginStr() const;
 
         /// @brief get end
-        double getEnd() const;
+        std::string getEndStr() const;
 
-        /// @brief get parameter
-        std::string getParameter() const;
+        /// @brief set attribute
+        std::string getAttributeStr() const;
 
         /// @}
 
@@ -822,24 +816,17 @@ struct GNEViewNetHelper {
         /// @brief set end
         void setEnd();
 
-        /// @brief set parameter
-        void setParameter();
+        /// @brief set attribute
+        void setAttribute();
 
         /// @}
-
-    protected:
-        /// @brief enable interval bar
-        void enableIntervalBar();
-
-        /// @brief disable interval bar
-        void disableIntervalBar();
 
     private:
         /// @brief pointer to net
         GNEViewNet* myViewNet;
 
-        /// @brief flag for update interval bar
-        bool myUpdateInterval;
+        /// @brief flag to enable or disable update interval bar
+        bool myIntervalBarUpdate;
 
         /// @brief combo box for generic data types
         FXComboBox* myGenericDataTypesComboBox;
@@ -848,7 +835,7 @@ struct GNEViewNetHelper {
         FXComboBox* myDataSetsComboBox;
 
         /// @brief checkbox for limit data elements by interval
-        FXCheckButton* myIntervalCheckBox;
+        FXCheckButton* myLimitByIntervalCheckBox;
 
         /// @brief text field for interval begin
         FXTextField* myBeginTextField;
@@ -856,16 +843,31 @@ struct GNEViewNetHelper {
         /// @brief text field for interval end
         FXTextField* myEndTextField;
 
-        /// @brief combo box for filtered parameters
-        FXComboBox* myParametersComboBox;
+        /// @brief combo box for filtered attributes
+        FXComboBox* myFilteredAttributesComboBox;
 
-        /// @brief current dataSets
-        std::vector<std::string> myDataSets;
+        /// @brief set for attribuets
+        std::set<std::string> myFilteredAttributes;
 
-        /// @brief current parameters
-        std::set<std::string> myParameters;
+        /// @brief string with wildcard for no generic datas
+        const FXString myNoGenericDatas;
+
+        /// @brief string with wildcard for all generic datas
+        const FXString myAllGenericDatas;
+
+        /// @brief string with wildcard for no dataSets
+        const FXString myNoDataSets;
+
+        /// @brief string with wildcard for all dataSets
+        const FXString myAllDataSets;
+
+        /// @brief string with wildcard for all attributes
+        const FXString myAllAttributes;
 
     private:
+        /// @brief update combo box attributes
+        void updateComboBoxAttributes();
+
         /// @brief Invalidated copy constructor.
         IntervalBar(const IntervalBar&) = delete;
 
@@ -1154,11 +1156,8 @@ struct GNEViewNetHelper {
         /// @brief chekable button for edit mode shape
         MFXCheckableButton* shapeButton;
 
-        /// @brief checkable button for edit mode prohibition
+        /// @brief checkable button for edit mode polygon
         MFXCheckableButton* prohibitionButton;
-
-        /// @brief checkable button for edit mode wires
-        MFXCheckableButton* wireButton;
 
     private:
         /// @brief pointer to net

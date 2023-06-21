@@ -42,14 +42,12 @@
 #ifdef HAVE_FOX
 #include <utils/foxtools/MsgHandlerSynchronized.h>
 #endif
-#include <libsumo/Helper.h>
 #include <mesosim/MEVehicleControl.h>
 #include <microsim/MSVehicleControl.h>
 #include <microsim/MSVehicleTransfer.h>
 #include <microsim/MSNet.h>
 #include <microsim/devices/MSDevice.h>
 #include <microsim/devices/MSDevice_ToC.h>
-#include <microsim/devices/MSDevice_BTreceiver.h>
 #include <microsim/MSEdgeControl.h>
 #include <microsim/MSGlobals.h>
 #include <microsim/output/MSDetectorControl.h>
@@ -153,39 +151,6 @@ NLBuilder::build() {
         }
     }
 
-    if (myOptions.getBool("junction-taz")) {
-        // create a TAZ for every junction
-        const MSJunctionControl& junctions = myNet.getJunctionControl();
-        for (auto it = junctions.begin(); it != junctions.end(); it++) {
-            const std::string sinkID = it->first + "-sink";
-            const std::string sourceID = it->first + "-source";
-            if (MSEdge::dictionary(sinkID) == nullptr && MSEdge::dictionary(sourceID) == nullptr) {
-                // sink must be built and added before source
-                MSEdge* sink = myEdgeBuilder.buildEdge(sinkID, SumoXMLEdgeFunc::CONNECTOR, "", "", -1, 0);
-                MSEdge* source = myEdgeBuilder.buildEdge(sourceID, SumoXMLEdgeFunc::CONNECTOR, "", "", -1, 0);
-                sink->setOtherTazConnector(source);
-                source->setOtherTazConnector(sink);
-                MSEdge::dictionary(sinkID, sink);
-                MSEdge::dictionary(sourceID, source);
-                sink->initialize(new std::vector<MSLane*>());
-                source->initialize(new std::vector<MSLane*>());
-                const MSJunction* junction = it->second;
-                for (const MSEdge* edge : junction->getIncoming()) {
-                    if (!edge->isInternal()) {
-                        const_cast<MSEdge*>(edge)->addSuccessor(sink);
-                    }
-                }
-                for (const MSEdge* edge : junction->getOutgoing()) {
-                    if (!edge->isInternal()) {
-                        source->addSuccessor(const_cast<MSEdge*>(edge));
-                    }
-                }
-            } else {
-                WRITE_WARNINGF("A TAZ with id '%' already exists. Not building junction TAZ.", it->first)
-            }
-        }
-    }
-
     // load additional net elements (sources, detectors, ...)
     if (myOptions.isSet("additional-files")) {
         if (!load("additional-files")) {
@@ -211,6 +176,38 @@ NLBuilder::build() {
         throw ProcessError("Loading vehicles ahead of a state file is not supported. Correct --begin option or load vehicles with option --route-files");
     }
 
+    if (myOptions.getBool("junction-taz")) {
+        // create a TAZ for every junction
+        const MSJunctionControl& junctions = myNet.getJunctionControl();
+        for (auto it = junctions.begin(); it != junctions.end(); it++) {
+            const std::string sinkID = it->first + "-sink";
+            const std::string sourceID = it->first + "-source";
+            if (MSEdge::dictionary(sinkID) == nullptr && MSEdge::dictionary(sourceID) == nullptr) {
+                // sink must be built and addd before source
+                MSEdge* sink = myEdgeBuilder.buildEdge(sinkID, SumoXMLEdgeFunc::CONNECTOR, "", "", -1, 0);
+                MSEdge* source = myEdgeBuilder.buildEdge(sourceID, SumoXMLEdgeFunc::CONNECTOR, "", "", -1, 0);
+                sink->setOtherTazConnector(source);
+                source->setOtherTazConnector(sink);
+                MSEdge::dictionary(sinkID, sink);
+                MSEdge::dictionary(sourceID, source);
+                sink->initialize(new std::vector<MSLane*>());
+                source->initialize(new std::vector<MSLane*>());
+                const MSJunction* junction = it->second;
+                for (const MSEdge* edge : junction->getIncoming()) {
+                    if (!edge->isInternal()) {
+                        const_cast<MSEdge*>(edge)->addSuccessor(sink);
+                    }
+                }
+                for (const MSEdge* edge : junction->getOutgoing()) {
+                    if (!edge->isInternal()) {
+                        source->addSuccessor(const_cast<MSEdge*>(edge));
+                    }
+                }
+            } else {
+                WRITE_WARNINGF("A TAZ with id '%' already exists. Not building junction TAZ.", it->first)
+            }
+        }
+    }
     // load weights if wished
     if (myOptions.isSet("weight-files")) {
         if (!myOptions.isUsableFileList("weight-files")) {
@@ -245,7 +242,6 @@ NLBuilder::build() {
     }
     // load the previous state if wished
     if (myOptions.isSet("load-state")) {
-        myNet.setCurrentTimeStep(string2time(myOptions.getString("begin")));
         const std::string& f = myOptions.getString("load-state");
         long before = PROGRESS_BEGIN_TIME_MESSAGE("Loading state from '" + f + "'");
         MSStateHandler h(f, string2time(myOptions.getString("load-state.offset")));
@@ -316,7 +312,7 @@ NLBuilder::init(const bool isLibsumo) {
     // need to init TraCI-Server before loading routes to catch VehicleState::BUILT
     TraCIServer::openSocket(std::map<int, TraCIServer::CmdExecutor>());
     if (isLibsumo) {
-        libsumo::Helper::registerStateListener();
+        libsumo::Helper::registerVehicleStateListener();
     }
 
     NLEdgeControlBuilder eb;
@@ -345,7 +341,6 @@ NLBuilder::initRandomness() {
     RandHelper::initRandGlobal(MSDevice::getEquipmentRNG());
     RandHelper::initRandGlobal(OUProcess::getRNG());
     RandHelper::initRandGlobal(MSDevice_ToC::getResponseTimeRNG());
-    RandHelper::initRandGlobal(MSDevice_BTreceiver::getRecognitionRNG());
     MSLane::initRNGs(OptionsCont::getOptions());
 }
 

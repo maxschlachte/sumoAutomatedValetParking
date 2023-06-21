@@ -34,7 +34,6 @@ SUMOTime MSGlobals::gIgnoreJunctionBlocker;
 
 SUMOTime MSGlobals::gTimeToGridlock;
 SUMOTime MSGlobals::gTimeToGridlockHighways;
-double MSGlobals::gGridlockHighwaysSpeed;
 SUMOTime MSGlobals::gTimeToTeleportDisconnected;
 bool MSGlobals::gRemoveGridlocked;
 
@@ -43,7 +42,6 @@ SUMOTime MSGlobals::gTimeToImpatience;
 bool MSGlobals::gCheck4Accidents;
 
 bool MSGlobals::gCheckRoutes;
-bool MSGlobals::gEmergencyInsert;
 
 SUMOTime MSGlobals::gLaneChangeDuration;
 
@@ -80,7 +78,6 @@ int MSGlobals::gNumThreads;
 double MSGlobals::gEmergencyDecelWarningThreshold(1);
 
 double MSGlobals::gMinorPenalty(0);
-double MSGlobals::gTLSPenalty(0);
 
 bool MSGlobals::gModelParkingManoeuver;
 
@@ -93,8 +90,5 @@ bool MSGlobals::gLefthand(false);
 
 double MSGlobals::gWeightsSeparateTurns(0);
 
-SUMOTime MSGlobals::gStartupWaitThreshold(0);
-
-bool MSGlobals::gHaveEmissions(false);
 
 /****************************************************************************/

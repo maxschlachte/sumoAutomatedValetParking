@@ -199,28 +199,6 @@ public:
     //@}
 
 
-    void setSection(const int element, const bool seen) {
-        mySection = element;
-        mySectionSeen = seen;
-        mySectionOpen = seen;
-        mySectionEnded = false;
-    }
-
-    bool sectionFinished() const {
-        return mySectionEnded;
-    }
-
-    std::pair<int, SUMOSAXAttributes*> retrieveNextSectionStart() {
-        std::pair<int, SUMOSAXAttributes*> ret = myNextSectionStart;
-        myNextSectionStart.first = -1;
-        myNextSectionStart.second = nullptr;
-        return ret;
-    }
-
-    void needsCharacterData(const bool value = true) {
-        myCollectCharacterData = value;
-    }
-
     // Reader needs access to myStartElement, myEndElement
     friend class SUMOSAXReader;
 
@@ -270,8 +248,6 @@ protected:
      */
     virtual void myEndElement(int element);
 
-    /// @brief signal endElement to the parent handler (special case for MSCalibrator)
-    void callParentEnd(int element);
 
 private:
     /**
@@ -335,25 +311,8 @@ private:
     /// @brief The root element to expect, empty string disables the check
     std::string myExpectedRoot;
 
-    /// @brief whether the reader should collect character data
-    bool myCollectCharacterData = false;
-
     /// @brief whether the reader has already seen the root element
-    bool myRootSeen = false;
-
-    /// @brief The tag indicating the current section to parse
-    int mySection = -1;
-
-    /// @brief whether the reader has already seen the begin of the section
-    bool mySectionSeen = false;
-
-    /// @brief whether the reader has already seen the end of the section
-    bool mySectionEnded = false;
-
-    /// @brief whether an element of the current section is open
-    bool mySectionOpen = false;
-
-    std::pair<int, SUMOSAXAttributes*> myNextSectionStart;
+    bool myRootSeen;
 
 private:
     /// @brief invalidated copy constructor

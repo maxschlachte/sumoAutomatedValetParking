@@ -74,7 +74,7 @@ public:
      * @return The corresponding (built or existing) device
      * @exception IOError If the output could not be built for any reason (error message is supplied)
      */
-    static OutputDevice& getDevice(const std::string& name, bool usePrefix = true);
+    static OutputDevice& getDevice(const std::string& name);
 
 
     /** @brief Creates the device using the output definition stored in the named option
@@ -165,9 +165,6 @@ public:
      * @param[in] precision The accuracy (number of digits behind '.') to set
      */
     void setPrecision(int precision = gPrecision);
-
-    /// @brief return precision set on the device
-    int precision();
 
     /** @brief Returns the precision of the underlying stream
      */
@@ -337,10 +334,6 @@ public:
 
     void flush() {
         getOStream().flush();
-    }
-
-    bool wroteHeader() const {
-        return myFormatter->wroteHeader();
     }
 
 protected:

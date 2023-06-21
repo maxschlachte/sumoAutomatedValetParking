@@ -25,18 +25,9 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(sys.argv[0]), '..'))
 from sumolib.output import parse  # noqa
 from sumolib.miscutils import Statistics  # noqa
-from sumolib.options import ArgumentParser  # noqa
 
 
-def parse_args():
-    optParser = ArgumentParser()
-    optParser.add_argument("tag", help="XML tag containing the attribute to be plotted")
-    optParser.add_argument("attr", help="XML attribute to be plotted")
-    optParser.add_argument("xmlfiles", help="XML file(s)", nargs='*')
-    return optParser.parse_args()
-
-
-def main(tag, attr, xmlfiles):
+def main(tag, attr, *xmlfiles):
     data = []
     for xmlfile in xmlfiles:
         stats = Statistics('%s %s' % (tag, attr))
@@ -45,16 +36,17 @@ def main(tag, attr, xmlfiles):
         print(stats)
         data.append(stats.values)
     try:
-        import matplotlib.pyplot as plt  # noqa
-        plt.figure()
-        plt.xticks(range(len(xmlfiles)), xmlfiles)
-        plt.ylabel("%s %s" % (tag, attr))
-        plt.boxplot(data)
-        plt.show()
-    except ImportError:
-        print("Matplotlib not found, cannot generate plot.", file=sys.stderr)
+        import matplotlib.pyplot as plt
+    except Exception as e:
+        sys.exit(e)
+    plt.figure()
+    plt.xticks(range(len(xmlfiles)), xmlfiles)
+    plt.ylabel("%s %s" % (tag, attr))
+    plt.boxplot(data)
+    plt.show()
 
 
 if __name__ == "__main__":
-    options = parse_args()
-    main(options.tag, options.attr, options.xmlfiles)
+    if len(sys.argv) < 4:
+        sys.exit("usage: %s <tag> <attr> <xmlfile>*" % __file__)
+    main(*sys.argv[1:])

@@ -48,12 +48,12 @@ public:
      */
     GNEChargingStation(const std::string& id, GNELane* lane, GNENet* net, const double startPos, const double endPos,
                        const std::string& name, double chargingPower, double efficiency, bool chargeInTransit, SUMOTime chargeDelay,
-                       bool friendlyPosition, const Parameterised::Map& parameters);
+                       bool friendlyPosition, const std::map<std::string, std::string>& parameters);
 
     /// @brief Destructor
     ~GNEChargingStation();
 
-    /**@brief write additional element into a xml file
+    /**@brief writte additional element into a xml file
      * @param[in] device device in which write parameters of additional element
      */
     void writeAdditional(OutputDevice& device) const;
@@ -90,7 +90,7 @@ public:
 
     /* @brief method for checking if the key and their correspond attribute are valids
      * @param[in] key The attribute key
-     * @param[in] value The value associated to key key
+     * @param[in] value The value asociated to key key
      * @return true if the value is valid, false in other case
      */
     bool isValid(SumoXMLAttr key, const std::string& value);

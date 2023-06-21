@@ -60,19 +60,13 @@ NGEdge::~NGEdge() {
 
 
 NBEdge*
-NGEdge::buildNBEdge(NBNetBuilder& nb, std::string type, const bool reversed) const {
-    const OptionsCont& oc = OptionsCont::getOptions();
-    if (oc.getBool("random-type") && nb.getTypeCont().size() > 1) {
-        auto it = nb.getTypeCont().begin();
-        std::advance(it, RandHelper::rand((int)nb.getTypeCont().size()));
-        type = it->first;
-    }
+NGEdge::buildNBEdge(NBNetBuilder& nb, const std::string& type, const bool reversed) const {
     int priority = nb.getTypeCont().getEdgeTypePriority(type);
-    if (priority > 1 && oc.getBool("rand.random-priority")) {
+    if (priority > 1 && OptionsCont::getOptions().getBool("rand.random-priority")) {
         priority = RandHelper::rand(priority) + 1;
     }
     int lanenumber = nb.getTypeCont().getEdgeTypeNumLanes(type);
-    if (lanenumber > 1 && oc.getBool("rand.random-lanenumber")) {
+    if (lanenumber > 1 && OptionsCont::getOptions().getBool("rand.random-lanenumber")) {
         lanenumber = RandHelper::rand(lanenumber) + 1;
     }
 
@@ -81,21 +75,12 @@ NGEdge::buildNBEdge(NBNetBuilder& nb, std::string type, const bool reversed) con
     if (isRailway(permissions) &&  nb.getTypeCont().getEdgeTypeIsOneWay(type)) {
         lsf = LaneSpreadFunction::CENTER;
     }
-    const double maxSegmentLength = oc.getFloat("geometry.max-segment-length");
-    NBNode* from = nb.getNodeCont().retrieve(reversed ? myEndNode->getID() : myStartNode->getID());
-    NBNode* to = nb.getNodeCont().retrieve(reversed ? myStartNode->getID() : myEndNode->getID());
-    PositionVector shape;
-    if (maxSegmentLength > 0) {
-        shape.push_back(from->getPosition());
-        shape.push_back(to->getPosition());
-        // shape is already cartesian but we must use a copy because the original will be modified
-        NBNetBuilder::addGeometrySegments(shape, PositionVector(shape), maxSegmentLength);
-    }
     NBEdge* result = new NBEdge(
         reversed ? myReverseID : myID,
-        from, to,
-        type, nb.getTypeCont().getEdgeTypeSpeed(type), NBEdge::UNSPECIFIED_FRICTION, lanenumber,
-        priority, nb.getTypeCont().getEdgeTypeWidth(type), NBEdge::UNSPECIFIED_OFFSET, shape, lsf);
+        nb.getNodeCont().retrieve(reversed ? myEndNode->getID() : myStartNode->getID()), // from
+        nb.getNodeCont().retrieve(reversed ? myStartNode->getID() : myEndNode->getID()), // to
+        type, nb.getTypeCont().getEdgeTypeSpeed(type), lanenumber,
+        priority, nb.getTypeCont().getEdgeTypeWidth(type), NBEdge::UNSPECIFIED_OFFSET, lsf);
     result->setPermissions(permissions);
     return result;
 }

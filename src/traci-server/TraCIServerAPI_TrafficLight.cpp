@@ -149,7 +149,6 @@ TraCIServerAPI_TrafficLight::processGet(TraCIServer& server, tcpip::Storage& inp
                         StoHelp::writeTypedInt(server.getWrapperStorage(), c.limit);
                         StoHelp::writeTypedInt(server.getWrapperStorage(), c.type);
                         StoHelp::writeTypedByte(server.getWrapperStorage(), c.mustWait);
-                        StoHelp::writeTypedByte(server.getWrapperStorage(), c.active);
                     }
                     break;
                 }
@@ -172,7 +171,6 @@ TraCIServerAPI_TrafficLight::processGet(TraCIServer& server, tcpip::Storage& inp
                         StoHelp::writeTypedInt(server.getWrapperStorage(), c.limit);
                         StoHelp::writeTypedInt(server.getWrapperStorage(), c.type);
                         StoHelp::writeTypedByte(server.getWrapperStorage(), c.mustWait);
-                        StoHelp::writeTypedByte(server.getWrapperStorage(), c.active);
                     }
                     break;
                 }
@@ -208,7 +206,6 @@ TraCIServerAPI_TrafficLight::processGet(TraCIServer& server, tcpip::Storage& inp
                         StoHelp::writeTypedInt(server.getWrapperStorage(), c.limit);
                         StoHelp::writeTypedInt(server.getWrapperStorage(), c.type);
                         StoHelp::writeTypedByte(server.getWrapperStorage(), c.mustWait);
-                        StoHelp::writeTypedByte(server.getWrapperStorage(), c.active);
                     }
                     break;
                 }
@@ -218,9 +215,9 @@ TraCIServerAPI_TrafficLight::processGet(TraCIServer& server, tcpip::Storage& inp
                     }
                     MSTrafficLightLogic* tls = MSNet::getInstance()->getTLSControl().get(id).getActive();
                     const std::string& state = tls->getCurrentPhaseDef().getState();
-                    const Parameterised::Map& params = tls->getParametersMap();
+                    const std::map<std::string, std::string>& params = tls->getParametersMap();
                     int num = 0;
-                    for (Parameterised::Map::const_iterator i = params.begin(); i != params.end(); ++i) {
+                    for (std::map<std::string, std::string>::const_iterator i = params.begin(); i != params.end(); ++i) {
                         if ("connection:" == (*i).first.substr(0, 11)) {
                             ++num;
                         }
@@ -229,7 +226,7 @@ TraCIServerAPI_TrafficLight::processGet(TraCIServer& server, tcpip::Storage& inp
                     server.getWrapperStorage().writeUnsignedByte(libsumo::TYPE_COMPOUND);
                     server.getWrapperStorage().writeUnsignedByte(libsumo::TYPE_INTEGER);
                     server.getWrapperStorage().writeInt(num * 2);
-                    for (Parameterised::Map::const_iterator i = params.begin(); i != params.end(); ++i) {
+                    for (std::map<std::string, std::string>::const_iterator i = params.begin(); i != params.end(); ++i) {
                         if ("connection:" != (*i).first.substr(0, 11)) {
                             continue;
                         }

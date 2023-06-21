@@ -20,7 +20,6 @@ from __future__ import absolute_import
 
 from xml.sax import handler, parse
 from .. import color
-from .. import miscutils
 
 
 def getBoundingBox(shape):
@@ -42,8 +41,6 @@ class Polygon:
         self.id = id
         self.type = type
         self.color = color
-        if layer is not None:
-            layer = miscutils.intIfPossible(float(layer))
         self.layer = layer
         self.fill = fill
         self.shape = shape
@@ -102,8 +99,8 @@ class PolygonReader(handler.ContentHandler):
                 cshape.append((float(p[0]), float(p[1])))
             if name == 'poly' and not self._includeTaz:
                 c = color.decodeXML(attrs['color'])
-                poly = Polygon(attrs['id'], attrs.get('type'), c,
-                               attrs.get('layer'), attrs.get('fill'), cshape)
+                poly = Polygon(attrs['id'], attrs['type'], c, float(
+                               attrs['layer']), attrs['fill'], cshape)
             else:
                 poly = Polygon(attrs['id'], color=attrs.get('color'), shape=cshape)
             self._id2poly[poly.id] = poly

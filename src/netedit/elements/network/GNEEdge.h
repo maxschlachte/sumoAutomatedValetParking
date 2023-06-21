@@ -83,12 +83,6 @@ public:
         return getParentJunctions().back();
     }
 
-    /// @brief check if current network element is valid to be written into XML
-    bool isNetworkElementValid() const;
-
-    /// @brief return a string with the current network element problem
-    std::string getNetworkElementProblem() const;
-
     /// @name Functions related with geometry of element
     /// @{
     /// @brief update pre-computed geometry information
@@ -136,7 +130,7 @@ public:
      */
     GUIGLObjectPopupMenu* getPopUpMenu(GUIMainWindow& app, GUISUMOAbstractView& parent);
 
-    /// @brief return exaggeration associated with this GLObject
+    /// @brief return exaggeration asociated with this GLObject
     double getExaggeration(const GUIVisualizationSettings& s) const;
 
     /// @brief update centering boundary (implies change in RTREE)
@@ -150,9 +144,6 @@ public:
      * @see GUIGlObject::drawGL
      */
     void drawGL(const GUIVisualizationSettings& s) const;
-
-    /// @brief update GLObject (geometry, ID, etc.)
-    void updateGLObject();
     /// @}
 
     /// @brief returns the internal NBEdge
@@ -206,7 +197,7 @@ public:
     /// @}
 
     /// @brief get parameters map
-    const Parameterised::Map& getACParametersMap() const;
+    const std::map<std::string, std::string>& getACParametersMap() const;
 
     /// @brief set responsibility for deleting internal structures
     void setResponsible(bool newVal);
@@ -230,7 +221,7 @@ public:
     const Position getBackDownShapePosition() const;
 
     /// @brief remake connections
-    void remakeGNEConnections(bool junctionsReady = false);
+    void remakeGNEConnections();
 
     /// @brief copy edge attributes from edgetemplate
     void copyTemplate(const GNEEdgeTemplate* edgeTemplate, GNEUndoList* undoList);
@@ -312,12 +303,6 @@ public:
     /// @brief check if edge makes a convex angle [0 - 180) degrees
     bool isConvexAngle() const;
 
-    /// @brief check if this edge has predecessors (note: only for vehicles, this function ignore walking areas!)
-    bool hasPredecessors() const;
-
-    /// @brief check if this edge has successors (note: only for vehicles, this function ignore walking areas!)
-    bool hasSuccessors() const;
-
 protected:
     /// @brief the underlying NBEdge
     NBEdge* myNBEdge;
@@ -372,7 +357,7 @@ private:
         const std::vector<GNEDemandElement*>& getDemandElements() const;
     };
 
-    /// @brief flag to enable/disable update geometry of lanes (used mainly by setNumLanes)
+    /// @brif flag to enable/disable update geometry of lanes (used mainly by setNumLanes)
     bool myUpdateGeometry;
 
     /// @brief set attribute after validation
@@ -427,9 +412,6 @@ private:
 
     /// @brief draw edgeStopOffset
     void drawLaneStopOffset(const GUIVisualizationSettings& s) const;
-
-    /// @brief draw TAZElements
-    void drawTAZElements(const GUIVisualizationSettings& s) const;
 
     /// @brief check if given stacked positions are overlapped
     bool areStackPositionOverlapped(const GNEEdge::StackPosition& vehicleA, const GNEEdge::StackPosition& vehicleB) const;

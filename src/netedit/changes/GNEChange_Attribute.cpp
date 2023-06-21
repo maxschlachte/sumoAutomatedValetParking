@@ -61,7 +61,7 @@ GNEChange_Attribute::~GNEChange_Attribute() {
     // remove if is unreferenced
     if (myAC->unreferenced()) {
         // show extra information for tests
-        WRITE_DEBUG("Deleting unreferenced " + myAC->getTagStr() + " in GNEChange_Attribute");
+        WRITE_DEBUG("Deleting unreferenced " + myAC->getTagStr() + " '" + myAC->getID() + "' in GNEChange_Attribute");
         // delete AC
         delete myAC;
     }
@@ -91,11 +91,11 @@ GNEChange_Attribute::undo() {
         // check if networkElements, additional or shapes has to be saved (only if key isn't GNE_ATTR_SELECTED)
         if (myAC->getTagProperty().isNetworkElement()) {
             myAC->getNet()->requireSaveNet(true);
-        } else if (myAC->getTagProperty().isAdditionalElement()) {
+        } else if (myAC->getTagProperty().isAdditionalElement() || myAC->getTagProperty().isShape() || myAC->getTagProperty().isTAZElement()) {
             myAC->getNet()->requireSaveAdditionals(true);
         } else if (myAC->getTagProperty().isDemandElement()) {
             myAC->getNet()->requireSaveDemandElements(true);
-        } else if (myAC->getTagProperty().isDataElement()) {
+        } else if (myAC->getTagProperty().isDemandElement()) {
             myAC->getNet()->requireSaveDataElements(true);
         }
     }
@@ -125,11 +125,11 @@ GNEChange_Attribute::redo() {
         // check if networkElements, additional or shapes has to be saved (only if key isn't GNE_ATTR_SELECTED)
         if (myAC->getTagProperty().isNetworkElement()) {
             myAC->getNet()->requireSaveNet(true);
-        } else if (myAC->getTagProperty().isAdditionalElement()) {
+        } else if (myAC->getTagProperty().isAdditionalElement() || myAC->getTagProperty().isShape() || myAC->getTagProperty().isTAZElement()) {
             myAC->getNet()->requireSaveAdditionals(true);
         } else if (myAC->getTagProperty().isDemandElement()) {
             myAC->getNet()->requireSaveDemandElements(true);
-        } else if (myAC->getTagProperty().isDataElement()) {
+        } else if (myAC->getTagProperty().isDemandElement()) {
             myAC->getNet()->requireSaveDataElements(true);
         }
     }

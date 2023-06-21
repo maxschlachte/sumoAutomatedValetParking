@@ -122,16 +122,12 @@ MFXListItem::MFXListItem() :
 }
 
 
-MFXIconComboBox::MFXIconComboBox(FXComposite* p, FXint cols, const bool haveIcons, FXObject* tgt, FXSelector sel, FXuint opts, FXint x, FXint y, FXint w, FXint h, FXint pl, FXint pr, FXint pt, FXint pb):
-    FXPacker(p, opts, x, y, w, h, 0, 0, 0, 0, 0, 0),
-    myHaveIcons(haveIcons) {
+MFXIconComboBox::MFXIconComboBox(FXComposite* p, FXint cols, FXObject* tgt, FXSelector sel, FXuint opts, FXint x, FXint y, FXint w, FXint h, FXint pl, FXint pr, FXint pt, FXint pb):
+    FXPacker(p, opts, x, y, w, h, 0, 0, 0, 0, 0, 0) {
     flags |= FLAG_ENABLED;
     target = tgt;
     message = sel;
     myIconLabel = new FXLabel(this, "", nullptr, 0, 0, 0, 0, 0, pl, pr, pt, pb);
-    if (!myHaveIcons) {
-        myIconLabel->hide();
-    }
     myTextFieldIcon = new MFXTextFieldIcon(this, cols, this, MFXIconComboBox::ID_TEXT, 0, 0, 0, 0, 0, pl, pr, pt, pb);
     if (options & COMBOBOX_STATIC) {
         myTextFieldIcon->setEditable(FALSE);
@@ -204,11 +200,7 @@ MFXIconComboBox::disable() {
 FXint
 MFXIconComboBox::getDefaultWidth() {
     FXint ww, pw;
-    if (myIconLabel->shown()) {
-        ww = myIconLabel->getDefaultWidth() + myTextFieldIcon->getDefaultWidth() + myButton->getDefaultWidth() + (border << 1);
-    } else {
-        ww = myTextFieldIcon->getDefaultWidth() + myButton->getDefaultWidth() + (border << 1);
-    }
+    ww = myIconLabel->getDefaultWidth() + myTextFieldIcon->getDefaultWidth() + myButton->getDefaultWidth() + (border << 1);
     pw = myPane->getDefaultWidth();
     return FXMAX(ww, pw);
 }
@@ -225,21 +217,15 @@ MFXIconComboBox::getDefaultHeight() {
 
 void
 MFXIconComboBox::layout() {
-    const FXint itemHeight = height - (border << 1);
-    const FXint iconSize = myHaveIcons ? itemHeight : 0;
-    const FXint buttonWidth = myButton->getDefaultWidth();
-    const FXint textWidth = width - buttonWidth - iconSize - (border << 1);
+    FXint buttonWidth, textWidth, itemHeight, iconSize;
+    itemHeight = height - (border << 1);
+    iconSize = itemHeight;
+    buttonWidth = myButton->getDefaultWidth();
+    textWidth = width - buttonWidth - iconSize - (border << 1);
     myIconLabel->position(border, border, iconSize, iconSize);
     myTextFieldIcon->position(border + iconSize, border, textWidth, itemHeight);
     myButton->position(border + textWidth + iconSize, border, buttonWidth, itemHeight);
-
-    int size = -1;
-    for (int i = 0; i < myList->getNumItems(); i++) {
-        if (myList->getItemWidth(i) > size) {
-            size = myList->getItemWidth(i);
-        }
-    }
-    myPane->resize(size + 17, myPane->getDefaultHeight());
+    myPane->resize(width, myPane->getDefaultHeight());
     flags &= ~FLAG_DIRTY;
 }
 
@@ -287,16 +273,10 @@ MFXIconComboBox::getNumVisible() const {
 
 
 void
-MFXIconComboBox::setText(FXString text) {
-    myTextFieldIcon->setText(text);
-}
-
-
-void
 MFXIconComboBox::setNumVisible(FXint nvis) {
     myList->setNumVisible(nvis);
     // set height manually (due icons)
-    myList->setHeight((nvis + 1) * ICON_HEIGHT);
+    myList->setHeight(nvis * ICON_HEIGHT);
 }
 
 
@@ -404,22 +384,11 @@ MFXIconComboBox::setItem(const FXString& text, FXIcon* icon) {
         const MFXListItem* item = dynamic_cast<MFXListItem*>(myList->getItem(i));
         // set icon and background color
         if (item && (item->getText() == text) && (item->getIcon() == icon)) {
-            myTextFieldIcon->setText(item->getText());
-            myTextFieldIcon->setBackColor(item->getBackGroundColor());
-            myIconLabel->setIcon(item->getIcon());
-            myIconLabel->setBackColor(item->getBackGroundColor());
-            myTextFieldIcon->setTextColor(FXRGB(0, 0, 0));
+            myList->setCurrentItem(i, FALSE);
             return true;
         }
     }
     return false;
-}
-
-
-void
-MFXIconComboBox::setCustomText(const FXString text) {
-    myTextFieldIcon->setText(text);
-    myTextFieldIcon->setTextColor(FXRGB(128, 128, 128));
 }
 
 
@@ -826,5 +795,4 @@ long MFXIconComboBox::onMouseWheel(FXObject*, FXSelector, void* ptr) {
 }
 
 
-MFXIconComboBox::MFXIconComboBox() :
-    myHaveIcons(false) {}
+MFXIconComboBox::MFXIconComboBox() {}

@@ -61,7 +61,6 @@ int MSVehicleType::myNextIndex = 0;
 // ===========================================================================
 MSVehicleType::MSVehicleType(const SUMOVTypeParameter& parameter) :
     myParameter(parameter),
-    myEnergyParams(&parameter),
     myWarnedActionStepLengthTauOnce(false),
     myWarnedActionStepLengthBallisticOnce(false),
     myWarnedStepLengthTauOnce(false),
@@ -86,7 +85,7 @@ MSVehicleType::~MSVehicleType() {
 
 double
 MSVehicleType::computeChosenSpeedDeviation(SumoRNG* rng, const double minDev) const {
-    return roundDecimal(MAX2(minDev, myParameter.speedFactor.sample(rng)), gPrecisionRandom);
+    return MAX2(minDev, myParameter.speedFactor.sample(rng));
 }
 
 
@@ -171,10 +170,6 @@ MSVehicleType::setPreferredLateralAlignment(const LatAlignmentDefinition& latAli
     myParameter.parametersSet |= VTYPEPARS_LATALIGNMENT_SET;
 }
 
-void
-MSVehicleType::setScale(double value) {
-    myParameter.scale = value;
-}
 
 void
 MSVehicleType::setDefaultProbability(const double& prob) {
@@ -211,7 +206,7 @@ MSVehicleType::setSpeedDeviation(const double& dev) {
 
 void
 MSVehicleType::setActionStepLength(const SUMOTime actionStepLength, bool resetActionOffset) {
-    assert(actionStepLength >= 0);
+    assert(actionStepLength >= 0.);
     myParameter.parametersSet |= VTYPEPARS_ACTIONSTEPLENGTH_SET;
 
     if (myParameter.actionStepLength == actionStepLength) {
@@ -249,13 +244,6 @@ void
 MSVehicleType::setEmissionClass(SUMOEmissionClass eclass) {
     myParameter.emissionClass = eclass;
     myParameter.parametersSet |= VTYPEPARS_EMISSIONCLASS_SET;
-}
-
-
-void
-MSVehicleType::setMass(double mass) {
-    myParameter.mass = mass;
-    myParameter.parametersSet |= VTYPEPARS_MASS_SET;
 }
 
 
@@ -437,7 +425,7 @@ MSVehicleType::check() {
         SVCPermissions ignoreVClasses = parseVehicleClasses(OptionsCont::getOptions().getStringVector("meso-ignore-lanes-by-vclass"));
         if ((ignoreVClasses & getVehicleClass()) != 0) {
             WRITE_WARNINGF("Vehicle class '%' of vType '%' is set as ignored by option --meso-ignore-lanes-by-vclass to ensure default vehicle capacity. Set option --meso-lane-queue for multi-modal meso simulation",
-                           toString(getVehicleClass()), getID());
+                    toString(getVehicleClass()), getID());
         }
     }
 }

@@ -49,7 +49,6 @@
 // ===========================================================================
 int OptionsIO::myArgC = 0;
 char** OptionsIO::myArgV;
-std::chrono::time_point<std::chrono::system_clock> OptionsIO::myLoadTime;
 
 
 // ===========================================================================
@@ -84,7 +83,6 @@ OptionsIO::setArgs(const std::vector<std::string>& args) {
 
 void
 OptionsIO::getOptions(const bool commandLineOnly) {
-    myLoadTime = std::chrono::system_clock::now();
     if (myArgC == 2 && myArgV[1][0] != '-') {
         // special case only one parameter, check who can handle it
         if (OptionsCont::getOptions().setByRootElement(getRoot(myArgV[1]), myArgV[1])) {

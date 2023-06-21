@@ -27,9 +27,15 @@ if 'SUMO_HOME' in os.environ:
     tools = os.path.join(os.environ['SUMO_HOME'], 'tools')
     sys.path.append(os.path.join(tools))
     from sumolib.output import parse
-    from sumolib.miscutils import intIfPossible
 else:
     sys.exit("please declare environment variable 'SUMO_HOME'")
+
+
+def intIfPossible(val):
+    if int(val) == val:
+        return int(val)
+    else:
+        return val
 
 
 def get_options(args=None):
@@ -47,7 +53,7 @@ def get_options(args=None):
                          default=False, help="whether ids should be modified as well")
     optParser.add_option("--heterogeneous", dest="heterogeneous",
                          action="store_true", default=False, help="whether heterogeneous objects shall be parsed " +
-                                                                  "(i.e. vehicles with embedded and referenced routes)")
+                                                                  "(i.e. vehicles with embeded and referenced routes)")
     optParser.add_option("--depart-edges", dest="depart_edges",
                          help="only modify departure times of vehicles departing on the given edges")
     optParser.add_option("--depart-edges.file", dest="depart_edges_file",
@@ -82,15 +88,14 @@ def get_options(args=None):
     if options.depart_edges_file is not None:
         if options.depart_edges is None:
             options.depart_edges = []
-        with open(options.depart_edges_file) as depart_edges:
-            for line in depart_edges:
-                line = line.strip()
-                if line.startswith("edge:"):
-                    options.depart_edges.append(line[5:])
-                elif line.startswith("lane:"):
-                    options.depart_edges.append(line[5:-2])
-                else:
-                    options.depart_edges.append(line)
+        for line in open(options.depart_edges_file):
+            line = line.strip()
+            if line.startswith("edge:"):
+                options.depart_edges.append(line[5:])
+            elif line.startswith("lane:"):
+                options.depart_edges.append(line[5:-2])
+            else:
+                options.depart_edges.append(line)
 
     if options.arrival_edges is not None:
         options.arrival_edges = options.arrival_edges.split(',')

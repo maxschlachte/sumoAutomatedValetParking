@@ -86,6 +86,10 @@ public:
             visited = false;
         }
 
+    private:
+        /// @brief Invalidated assignment operator
+        EdgeInfo& operator=(const EdgeInfo& s) = delete;
+
     };
 
     /// Type of the function that is used to retrieve the edge effort.
@@ -126,8 +130,8 @@ public:
     /// Destructor
     virtual ~SUMOAbstractRouter() {
         if (myNumQueries > 0) {
-            WRITE_MESSAGE(myType + " answered " + toString(myNumQueries) + " queries and explored " + toString((double)myQueryVisits / (double)myNumQueries) +  " edges on average.");
-            WRITE_MESSAGE(myType + " spent " + elapsedMs2string(myQueryTimeSum) + " answering queries (" + toString((double)myQueryTimeSum / (double)myNumQueries) +  "ms on average).");
+            WRITE_MESSAGE(myType + " answered " + toString(myNumQueries) + " queries and explored " + toString(double(myQueryVisits) / myNumQueries) +  " edges on average.");
+            WRITE_MESSAGE(myType + " spent " + elapsedMs2string(myQueryTimeSum) + " answering queries (" + toString(double(myQueryTimeSum) / myNumQueries) +  "ms on average).");
         }
     }
 

@@ -78,9 +78,6 @@ protected:
     /// @brief The type map to fill
     PCTypeMap& myContainer;
 
-    /// @brief whether to replace the loaded type with a custom value
-    bool myOverwriteType;
-
 
 private:
     /// @brief Invalidated copy constructor

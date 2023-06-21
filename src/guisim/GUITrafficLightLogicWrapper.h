@@ -75,7 +75,7 @@ public:
     GUIParameterTableWindow* getParameterWindow(GUIMainWindow& app,
             GUISUMOAbstractView& parent);
 
-    /// @brief return exaggeration associated with this GLObject
+    /// @brief return exaggeration asociated with this GLObject
     double getExaggeration(const GUIVisualizationSettings& s) const;
 
     /** @brief Returns the boundary to which the view shall be centered in order to show the object
@@ -116,14 +116,14 @@ public:
 
     int getCurrentPhase() const;
     std::string getCurrentPhaseName() const;
-    int getCurrentDurationSeconds() const;
-    int getCurrentMinDurSeconds() const;
-    int getCurrentMaxDurSeconds() const;
-    int getCurrentEarliestEndSeconds() const;
-    int getCurrentLatestEndSeconds() const;
-    int getDefaultCycleTimeSeconds() const;
-    int getCurrentTimeInCycleSeconds() const;
-    int getRunningDurationSeconds() const;
+    int getCurrentDuration() const;
+    int getCurrentMinDur() const;
+    int getCurrentMaxDur() const;
+    int getCurrentEarliestEnd() const;
+    int getCurrentLatestEnd() const;
+    int getDefaultCycleTime() const;
+    int getCurrentTimeInCycle() const;
+    int getRunningDuration() const;
 
 public:
     /**

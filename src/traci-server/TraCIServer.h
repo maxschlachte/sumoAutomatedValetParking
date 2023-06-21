@@ -266,7 +266,6 @@ public:
     bool wrapInt(const std::string& objID, const int variable, const int value);
     bool wrapString(const std::string& objID, const int variable, const std::string& value);
     bool wrapStringList(const std::string& objID, const int variable, const std::vector<std::string>& value);
-    bool wrapDoubleList(const std::string& objID, const int variable, const std::vector<double>& value);
     bool wrapPosition(const std::string& objID, const int variable, const libsumo::TraCIPosition& value);
     bool wrapPositionVector(const std::string& objID, const int variable, const libsumo::TraCIPositionVector& value);
     bool wrapColor(const std::string& objID, const int variable, const libsumo::TraCIColor& value);

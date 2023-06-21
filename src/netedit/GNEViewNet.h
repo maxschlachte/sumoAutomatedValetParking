@@ -55,7 +55,7 @@ public:
      * @param[in] viewParent viewParent of this viewNet
      * @param[in] net traffic net
      * @param[in] newNet check if we're creating a new net, or loading an existent
-     * @param[in] undoList pointer to UndoList module
+     * @param[in] undoList pointer to UndoList modul
      * @param[in] glVis a reference to GLVisuals
      * @param[in] share a reference to FXCanvas
      */
@@ -130,10 +130,10 @@ public:
     /// @brief get data view options
     const GNEViewNetHelper::DataViewOptions& getDataViewOptions() const;
 
-    /// @brief get Key Pressed module
+    /// @brief get Key Pressed modul
     const GNEViewNetHelper::MouseButtonKeyPressed& getMouseButtonKeyPressed() const;
 
-    /// @brief get Edit Shape module
+    /// @brief get Edit Shape modul
     const GNEViewNetHelper::EditNetworkElementShapes& getEditNetworkElementShapes() const;
 
     /// @name overloaded handlers
@@ -281,9 +281,6 @@ public:
     /// @brief edit connection shape
     long onCmdEditConnectionShape(FXObject*, FXSelector, void*);
 
-    /// @brief edit connection shape
-    long onCmdSmoothConnectionShape(FXObject*, FXSelector, void*);
-
     /// @brief edit crossing shape
     long onCmdEditCrossingShape(FXObject*, FXSelector, void*);
 
@@ -302,9 +299,6 @@ public:
     /// @brief toggle show additional sub-elements
     long onCmdToggleShowAdditionalSubElements(FXObject*, FXSelector, void*);
 
-    /// @brief toggle show TAZ elements
-    long onCmdToggleShowTAZElements(FXObject*, FXSelector, void*);
-
     /// @brief toggle extend selection
     long onCmdToggleExtendSelection(FXObject*, FXSelector, void*);
 
@@ -313,9 +307,6 @@ public:
 
     /// @brief toggle show grid
     long onCmdToggleShowGrid(FXObject*, FXSelector, void*);
-
-    /// @brief toggle draw junction shape
-    long onCmdToggleDrawJunctionShape(FXObject*, FXSelector, void*);
 
     /// @brief toggle draw vehicles in begin position or spread in lane
     long onCmdToggleDrawSpreadVehicles(FXObject*, FXSelector, void*);
@@ -403,8 +394,8 @@ public:
     /// @brief change end in interval bar
     long onCmdIntervalBarSetEnd(FXObject*, FXSelector, void*);
 
-    /// @brief change parameter in interval bar
-    long onCmdIntervalBarSetParameter(FXObject*, FXSelector, void*);
+    /// @brief change attribute in interval bar
+    long onCmdIntervalBarSetAttribute(FXObject*, FXSelector, void*);
 
     /// @}
 
@@ -471,13 +462,10 @@ public:
     /// @brief draw front attributeCarrier
     void drawTranslateFrontAttributeCarrier(const GNEAttributeCarrier* AC, double typeOrLayer, const double extraOffset = 0);
 
-    /// @brief get last created route
-    GNEDemandElement* getLastCreatedRoute() const;
+    /// @brief check if lock icon should be visible
+    bool showLockIcon() const;
 
-    /// @brief set last created route
-    void setLastCreatedRoute(GNEDemandElement* lastCreatedRoute);
-
-    /// @brief set statusBar text
+    /// @brief set staturBar text
     void setStatusBarText(const std::string& text);
 
     /// @brief whether to autoselect nodes or to lanes
@@ -596,25 +584,22 @@ private:
     GNEViewNetHelper::LockManager myLockManager;
 
     /// @brief view parent
-    GNEViewParent* myViewParent = nullptr;
+    GNEViewParent* myViewParent;
 
     /// @brief Pointer to current net. (We are not responsible for deletion)
-    GNENet* myNet = nullptr;
+    GNENet* myNet;
 
     /// @brief the current frame
-    GNEFrame* myCurrentFrame = nullptr;
+    GNEFrame* myCurrentFrame;
 
     /// @brief a reference to the undolist maintained in the application
-    GNEUndoList* myUndoList = nullptr;
+    GNEUndoList* myUndoList;
 
     /// @brief current inspected attribute carrier
     std::vector<GNEAttributeCarrier*> myInspectedAttributeCarriers;
 
     /// @brief front attribute carrier
-    GNEAttributeCarrier* myFrontAttributeCarrier = nullptr;
-
-    /// @brief last created route
-    GNEDemandElement* myLastCreatedRoute = nullptr;
+    GNEAttributeCarrier* myFrontAttributeCarrier;
 
     /// @brief create edit mode buttons and elements
     void buildEditModeControls();
@@ -682,14 +667,14 @@ private:
     /// @brief draw functions
     /// @{
 
+    /// @brief draw connections between lane candidates during selecting lane mode in Additional mode
+    void drawLaneCandidates() const;
+
     /// @brief draw temporal polygon shape in Polygon Mode
-    void drawTemporalDrawingShape() const;
+    void drawTemporalDrawShape() const;
 
     /// @brief draw temporal junction in create edge mode
     void drawTemporalJunction() const;
-
-    /// @brief draw temporal split junction in create edge mode
-    void drawTemporalSplitJunction() const;
     /// @}
 
     /// @brief mouse process functions

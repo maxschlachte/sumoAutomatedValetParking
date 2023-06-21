@@ -9,7 +9,7 @@ option(PROFILING "Enable output of profiling data (applies to gcc/clang builds o
 option(PPROF "Link the pprof profiler library (applies to gcc/clang builds only)" false)
 option(COVERAGE "Enable output of coverage data (applies to gcc/clang builds only)" false)
 option(SUMO_UTILS "Enable generation of a shared library for the utility functions for option handling, XML parsing etc." false)
-option(FMI "Enable generation of an FMI library for SUMO" true)
+option(FMI "Enable generation of an FMI library for SUMO" false)
 set(BINARY_SUFFIX "" CACHE STRING "Append the suffix to every generated binary")
 set(COMPILE_DEFINITIONS "" CACHE STRING "Macros or defines to add when compiling")
 set(CCACHE_SUPPORT ON CACHE BOOL "Enable ccache support if installed")
@@ -29,8 +29,8 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif ()
 
 project(SUMO CXX C)
-set(PACKAGE_VERSION "git")
-cmake_minimum_required(VERSION 3.4)
+set(PACKAGE_VERSION "1.12.0")
+cmake_minimum_required(VERSION 3.9)
 
 # Check if libraries have to be found, depending on SUMO_LIBRARIES
 set(SUMO_LIBRARIES "$ENV{SUMO_LIBRARIES}" CACHE PATH "Location of SUMOLibraries dependencies")
@@ -41,27 +41,23 @@ if (NOT SUMO_LIBRARIES AND EXISTS "${CMAKE_SOURCE_DIR}/../SUMOLibraries")
 endif ()
 
 if (CCACHE_SUPPORT)
-    if (MSVC)
-        file(GLOB SCCACHE_ROOT "${SUMO_LIBRARIES}/sccache-*")
-        find_program(SCCACHE_PROGRAM sccache ${SCCACHE_ROOT})
-        if (SCCACHE_PROGRAM)
-            message(STATUS "Found sccache: ${SCCACHE_PROGRAM}")
-            set(CMAKE_C_COMPILER_LAUNCHER "${SCCACHE_PROGRAM}")
-            set(CMAKE_CXX_COMPILER_LAUNCHER "${SCCACHE_PROGRAM}")
-            if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-                string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
-                string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
-            elseif (CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-                string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
-                string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
-            endif()
-        endif()
-    else()
-        find_program(CCACHE_PROGRAM ccache)
-        if (CCACHE_PROGRAM)
-            message(STATUS "Found ccache: ${CCACHE_PROGRAM}")
-            set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
-            set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    find_program(CCACHE_PROGRAM ccache)
+    file(GLOB SCCACHE_ROOT "${SUMO_LIBRARIES}/sccache-*")
+    find_program(SCCACHE_PROGRAM sccache ${SCCACHE_ROOT})
+    if (CCACHE_PROGRAM)
+        message(STATUS "Found ccache: ${CCACHE_PROGRAM}")
+        set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+        set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    elseif (SCCACHE_PROGRAM)
+        message(STATUS "Found sccache: ${SCCACHE_PROGRAM}")
+        set(CMAKE_C_COMPILER_LAUNCHER "${SCCACHE_PROGRAM}")
+        set(CMAKE_CXX_COMPILER_LAUNCHER "${SCCACHE_PROGRAM}")
+        if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+            string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+            string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+        elseif (CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+            string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+            string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
         endif()
     endif()
 endif()
@@ -108,21 +104,13 @@ if (GNU_COMPILER OR CLANG_COMPILER)
     endif ()
 elseif (MSVC)
     # enabling /WX is not possible due to warnings in external headers
-    if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    # /Wall brings MSVC 2013 to complete halt
+    if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
         # this is a workaround to disable lots of warnings for replacing /W3 with /W4 in VS 2019
         # there is a policy for that starting with CMake 3.15
-        if (MSVC_VERSION GREATER 1900)
-            string(REPLACE "/W3" "/Wall" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-        else ()
-            string(REPLACE "/W3" "/W4" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-        endif ()
+        string(REPLACE "/W3" "/W4" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
     else ()
-        # /Wall brings MSVC 2013 to complete halt
-        if (MSVC_VERSION GREATER 1900)
-            set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Wall")
-        else ()
-            set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /W4")
-        endif ()
+        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /W4")
     endif ()
     if (MULTITHREADED_BUILD)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
@@ -179,6 +167,7 @@ if (CMAKE_GENERATOR MATCHES Xcode)
 endif ()
 message(STATUS "")
 
+#set(Python_ADDITIONAL_VERSIONS 3.7 3.6 3.5 3.4 3.3 2.7) # it may help in finding the correct python for libsumo
 find_package(PythonInterp REQUIRED)
 message(STATUS "Found Python: " ${PYTHON_EXECUTABLE})
 execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import setuptools" RESULT_VARIABLE SETUPTOOLS_MISSING)
@@ -186,6 +175,19 @@ execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import setuptools" RESULT_VARIA
 if (APPLE)
     # we know that openGL is deprecated for newer MacOS
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DGL_SILENCE_DEPRECATION")
+    # http://stackoverflow.com/questions/1487752/how-do-i-instruct-cmake-to-look-for-libraries-installed-by-macports
+    link_directories(/opt/X11/lib)
+    include_directories(SYSTEM /opt/X11/include)
+    # Detect if the "port" command is valid on this system; if so, return full path
+    execute_process(COMMAND which port RESULT_VARIABLE DETECT_MACPORTS OUTPUT_VARIABLE MACPORTS_PREFIX ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if (${DETECT_MACPORTS} EQUAL 0)
+        # MACPORTS_PREFIX contains now something like "/opt/local/bin/port", so we get the parent directory
+        get_filename_component(MACPORTS_PREFIX ${MACPORTS_PREFIX} DIRECTORY)
+        # "/opt/local" is where MacPorts lives, add `/lib` suffix and link
+        link_directories(${MACPORTS_PREFIX}/../lib)
+        include_directories(${MACPORTS_PREFIX}/../include)
+        message(STATUS "Macports detected: ${MACPORTS_PREFIX}")
+    endif ()
 
     # Recommendation, also add a "brew --prefix" custom command to detect a homebrew build environment
     execute_process(COMMAND brew --prefix RESULT_VARIABLE DETECT_BREW OUTPUT_VARIABLE BREW_PREFIX ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -193,18 +195,6 @@ if (APPLE)
         link_directories(${BREW_PREFIX}/lib)
         include_directories(${BREW_PREFIX}/include)
         message(STATUS "Brew detected: ${BREW_PREFIX}")
-    endif ()
-
-    # Detect if the "port" command is valid on this system; if so, return full path
-    execute_process(COMMAND which port RESULT_VARIABLE DETECT_MACPORTS OUTPUT_VARIABLE MACPORTS_PREFIX ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if (${DETECT_MACPORTS} EQUAL 0)
-        # MACPORTS_PREFIX contains now something like "/opt/local/bin/port", so we get the parent directory
-        get_filename_component(MACPORTS_PREFIX ${MACPORTS_PREFIX} DIRECTORY)
-        # "/opt/local" is where MacPorts lives, add `/lib` suffix and link
-        # http://stackoverflow.com/questions/1487752/how-do-i-instruct-cmake-to-look-for-libraries-installed-by-macports
-        link_directories(/opt/X11/lib ${MACPORTS_PREFIX}/../lib)
-        include_directories(SYSTEM /opt/X11/include ${MACPORTS_PREFIX}/../include)
-        message(STATUS "Macports detected: ${MACPORTS_PREFIX}")
     endif ()
 endif (APPLE)
 
@@ -343,7 +333,7 @@ if (CHECK_OPTIONAL_LIBS)
     file(GLOB OSG_PATH "${SUMO_LIBRARIES}/OSG-?.?.?")
     file(GLOB GL2PS_PATH "${SUMO_LIBRARIES}${LIB_VERSION}/gl2ps-?.?.?")
     set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};${GDAL_PATH};${FFMPEG_PATH};${OSG_PATH};${GL2PS_PATH}")
-    file(GLOB SUMO_OPTIONAL_LIBRARIES_DLL "${GDAL_PATH}/bin/*.dll" "${FFMPEG_PATH}/bin/*.dll" "${OSG_PATH}/bin/*.dll" "${GL2PS_PATH}/bin/*.dll")
+    file(GLOB SUMO_OPTIONAL_LIBRARIES_DLL "${GDAL_PATH}/bin/*.dll" "${FFMPEG_PATH}/bin/*.dll" "${GL2PS_PATH}/bin/*.dll")
 
     # GDAL (for geopositioning)
     find_package(GDAL)
@@ -355,31 +345,29 @@ if (CHECK_OPTIONAL_LIBS)
         set(GDAL_LIBRARY "")
     endif (GDAL_FOUND)
 
-    if (FOX_FOUND)
-        # FFMPEG (for recording videos)
-        find_package(FFMPEG)
-        if (FFMPEG_FOUND)
-            include_directories(SYSTEM ${FFMPEG_INCLUDE_DIR})
-            set(HAVE_FFMPEG 1)
-            set(ENABLED_FEATURES "${ENABLED_FEATURES} FFmpeg")
-        endif ()
-
-        # OSG (For 3D view)
-        find_package(OpenSceneGraph 3.4.0 COMPONENTS osgGA osgViewer osgUtil osgDB osgText)
-        if (OPENSCENEGRAPH_FOUND)
-            include_directories(SYSTEM ${OPENSCENEGRAPH_INCLUDE_DIRS})
-            set(HAVE_OSG 1)
-            set(ENABLED_FEATURES "${ENABLED_FEATURES} OSG")
-        endif ()
-
-        # GL2PS (deprecated, will be changed by FreeType
-        find_package(GL2PS)
-        if (GL2PS_FOUND)
-            include_directories(SYSTEM ${GL2PS_INCLUDE_DIR})
-            set(HAVE_GL2PS 1)
-            set(ENABLED_FEATURES "${ENABLED_FEATURES} GL2PS")
-        endif (GL2PS_FOUND)
+    # FFMPEG (for recording videos)
+    find_package(FFMPEG)
+    if (FFMPEG_FOUND)
+        include_directories(SYSTEM ${FFMPEG_INCLUDE_DIR})
+        set(HAVE_FFMPEG 1)
+        set(ENABLED_FEATURES "${ENABLED_FEATURES} FFmpeg")
     endif ()
+
+    # OSG (For 3D view)
+    find_package(OpenSceneGraph 3.4.0 COMPONENTS osgGA osgViewer osgUtil osgDB osgText)
+    if (OPENSCENEGRAPH_FOUND)
+        include_directories(SYSTEM ${OPENSCENEGRAPH_INCLUDE_DIRS})
+        set(HAVE_OSG 1)
+        set(ENABLED_FEATURES "${ENABLED_FEATURES} OSG")
+    endif ()
+
+    # GL2PS (deprecated, will be changed by FreeType
+    find_package(GL2PS)
+    if (GL2PS_FOUND)
+        include_directories(SYSTEM ${GL2PS_INCLUDE_DIR})
+        set(HAVE_GL2PS 1)
+        set(ENABLED_FEATURES "${ENABLED_FEATURES} GL2PS")
+    endif (GL2PS_FOUND)
 
     # Eigen (for overhead wire / electric circuit simulation)
     find_package(Eigen3 3.2)
@@ -407,15 +395,15 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(commonlibs
         utils_distribution utils_handlers utils_shapes utils_options
         utils_xml utils_geom utils_common utils_importio utils_iodevices utils_traction_wire foreign_tcpip
-        ${XercesC_LIBRARIES} ${ZLIB_LIBRARIES} ${PROJ_LIBRARY})
-if (WIN32)
+        ${XercesC_LIBRARIES} ${ZLIB_LIBRARIES} ${PROJ_LIBRARY} ${TCMALLOC_LIBRARY})
+if (MSVC)
     set(commonlibs ${commonlibs} ws2_32)
 endif ()
 if (PPROF)
     set(commonlibs ${commonlibs} profiler)
 endif ()
 set(commonvehiclelibs
-        utils_emissions foreign_phemlight foreign_phemlight_V5 utils_vehicle ${commonlibs} ${FOX_LIBRARY})
+        utils_emissions foreign_phemlight utils_vehicle ${commonlibs} ${FOX_LIBRARY})
 
 # set custom name and folder for ALL_BUILD and ZERO_CHECK in visual studio solutions
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -426,13 +414,6 @@ if (MSVC)
     if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
         set(CMAKE_INSTALL_PREFIX "sumo-${PACKAGE_VERSION}")
     endif()
-    install(DIRECTORY bin/ DESTINATION bin
-            FILES_MATCHING
-            PATTERN "*.bat"
-            PATTERN "*.dll"
-            PATTERN "*d.dll" EXCLUDE
-            PATTERN "gtest*.dll" EXCLUDE
-            PATTERN "FOXDLLD-1.6.dll" EXCLUDE)
 else ()
     include(GNUInstallDirs)
 endif ()
@@ -445,6 +426,13 @@ if (SKBUILD)
     set(EXCLUDE_LIBSUMO "libsumo")
     set(EXCLUDE_LIBTRACI "libtraci")
 endif ()
+install(DIRECTORY bin/ DESTINATION bin
+        FILES_MATCHING
+        PATTERN "*.bat"
+        PATTERN "*.dll"
+        PATTERN "*d.dll" EXCLUDE
+        PATTERN "gtest*.dll" EXCLUDE
+        PATTERN "FOXDLLD-1.6.dll" EXCLUDE)
 install(DIRECTORY data/ DESTINATION ${DATA_PATH}data)
 install(DIRECTORY tools/ DESTINATION ${DATA_PATH}tools
         USE_SOURCE_PERMISSIONS
@@ -500,14 +488,12 @@ if (SUMO_LIBRARIES AND WIN32)
     endforeach(DLL_PATH)
     # copy OSG dlls
     if (HAVE_OSG)
-        file(GLOB OSG_PLUGIN_DLL "${OSG_PATH}/bin/osgPlugins*/osgdb_osg.dll")
-        get_filename_component(OSG_PLUGIN_DLL_BASENAME ${OSG_PLUGIN_DLL} NAME)
-        get_filename_component(OSG_PLUGIN_DIR ${OSG_PLUGIN_DLL} DIRECTORY)
-        get_filename_component(OSG_PLUGIN_DIR ${OSG_PLUGIN_DIR} NAME)
-        set(OSG_TARGET ${CMAKE_SOURCE_DIR}/bin/${OSG_PLUGIN_DIR}/${OSG_PLUGIN_DLL_BASENAME})
+        file(GLOB OSG_DLL "${OSG_PATH}/bin/*osg.dll")
+        get_filename_component(OSG_DLL_BASENAME ${OSG_DLL} NAME)
+        set(OSG_TARGET ${CMAKE_SOURCE_DIR}/bin/${OSG_DLL_BASENAME})
         add_custom_command(OUTPUT ${OSG_TARGET}
-                           COMMAND ${CMAKE_COMMAND} -E copy_directory ${OSG_PATH}/bin/${OSG_PLUGIN_DIR} ${CMAKE_SOURCE_DIR}/bin/${OSG_PLUGIN_DIR}
-                           DEPENDS ${OSG_PLUGIN_DLL})
+                           COMMAND ${CMAKE_COMMAND} -E copy_directory ${OSG_PATH}/bin ${CMAKE_SOURCE_DIR}/bin
+                           DEPENDS ${OSG_DLL})
     endif (HAVE_OSG)
     # proj 7 needs to copy "share/proj" folder in SUMO_HOME/share
     set(PROJ_DATA ${CMAKE_SOURCE_DIR}/share/proj/proj.db)
@@ -530,14 +516,13 @@ if (MVN_EXECUTABLE AND Java_FOUND)
         get_filename_component(JAVA_BIN ${Java_JAVAC_EXECUTABLE} DIRECTORY)
         get_filename_component(JAVA_HOME ${JAVA_BIN} DIRECTORY)
         set(MVN_COMMAND_PREFIX ${CMAKE_COMMAND} -E env JAVA_HOME=${JAVA_HOME})
-        set(MVN_REPO "-Dmaven.repo.local=${CMAKE_BINARY_DIR}/m2")
     endif ()
     add_custom_target(traas
-        COMMAND ${MVN_COMMAND_PREFIX} ${MVN_EXECUTABLE} ${MVN_REPO} --batch-mode -f tools/contributed/traas/pom.xml clean install
+        COMMAND ${MVN_COMMAND_PREFIX} ${MVN_EXECUTABLE} --batch-mode -f tools/contributed/traas/pom.xml clean install
         COMMAND ${CMAKE_COMMAND} -E copy tools/contributed/traas/target/traas-1.1.jar bin/TraaS.jar
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
     add_custom_target(lisum
-        COMMAND ${MVN_COMMAND_PREFIX} ${MVN_EXECUTABLE} ${MVN_REPO} --batch-mode -f tools/contributed/lisum/pom.xml clean install
+        COMMAND ${MVN_COMMAND_PREFIX} ${MVN_EXECUTABLE} --batch-mode -f tools/contributed/lisum/pom.xml clean install
         COMMAND ${CMAKE_COMMAND} -E copy tools/contributed/lisum/lisum-core/target/lisum-core-1.0.2.jar bin/lisum-core.jar
         COMMAND ${CMAKE_COMMAND} -E copy tools/contributed/lisum/lisum-gui/target/lisum-gui-1.1.jar bin/lisum-gui.jar
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})

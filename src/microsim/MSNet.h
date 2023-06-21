@@ -303,7 +303,7 @@ public:
      * @return The new simulation state
      * @see SimulationState
      */
-    SimulationState adaptToState(const SimulationState state, const bool isLibsumo = false) const;
+    SimulationState adaptToState(const SimulationState state) const;
 
 
     /** @brief Returns the message to show if a certain state occurs
@@ -331,7 +331,7 @@ public:
     /** @brief Resets events when quick-loading state
      * @param step The new simulation step
      */
-    void clearState(const SUMOTime step, bool quickReload = false);
+    void clearState(const SUMOTime step);
 
     /** @brief Write netstate, summary and detector output
      * @todo Which exceptions may occur?
@@ -587,12 +587,6 @@ public:
     /// @brief update view after simulation.loadState
     virtual void updateGUI() const { }
 
-    /// @brief load state from file and return new time
-    SUMOTime loadState(const std::string& fileName);
-
-    /// @brief reset state to the beginning without reloading the network
-    void quickReload();
-
     /// @name Notification about vehicle state changes
     /// @{
 
@@ -822,7 +816,6 @@ public:
     static const std::string STAGE_MOVEMENTS;
     static const std::string STAGE_LANECHANGE;
     static const std::string STAGE_INSERTIONS;
-    static const std::string STAGE_REMOTECONTROL;
 
     // (qpk): sorts LotSpaceDefinitions of all parking areas in the net
     /// @brief sorts LotSpaceDefinitions of all parking areas in the net
@@ -992,7 +985,6 @@ protected:
     /// @brief to avoid concurrent access to the state update function
     FXMutex myTransportableStateListenerMutex;
 #endif
-    static const NamedObjectCont<MSStoppingPlace*> myEmptyStoppingPlaceCont;
 
     /// @brief container to record warnings that shall only be issued once
     std::map<std::string, bool> myWarnedOnce;

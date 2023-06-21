@@ -73,32 +73,32 @@ Calibrator::getLaneID(const std::string& calibratorID) {
 
 double
 Calibrator::getVehsPerHour(const std::string& calibratorID) {
-    return Helper::getCalibratorState(getCalibrator(calibratorID)).q;
+    return getCalibratorState(getCalibrator(calibratorID)).q;
 }
 
 double
 Calibrator::getSpeed(const std::string& calibratorID) {
-    return Helper::getCalibratorState(getCalibrator(calibratorID)).v;
+    return getCalibratorState(getCalibrator(calibratorID)).v;
 }
 
 std::string
 Calibrator::getTypeID(const std::string& calibratorID) {
-    return Helper::getCalibratorState(getCalibrator(calibratorID)).vehicleParameter->vtypeid;
+    return getCalibratorState(getCalibrator(calibratorID)).vehicleParameter->vtypeid;
 }
 
 double
 Calibrator::getBegin(const std::string& calibratorID) {
-    return STEPS2TIME(Helper::getCalibratorState(getCalibrator(calibratorID)).begin);
+    return STEPS2TIME(getCalibratorState(getCalibrator(calibratorID)).begin);
 }
 
 double
 Calibrator::getEnd(const std::string& calibratorID) {
-    return STEPS2TIME(Helper::getCalibratorState(getCalibrator(calibratorID)).end);
+    return STEPS2TIME(getCalibratorState(getCalibrator(calibratorID)).end);
 }
 
 std::string
 Calibrator::getRouteID(const std::string& calibratorID) {
-    return Helper::getCalibratorState(getCalibrator(calibratorID)).vehicleParameter->routeid;
+    return getCalibratorState(getCalibrator(calibratorID)).vehicleParameter->routeid;
 }
 
 std::string
@@ -186,6 +186,14 @@ Calibrator::getCalibrator(const std::string& id) {
     return it->second;
 }
 
+MSCalibrator::AspiredState
+Calibrator::getCalibratorState(const MSCalibrator* c) {
+    try {
+        return c->getCurrentStateInterval();
+    } catch (ProcessError& e) {
+        throw TraCIException(e.what());
+    }
+}
 
 std::shared_ptr<VariableWrapper>
 Calibrator::makeWrapper() {

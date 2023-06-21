@@ -56,7 +56,7 @@ const RGBColor RGBColor::DEFAULT_COLOR = RGBColor::YELLOW;
 const std::string RGBColor::DEFAULT_COLOR_STRING = toString(RGBColor::DEFAULT_COLOR);
 
 // random colors do not affect the simulation. No initialization is necessary
-SumoRNG RGBColor::myRNG("color");
+SumoRNG RGBColor::myRNG;
 
 // ===========================================================================
 // method definitions
@@ -153,9 +153,6 @@ operator<<(std::ostream& os, const RGBColor& col) {
     }
     if (col == RGBColor::GREY) {
         return os << "grey";
-    }
-    if (col == RGBColor::INVISIBLE) {
-        return os << "invisible";
     }
     os << static_cast<int>(col.myRed) << ","
        << static_cast<int>(col.myGreen) << ","
@@ -369,9 +366,6 @@ RGBColor::interpolate(const RGBColor& minColor, const RGBColor& maxColor, double
 
 RGBColor
 RGBColor::fromHSV(double h, double s, double v) {
-    h = MIN2(MAX2(h, 0.), 360.);
-    s = MIN2(MAX2(s, 0.), 1.);
-    v = MIN2(MAX2(v, 0.), 1.);
     h /= 60.;
     const int i = int(floor(h));
     double f = h - i;
@@ -382,8 +376,8 @@ RGBColor::fromHSV(double h, double s, double v) {
     const unsigned char n = static_cast<unsigned char>(v * (1 - s * f) * 255. + 0.5);
     const unsigned char vv = static_cast<unsigned char>(v * 255. + 0.5);
     switch (i) {
-        case 0:
         case 6:
+        case 0:
             return RGBColor(vv, n, m, 255);
         case 1:
             return RGBColor(n, vv, m, 255);

@@ -21,13 +21,7 @@
 #include <config.h>
 
 #include <netedit/frames/GNEFrame.h>
-#include <netedit/frames/GNEAttributesCreator.h>
 #include <utils/vehicle/SUMOVehicleParameter.h>
-#include <netedit/elements/demand/GNERouteHandler.h>
-#include <netedit/frames/GNENeteditAttributes.h>
-#include <netedit/frames/GNEDemandSelector.h>
-#include <netedit/frames/GNETagSelector.h>
-
 
 // ===========================================================================
 // class definitions
@@ -84,18 +78,15 @@ public:
     /**@brief add Stop element
      * @param objectsUnderCursor collection of objects under cursor after click over view
      * @param mouseButtonKeyPressed key pressed during click
-     * @return true if Stop was successfully added
+     * @return true if Stop was sucesfully added
      */
     bool addStop(const GNEViewNetHelper::ObjectsUnderCursor& objectsUnderCursor, const GNEViewNetHelper::MouseButtonKeyPressed& mouseButtonKeyPressed);
 
     /// @brief get stop parameters
     bool getStopParameter(const SumoXMLTag stopTag, const GNELane* lane, const GNEAdditional* stoppingPlace);
 
-    /// @brief get stop parent selector
-    DemandElementSelector* getStopParentSelector() const;
-
 protected:
-    /// @brief Tag selected in GNETagSelector
+    /// @brief Tag selected in TagSelector
     void tagSelected();
 
     /// @brief selected demand element in DemandElementSelector
@@ -109,16 +100,16 @@ private:
     CommonXMLStructure::SumoBaseObject* myStopParentBaseObject;
 
     /// @brief Stop parent selectors
-    DemandElementSelector* myStopParentSelector;
+    GNEFrameModules::DemandElementSelector* myStopParentSelector;
 
     /// @brief stop tag selector selector (used to select diffent kind of Stops)
-    GNETagSelector* myStopTagSelector;
+    GNEFrameModules::TagSelector* myStopTagSelector;
 
     /// @brief internal Stop attributes
-    GNEAttributesCreator* myStopAttributes;
+    GNEFrameAttributeModules::AttributesCreator* myStopAttributes;
 
     /// @brief Netedit parameter
-    GNENeteditAttributes* myNeteditAttributes;
+    GNEFrameAttributeModules::NeteditAttributes* myNeteditAttributes;
 
     /// @brief Help creation
     HelpCreation* myHelpCreation;

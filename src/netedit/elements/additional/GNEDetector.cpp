@@ -20,9 +20,12 @@
 #include <config.h>
 
 #include <netedit/GNENet.h>
+#include <netedit/GNEUndoList.h>
 #include <netedit/GNEViewNet.h>
 #include <netedit/GNEViewParent.h>
 #include <netedit/elements/additional/GNEAdditionalHandler.h>
+#include <netedit/elements/network/GNEEdge.h>
+#include <netedit/elements/network/GNELane.h>
 #include <netedit/frames/common/GNEMoveFrame.h>
 #include <utils/gui/div/GLHelper.h>
 #include <utils/gui/globjects/GLIncludes.h>
@@ -34,26 +37,24 @@
 // member method definitions
 // ===========================================================================
 
-GNEDetector::GNEDetector(const std::string& id, GNENet* net, GUIGlObjectType type, SumoXMLTag tag, double pos, const SUMOTime period,
+GNEDetector::GNEDetector(const std::string& id, GNENet* net, GUIGlObjectType type, SumoXMLTag tag, double pos, const SUMOTime freq,
                          const std::vector<GNELane*>& parentLanes, const std::string& filename, const std::vector<std::string>& vehicleTypes, const std::string& name,
-                         const bool friendlyPos, const Parameterised::Map& parameters) :
-    GNEAdditional(id, net, type, tag, name, {}, {}, parentLanes, {}, {}, {}),
-              Parameterised(parameters),
+                         const bool friendlyPos, const std::map<std::string, std::string>& parameters) :
+    GNEAdditional(id, net, type, tag, name, {}, {}, parentLanes, {}, {}, {}, {}, {}, parameters),
               myPositionOverLane(pos),
-              myPeriod(period),
+              myFreq(freq),
               myFilename(filename),
               myVehicleTypes(vehicleTypes),
 myFriendlyPosition(friendlyPos) {
 }
 
 
-GNEDetector::GNEDetector(GNEAdditional* additionalParent, GNENet* net, GUIGlObjectType type, SumoXMLTag tag, const double pos, const SUMOTime period,
+GNEDetector::GNEDetector(GNEAdditional* additionalParent, GNENet* net, GUIGlObjectType type, SumoXMLTag tag, const double pos, const SUMOTime freq,
                          const std::vector<GNELane*>& parentLanes, const std::string& filename, const std::string& name, const bool friendlyPos,
-                         const Parameterised::Map& parameters) :
-    GNEAdditional(net, type, tag, name, {}, {}, parentLanes, {additionalParent}, {}, {}),
-Parameterised(parameters),
+                         const std::map<std::string, std::string>& parameters) :
+    GNEAdditional(net, type, tag, name, {}, {}, parentLanes, {additionalParent}, {}, {}, {}, {}, parameters),
 myPositionOverLane(pos),
-myPeriod(period),
+myFreq(freq),
 myFilename(filename),
 myFriendlyPosition(friendlyPos) {
 }
@@ -64,15 +65,13 @@ GNEDetector::~GNEDetector() {}
 
 GNEMoveOperation*
 GNEDetector::getMoveOperation() {
-    // check modes and detector type
-    if (!myNet->getViewNet()->getEditModes().isCurrentSupermodeNetwork() || (myNet->getViewNet()->getEditModes().networkEditMode != NetworkEditMode::NETWORK_MOVE)) {
-        return nullptr;
-    } else if (myTagProperty.getTag() == SUMO_TAG_E2DETECTOR) {
-        return getMoveOperationSingleLane(myPositionOverLane, getAttributeDouble(SUMO_ATTR_ENDPOS));
+    // check detector type
+    if (myTagProperty.getTag() == SUMO_TAG_E2DETECTOR) {
+        return getMoveOperationE2SingleLane();
     } else if (myTagProperty.getTag() == GNE_TAG_E2DETECTOR_MULTILANE) {
-        return getMoveOperationMultiLane(myPositionOverLane, getAttributeDouble(SUMO_ATTR_ENDPOS));
+        return getMoveOperationE2MultiLane();
     } else {
-        // return move operation for detectors with single position placed over shape (E1, EntryExits..)
+        // return move operation for detectors with single position placed over shape
         return new GNEMoveOperation(this, getParentLanes().front(), myPositionOverLane,
                                     myNet->getViewNet()->getViewParent()->getMoveFrame()->getCommonModeOptions()->getAllowChangeLane());
     }
@@ -130,9 +129,8 @@ double
 GNEDetector::getGeometryPositionOverLane() const {
     double fixedPos = myPositionOverLane;
     const double len = getLane()->getParentEdge()->getNBEdge()->getFinalLength();
-    double length = 0;
-    GNEAdditionalHandler::fixLanePosition(fixedPos, length, len);
-    return (fixedPos * getLane()->getLengthGeometryFactor());
+    GNEAdditionalHandler::fixSinglePositionOverLane(fixedPos, len);
+    return fixedPos * getLane()->getLengthGeometryFactor();
 }
 
 
@@ -140,12 +138,6 @@ GNEDetector::getGeometryPositionOverLane() const {
 std::string
 GNEDetector::getParentName() const {
     return getLane()->getID();
-}
-
-
-const Parameterised::Map&
-GNEDetector::getACParametersMap() const {
-    return getParametersMap();
 }
 
 
@@ -255,6 +247,74 @@ GNEDetector::drawDetectorLogo(const GUIVisualizationSettings& s, const double ex
         GLHelper::drawText(logo, Position(), .1, 1.5, textColor);
         // pop matrix
         GLHelper::popMatrix();
+    }
+}
+
+
+GNEMoveOperation*
+GNEDetector::getMoveOperationE2SingleLane() {
+    // get allow change lane
+    const bool allowChangeLane = myNet->getViewNet()->getViewParent()->getMoveFrame()->getCommonModeOptions()->getAllowChangeLane();
+    // fist check if we're moving only extremes
+    if (myNet->getViewNet()->getEditModes().isCurrentSupermodeNetwork() &&
+            (myNet->getViewNet()->getEditModes().networkEditMode == NetworkEditMode::NETWORK_MOVE) &&
+            myNet->getViewNet()->getMouseButtonKeyPressed().shiftKeyPressed()) {
+        // get snap radius
+        const double snap_radius = myNet->getViewNet()->getVisualisationSettings().neteditSizeSettings.additionalGeometryPointRadius;
+        // get mouse position
+        const Position mousePosition = myNet->getViewNet()->getPositionInformation();
+        // check if we clicked over start or end position
+        if (myAdditionalGeometry.getShape().front().distanceSquaredTo2D(mousePosition) <= (snap_radius * snap_radius)) {
+            // move only start position
+            return new GNEMoveOperation(this, getParentLanes().front(), myPositionOverLane, getAttributeDouble(SUMO_ATTR_ENDPOS),
+                                        allowChangeLane, GNEMoveOperation::OperationType::ONE_LANE_MOVEFIRST);
+        } else if (myAdditionalGeometry.getShape().back().distanceSquaredTo2D(mousePosition) <= (snap_radius * snap_radius)) {
+            // move only end position
+            return new GNEMoveOperation(this, getParentLanes().front(), myPositionOverLane, getAttributeDouble(SUMO_ATTR_ENDPOS),
+                                        allowChangeLane, GNEMoveOperation::OperationType::ONE_LANE_MOVESECOND);
+        } else {
+            return nullptr;
+        }
+    } else {
+        // move both start and end positions
+        return new GNEMoveOperation(this, getParentLanes().front(), myPositionOverLane, getAttributeDouble(SUMO_ATTR_ENDPOS),
+                                    allowChangeLane, GNEMoveOperation::OperationType::ONE_LANE_MOVEBOTH);
+    }
+}
+
+
+GNEMoveOperation*
+GNEDetector::getMoveOperationE2MultiLane() {
+    // fist check if we're moving only extremes
+    if (myNet->getViewNet()->getEditModes().isCurrentSupermodeNetwork() &&
+            (myNet->getViewNet()->getEditModes().networkEditMode == NetworkEditMode::NETWORK_MOVE) &&
+            myNet->getViewNet()->getMouseButtonKeyPressed().shiftKeyPressed()) {
+        // get snap radius
+        const double snap_radius = myNet->getViewNet()->getVisualisationSettings().neteditSizeSettings.additionalGeometryPointRadius;
+        // get mouse position
+        const Position mousePosition = myNet->getViewNet()->getPositionInformation();
+        // calculate both geometries
+        GUIGeometry fromGeometry, toGeometry;
+        fromGeometry.updateGeometry(getParentLanes().front()->getLaneGeometry().getShape(), myPositionOverLane, 0);
+        toGeometry.updateGeometry(getParentLanes().back()->getLaneGeometry().getShape(), getAttributeDouble(SUMO_ATTR_ENDPOS), 0);
+        // check if we clicked over start or end position
+        if (fromGeometry.getShape().front().distanceSquaredTo2D(mousePosition) <= (snap_radius * snap_radius)) {
+            // move only start position
+            return new GNEMoveOperation(this, getParentLanes().front(), myPositionOverLane,
+                                        getParentLanes().back(), getAttributeDouble(SUMO_ATTR_ENDPOS),
+                                        false, GNEMoveOperation::OperationType::TWO_LANES_MOVEFIRST);
+        } else if (toGeometry.getShape().back().distanceSquaredTo2D(mousePosition) <= (snap_radius * snap_radius)) {
+            // move only end position
+            return new GNEMoveOperation(this, getParentLanes().front(), myPositionOverLane,
+                                        getParentLanes().back(), getAttributeDouble(SUMO_ATTR_ENDPOS),
+                                        false, GNEMoveOperation::OperationType::TWO_LANES_MOVESECOND);
+        } else {
+            return nullptr;
+        }
+    } else {
+        // move both start and end positions
+        return new GNEMoveOperation(this, getParentLanes().front(), myPositionOverLane, getParentLanes().back(), getAttributeDouble(SUMO_ATTR_ENDPOS),
+                                    false, GNEMoveOperation::OperationType::TWO_LANES_MOVEBOTH);
     }
 }
 

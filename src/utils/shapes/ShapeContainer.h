@@ -29,7 +29,6 @@
 #include "PointOfInterest.h"
 #include "SUMOPolygon.h"
 
-
 // ===========================================================================
 // class declarations
 // ===========================================================================
@@ -37,7 +36,6 @@ class PolygonDynamics;
 class SUMOTrafficObject;
 template <class T, class S>
 class ParametrisedWrappingCommand;
-
 
 // ===========================================================================
 // class definitions

@@ -23,7 +23,6 @@
 #pragma once
 #include <config.h>
 #include <string>
-#include <chrono>
 #include <xercesc/util/XMLString.hpp>
 #include <utils/common/UtilExceptions.h>
 
@@ -40,11 +39,8 @@ public:
     /// Removes trailing and leading whitechars
     static std::string prune(const std::string& str);
 
-    /// Removes trailing zeros (at most 'max')
-    static std::string pruneZeros(const std::string& str, int max);
-
     /// Transfers the content to lower case
-    static std::string to_lower_case(const std::string& str);
+    static std::string to_lower_case(std::string str);
 
     /// Transfers from Latin 1 (ISO-8859-1) to UTF-8
     static std::string latin1_to_utf8(std::string str);
@@ -54,11 +50,12 @@ public:
 
     /** Replaces all occurences of the second string by the third
         string within the first string */
-    static std::string replace(std::string str, const std::string& what, const std::string& by);
+    static std::string replace(std::string str, const char* what,
+                               const char* by);
 
     /** Replaces an environment variable with its value (similar to bash);
         syntax for a variable is ${NAME} */
-    static std::string substituteEnvironment(const std::string& str, const std::chrono::time_point<std::chrono::system_clock>* const timeRef = nullptr);
+    static std::string substituteEnvironment(std::string str);
 
     /// Builds a time string (hh:mm:ss) from the given seconds
     static std::string toTimeString(int time);

@@ -80,4 +80,7 @@ private:
 
     /// @brief the new value
     const bool myNewValue;
+
+    /// @brief previous values (used by flows)
+    const int myPreviousParameters;
 };

@@ -26,7 +26,6 @@
 #include <utils/options/OptionsCont.h>
 #include <utils/geom/GeoConvHelper.h>
 #include <utils/geom/GeomHelper.h>
-#include <utils/shapes/SUMOPolygon.h>
 #include <libsumo/Helper.h>
 #include <microsim/devices/MSDevice_FCD.h>
 #include <microsim/devices/MSTransportableDevice_FCD.h>
@@ -50,8 +49,8 @@ void
 MSFCDExport::write(OutputDevice& of, SUMOTime timestep, bool elevation) {
     const OptionsCont& oc = OptionsCont::getOptions();
     const SUMOTime period = string2time(oc.getString("device.fcd.period"));
-    const SUMOTime begin = string2time(oc.getString("device.fcd.begin"));
-    if ((period > 0 && (timestep - begin) % period != 0) || timestep < begin) {
+    const SUMOTime begin = string2time(oc.getString("begin"));
+    if (period > 0 && (timestep - begin) % period != 0) {
         return;
     }
     const long long int mask = MSDevice_FCD::getWrittenAttributes();
@@ -66,7 +65,6 @@ MSFCDExport::write(OutputDevice& of, SUMOTime timestep, bool elevation) {
     MSVehicleControl& vc = net->getVehicleControl();
     const double radius = oc.getFloat("device.fcd.radius");
     const bool filter = MSDevice_FCD::getEdgeFilter().size() > 0;
-    const bool shapeFilter = MSDevice_FCD::hasShapeFilter();
     std::set<const Named*> inRadius;
     if (radius > 0) {
         // collect all vehicles in radius around equipped vehicles
@@ -75,8 +73,7 @@ MSFCDExport::write(OutputDevice& of, SUMOTime timestep, bool elevation) {
             MSDevice_FCD* fcdDevice = (MSDevice_FCD*)veh->getDevice(typeid(MSDevice_FCD));
             if (fcdDevice != nullptr
                     && (veh->isOnRoad() || veh->isParking() || veh->isRemoteControlled())
-                    && (!filter || MSDevice_FCD::getEdgeFilter().count(veh->getEdge()) > 0)
-                    && (!shapeFilter || MSDevice_FCD::shapeFilter(veh))) {
+                    && (!filter || MSDevice_FCD::getEdgeFilter().count(veh->getEdge()) > 0)) {
                 PositionVector shape;
                 shape.push_back(veh->getPosition());
                 libsumo::Helper::collectObjectsInRange(libsumo::CMD_GET_VEHICLE_VARIABLE, shape, radius, inRadius);
@@ -93,7 +90,6 @@ MSFCDExport::write(OutputDevice& of, SUMOTime timestep, bool elevation) {
         if ((veh->isOnRoad() || veh->isParking() || veh->isRemoteControlled())
                 // only filter on normal edges
                 && (!filter || MSDevice_FCD::getEdgeFilter().count(veh->getEdge()) > 0)
-                && (!shapeFilter || MSDevice_FCD::shapeFilter(veh))
                 && (veh->getDevice(typeid(MSDevice_FCD)) != nullptr || (radius > 0 && inRadius.count(veh) > 0))) {
             Position pos = veh->getPosition();
             if (useGeo) {
@@ -104,7 +100,6 @@ MSFCDExport::write(OutputDevice& of, SUMOTime timestep, bool elevation) {
             of.writeAttr(SUMO_ATTR_ID, veh->getID());
             of.writeOptionalAttr(SUMO_ATTR_X, pos.x(), mask);
             of.writeOptionalAttr(SUMO_ATTR_Y, pos.y(), mask);
-            of.setPrecision(gPrecision);
             if (elevation) {
                 of.writeOptionalAttr(SUMO_ATTR_Z, pos.z(), mask);
             }
@@ -144,8 +139,6 @@ MSFCDExport::write(OutputDevice& of, SUMOTime timestep, bool elevation) {
                 // if the kilometrage runs counter to the edge direction edge->getDistance() is negative
                 of.writeOptionalAttr(SUMO_ATTR_DISTANCE, fabs(distance), mask);
             }
-            of.writeOptionalAttr(SUMO_ATTR_ODOMETER, veh->getOdometer(), mask);
-            of.writeOptionalAttr(SUMO_ATTR_POSITION_LAT, veh->getLateralPositionOnLane(), mask);
             if (maxLeaderDistance >= 0 && microVeh != nullptr) {
                 std::pair<const MSVehicle* const, double> leader = microVeh->getLeader(maxLeaderDistance);
                 if (leader.first != nullptr) {
@@ -171,11 +164,11 @@ MSFCDExport::write(OutputDevice& of, SUMOTime timestep, bool elevation) {
 
             const std::vector<MSTransportable*>& persons = veh->getPersons();
             for (MSTransportable* person : persons) {
-                writeTransportable(of, edge, person, veh, inRadius.count(person) > 0, SUMO_TAG_PERSON, useGeo, elevation, mask);
+                writeTransportable(of, edge, person, veh, inRadius.count(person), SUMO_TAG_PERSON, useGeo, elevation, mask);
             }
             const std::vector<MSTransportable*>& containers = veh->getContainers();
             for (MSTransportable* container : containers) {
-                writeTransportable(of, edge, container, veh, inRadius.count(container) > 0, SUMO_TAG_CONTAINER, useGeo, elevation, mask);
+                writeTransportable(of, edge, container, veh, inRadius.count(container), SUMO_TAG_CONTAINER, useGeo, elevation, mask);
             }
         }
     }

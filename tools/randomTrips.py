@@ -31,7 +31,7 @@ import math
 if 'SUMO_HOME' in os.environ:
     sys.path.append(os.path.join(os.environ['SUMO_HOME'], 'tools'))
 import sumolib  # noqa
-from sumolib.miscutils import euclidean, parseTime, intIfPossible  # noqa
+from sumolib.miscutils import euclidean  # noqa
 from sumolib.geomhelper import naviDegree, minAngleDegreeDiff  # noqa
 
 DUAROUTER = sumolib.checkBinary('duarouter')
@@ -66,9 +66,9 @@ def get_options(args=None):
     optParser.add_argument("--persontrip.transfer.car-walk", dest="carWalkMode",
                            help="Where are mode changes from car to walking allowed " +
                            "(possible values: 'ptStops', 'allJunctions' and combinations)")
-    optParser.add_argument("--persontrip.walkfactor", dest="walkfactor", metavar="FLOAT",
+    optParser.add_argument("--persontrip.walkfactor", dest="walkfactor",
                            help="Use FLOAT as a factor on pedestrian maximum speed during intermodal routing")
-    optParser.add_argument("--persontrip.walk-opposite-factor", dest="walkoppositefactor", metavar="FLOAT",
+    optParser.add_argument("--persontrip.walk-opposite-factor", dest="walkoppositefactor",
                            help="Use FLOAT as a factor on pedestrian maximum speed against vehicle traffic direction")
     optParser.add_argument("--prefix", dest="tripprefix",
                            default="", help="prefix for the trip ids")
@@ -79,9 +79,9 @@ def get_options(args=None):
                            default="", help="additional trip attributes when starting on a fringe.")
     optParser.add_argument("-b", "--begin", default=0, help="begin time")
     optParser.add_argument("-e", "--end", default=3600, help="end time (default 3600)")
-    optParser.add_argument("-p", "--period", type=float, default=1.0, nargs="+", metavar="FLOAT",
-                           help="Generate vehicles with equidistant departure times and period=FLOAT (default 1.0). " +
-                           "If option --binomial is used, the expected arrival rate is set to 1/period.")
+    optParser.add_argument(
+        "-p", "--period", type=float, default=1, help="Generate vehicles with equidistant departure times and " +
+        "period=FLOAT (default 1.0). If option --binomial is used, the expected arrival rate is set to 1/period.")
     optParser.add_argument("--random-depart", action="store_true", dest="randomDepart",
                            default=False, help="Distribute departures randomly between begin and end")
     optParser.add_argument("-s", "--seed", type=int, default=42, help="random seed")
@@ -93,9 +93,9 @@ def get_options(args=None):
                            default=False, help="weight edge probability by number of lanes")
     optParser.add_argument("--edge-param", dest="edgeParam",
                            help="use the given edge parameter as factor for edge")
-    optParser.add_argument("--speed-exponent", type=float, dest="speed_exponent", metavar="FLOAT",
+    optParser.add_argument("--speed-exponent", type=float, dest="speed_exponent",
                            default=0.0, help="weight edge probability by speed^<FLOAT> (default 0)")
-    optParser.add_argument("--fringe-speed-exponent", type=float, dest="fringe_speed_exponent", metavar="FLOAT",
+    optParser.add_argument("--fringe-speed-exponent", type=float, dest="fringe_speed_exponent",
                            help="weight fringe edge probability by speed^<FLOAT> (default: speed exponent)")
     optParser.add_argument("--angle", type=float, dest="angle",
                            default=90.0, help="weight edge probability by angle [0-360] relative to the network center")
@@ -113,9 +113,9 @@ def get_options(args=None):
                            "that enter the network, if they have at least the given length")
     optParser.add_argument("--fringe-junctions", action="store_true", dest="fringeJunctions",
                            default=False, help="Determine fringe edges based on junction attribute 'fringe'")
-    optParser.add_argument("--min-distance", type=float, dest="min_distance", metavar="FLOAT",
+    optParser.add_argument("--min-distance", type=float, dest="min_distance",
                            default=0.0, help="require start and end edges for each trip to be at least <FLOAT> m apart")
-    optParser.add_argument("--max-distance", type=float, dest="max_distance", metavar="FLOAT",
+    optParser.add_argument("--max-distance", type=float, dest="max_distance",
                            default=None, help="require start and end edges for each trip to be at most <FLOAT> m " +
                            "apart (default 0 which disables any checks)")
     optParser.add_argument("-i", "--intermediate", type=int,
@@ -136,9 +136,6 @@ def get_options(args=None):
                            "to the output file).")
     optParser.add_argument("--remove-loops", dest="remove_loops", action="store_true",
                            default=False, help="Remove loops at route start and end")
-    optParser.add_argument("--random-routing-factor", dest="randomRoutingFactor", type=float, default=1,
-                           help="Edge weights for routing are dynamically disturbed "
-                           "by a random factor drawn uniformly from [1,FLOAT)")
     optParser.add_argument("--junction-taz", dest="junctionTaz", action="store_true",
                            default=False, help="Write trips with fromJunction and toJunction")
     optParser.add_argument("--via-edge-types", dest="viaEdgeTypes",
@@ -148,10 +145,6 @@ def get_options(args=None):
                            help="Whether to produce trip output that is already checked for connectivity")
     optParser.add_argument("-v", "--verbose", action="store_true",
                            default=False, help="tell me what you are doing")
-    optParser.add_argument("--random-departpos", dest="randomDepartPos", action="store_true",
-                           help="Randomly choose a position on the starting edge of the trip")
-    optParser.add_argument("--random-arrivalpos", dest="randomArrivalPos", action="store_true",
-                           help="Randomly choose a position on the ending edge of the trip")
     options = optParser.parse_args(args=args)
     if not options.netfile:
         optParser.print_help()
@@ -169,12 +162,7 @@ def get_options(args=None):
     if options.validate and options.routefile is None:
         options.routefile = "routes.rou.xml"
 
-    if isinstance(options.period, float):
-        options.period = [options.period]
-
-    options.period = list(map(intIfPossible, options.period))
-
-    if any(options.period) <= 0:
+    if options.period <= 0:
         print("Error: Period must be positive", file=sys.stderr)
         sys.exit(1)
 
@@ -190,18 +178,6 @@ def get_options(args=None):
 
         if 'type=' in options.tripattrs:
             print("Error: trip-attribute 'type' cannot be used together with option --vehicle-class", file=sys.stderr)
-            sys.exit(1)
-
-    if options.randomDepartPos:
-        if 'departPos' in options.tripattrs:
-            print("Error: trip-attribute 'departPos' cannot be used together with option --random-departpos",
-                  file=sys.stderr)
-            sys.exit(1)
-
-    if options.randomArrivalPos:
-        if 'arrivalPos' in options.tripattrs:
-            print("Error: trip-attribute 'arrivalPos' cannot be used together with option --random-arrivalpos",
-                  file=sys.stderr)
             sys.exit(1)
 
     if options.viaEdgeTypes:
@@ -483,10 +459,6 @@ def prependSpace(s):
         return " " + s
 
 
-def samplePosition(edge):
-    return random.uniform(0.0, edge.getLength())
-
-
 def main(options):
     if not options.random:
         random.seed(options.seed)
@@ -511,102 +483,68 @@ def main(options):
 
     vias = {}
 
-    time_delta = (parseTime(options.end) - parseTime(options.begin)) / len(options.period)
-    times = [parseTime(options.begin) + i*time_delta for i in range(len(options.period)+1)]
-    times = list(map(intIfPossible, times))
-
-    def generate_origin_destination(trip_generator, options):
-        source_edge, sink_edge, intermediate = trip_generator.get_trip(
-            options.min_distance, options.max_distance, options.maxtries,
-            options.junctionTaz)
-        return source_edge, sink_edge, intermediate
-
-    def generate_attributes(idx, departureTime, arrivalTime, origin, destination, intermediate, options):
+    def generate_one(idx, depart):
         label = "%s%s" % (options.tripprefix, idx)
-        combined_attrs = options.tripattrs
-        if options.randomDepartPos:
-            randomPosition = samplePosition(origin)
-            combined_attrs += ' departPos="%.2f"' % randomPosition
-        if options.randomArrivalPos:
-            randomPosition = samplePosition(destination)
-            combined_attrs += ' arrivalPos="%.2f"' % randomPosition
-        if options.fringeattrs and origin.is_fringe(
-                origin._incoming, checkJunctions=options.fringeJunctions):
-            combined_attrs += " " + options.fringeattrs
-        if options.junctionTaz:
-            attrFrom = ' fromJunction="%s"' % origin.getFromNode().getID()
-            attrTo = ' toJunction="%s"' % destination.getToNode().getID()
-        else:
-            attrFrom = ' from="%s"' % origin.getID()
-            attrTo = ' to="%s"' % destination.getID()
-        via = ""
-        if len(intermediate) > 0:
-            via = ' via="%s" ' % ' '.join(
-                [e.getID() for e in intermediate])
-            if options.validate:
-                vias[label] = via
-        return label, combined_attrs, attrFrom, attrTo, via
-
-    def generate_one_person(label, combined_attrs, attrFrom, attrTo, departureTime, intermediate, options):
-        fouttrips.write(
-            '    <person id="%s" depart="%.2f"%s>\n' % (label, departureTime, personattrs))
-        element = "walk"
-        attrs = otherattrs
-        if options.persontrips:
-            element = "personTrip"
-        elif options.personrides:
-            element = "ride"
-            attrs = ' lines="%s%s"' % (options.personrides, otherattrs)
-        if intermediate:
-            fouttrips.write('        <%s%s to="%s"%s/>\n' % (element, attrFrom, intermediate[0].getID(), attrs))
-            for edge in intermediate[1:]:
-                fouttrips.write('        <%s to="%s"%s/>\n' % (element, edge.getID(), attrs))
-            fouttrips.write('        <%s%s%s/>\n' % (element, attrTo, attrs))
-        else:
-            fouttrips.write('        <%s%s%s%s/>\n' % (element, attrFrom, attrTo, attrs))
-        fouttrips.write('    </person>\n')
-
-    def generate_one_flow(label, combined_attrs, departureTime, arrivalTime, period, options, timeIdx):
-        if len(options.period) > 1:
-            label = label + "#%s" % timeIdx
-        if options.binomial:
-            for j in range(options.binomial):
-                fouttrips.write(('    <flow id="%s#%s" begin="%s" end="%s" probability="%.2f"%s/>\n') % (
-                    label, j, departureTime, arrivalTime, 1.0 / period / options.binomial,
-                    combined_attrs))
-        else:
-            fouttrips.write(('    <flow id="%s" begin="%s" end="%s" period="%s"%s/>\n') % (
-                label, departureTime, arrivalTime, intIfPossible(period * options.flows), combined_attrs))
-
-    def generate_one_trip(label, combined_attrs, departureTime):
-        fouttrips.write('    <trip id="%s" depart="%.2f"%s/>\n' % (
-            label, departureTime, combined_attrs))
-
-    def generate_one(idx, departureTime, arrivalTime, period, origin, destination, intermediate, timeIdx=None):
         try:
-            label, combined_attrs, attrFrom, attrTo, via = generate_attributes(
-                idx, departureTime, arrivalTime, origin, destination, intermediate, options)
-
+            source_edge, sink_edge, intermediate = trip_generator.get_trip(
+                options.min_distance, options.max_distance, options.maxtries,
+                options.junctionTaz)
+            combined_attrs = options.tripattrs
+            if options.fringeattrs and source_edge.is_fringe(
+                    source_edge._incoming, checkJunctions=options.fringeJunctions):
+                combined_attrs += " " + options.fringeattrs
+            if options.junctionTaz:
+                attrFrom = ' fromJunction="%s"' % source_edge.getFromNode().getID()
+                attrTo = ' toJunction="%s"' % sink_edge.getToNode().getID()
+            else:
+                attrFrom = ' from="%s"' % source_edge.getID()
+                attrTo = ' to="%s"' % sink_edge.getID()
+            via = ""
+            if len(intermediate) > 0:
+                via = ' via="%s" ' % ' '.join(
+                    [e.getID() for e in intermediate])
+                if options.validate:
+                    vias[label] = via
             if options.pedestrians:
-                generate_one_person(label, combined_attrs, attrFrom, attrTo, departureTime, intermediate, options)
+                fouttrips.write(
+                    '    <person id="%s" depart="%.2f"%s>\n' % (label, depart, personattrs))
+                element = "walk"
+                attrs = otherattrs
+                if options.persontrips:
+                    element = "personTrip"
+                elif options.personrides:
+                    element = "ride"
+                    attrs = ' lines="%s%s"' % (options.personrides, otherattrs)
+                if intermediate:
+                    fouttrips.write('        <%s%s to="%s"%s/>\n' % (element, attrFrom, intermediate[0].getID(), attrs))
+                    for edge in intermediate[1:]:
+                        fouttrips.write('        <%s to="%s"%s/>\n' % (element, edge.getID(), attrs))
+                    fouttrips.write('        <%s%s%s/>\n' % (element, attrTo, attrs))
+                else:
+                    fouttrips.write('        <%s%s%s%s/>\n' % (element, attrFrom, attrTo, attrs))
+                fouttrips.write('    </person>\n')
             else:
                 if options.jtrrouter:
                     attrTo = ''
-
                 combined_attrs = attrFrom + attrTo + via + combined_attrs
-
                 if options.flows > 0:
-                    generate_one_flow(label, combined_attrs, departureTime, arrivalTime, period, options, timeIdx)
+                    if options.binomial:
+                        for j in range(options.binomial):
+                            fouttrips.write(('    <flow id="%s#%s" begin="%s" end="%s" probability="%s"%s/>\n') % (
+                                label, j, options.begin, options.end, 1.0 / options.period / options.binomial,
+                                combined_attrs))
+                    else:
+                        fouttrips.write(('    <flow id="%s" begin="%s" end="%s" period="%s"%s/>\n') % (
+                            label, options.begin, options.end, options.period * options.flows, combined_attrs))
                 else:
-                    generate_one_trip(label, combined_attrs, departureTime)
-
+                    fouttrips.write('    <trip id="%s" depart="%.2f"%s/>\n' % (
+                        label, depart, combined_attrs))
         except Exception as exc:
             print(exc, file=sys.stderr)
-
         return idx + 1
 
     with open(options.tripfile, 'w') as fouttrips:
-        sumolib.writeXMLHeader(fouttrips, "$Id$", "routes", options=options)
+        sumolib.writeXMLHeader(fouttrips, "$Id$", "routes")  # noqa
         if options.vehicle_class:
             vTypeDef = '    <vType id="%s" vClass="%s"%s/>\n' % (
                 options.vtypeID, options.vehicle_class, vtypeattrs)
@@ -618,83 +556,50 @@ def main(options):
                 else:
                     options.additional += ",options.vtypeout"
                 with open(options.vtypeout, 'w') as fouttype:
-                    sumolib.writeXMLHeader(fouttype, "$Id$", "additional", options=options)
+                    sumolib.writeXMLHeader(fouttype, "$Id$", "additional")  # noqa
                     fouttype.write(vTypeDef)
                     fouttype.write("</additional>\n")
             else:
                 fouttrips.write(vTypeDef)
             options.tripattrs += ' type="%s"' % options.vtypeID
             personattrs += ' type="%s"' % options.vtypeID
-
+        time = begin = sumolib.miscutils.parseTime(options.begin)
+        maxTime = sumolib.miscutils.parseTime(options.end)
         if trip_generator:
             if options.flows == 0:
-                for i in range(len(times)-1):
-                    time = departureTime = parseTime(times[i])
-                    arrivalTime = parseTime(times[i+1])
-                    period = options.period[i]
-                    if options.binomial is None:
-                        departures = []
-                        if options.randomDepart:
-                            subsecond = math.fmod(period, 1)
-                            while time < arrivalTime:
-                                rTime = random.randrange(int(departureTime), int(arrivalTime))
-                                time += period
-                                if subsecond != 0:
-                                    # allow all multiples of subsecond to appear
-                                    rSubSecond = math.fmod(
-                                        subsecond * random.randrange(int(departureTime), int(arrivalTime)), 1)
-                                    rTime = min(arrivalTime, rTime + rSubSecond)
-                                departures.append(rTime)
-                            departures.sort()
-                        else:
-                            while departureTime < arrivalTime:
-                                departures.append(departureTime)
-                                departureTime += period
-
-                        for time in departures:
-                            # generate with constant spacing
-                            try:
-                                origin, destination, intermediate = generate_origin_destination(trip_generator, options)
-                                idx = generate_one(idx, time, arrivalTime, period, origin, destination, intermediate)
-                            except Exception as exc:
-                                print(exc, file=sys.stderr)
+                if options.binomial is None:
+                    departures = []
+                    if options.randomDepart:
+                        while time < maxTime:
+                            departures.append(random.randrange(begin, maxTime))
+                            time += options.period
+                        departures.sort()
                     else:
-                        time = departureTime
-                        while time < arrivalTime:
-                            # draw n times from a Bernoulli distribution
-                            # for an average arrival rate of 1 / period
-                            prob = 1.0 / period / options.binomial
-                            for _ in range(options.binomial):
-                                if random.random() < prob:
-                                    try:
-                                        origin, destination, intermediate = generate_origin_destination(
-                                            trip_generator, options)
-                                        idx = generate_one(idx, time, arrivalTime, period,
-                                                           origin, destination, intermediate)
-                                    except Exception as exc:
-                                        print(exc, file=sys.stderr)
-                            time += 1.0
+                        while time < maxTime:
+                            departures.append(time)
+                            time += options.period
+
+                    for time in departures:
+                        # generate with constant spacing
+                        idx = generate_one(idx, time)
+                else:
+                    while time < maxTime:
+                        # draw n times from a Bernoulli distribution
+                        # for an average arrival rate of 1 / period
+                        prob = 1.0 / options.period / options.binomial
+                        for _ in range(options.binomial):
+                            if random.random() < prob:
+                                idx = generate_one(idx, time)
+                        time += 1
             else:
-                try:
-                    origins_destinations = [generate_origin_destination(
-                        trip_generator, options) for _ in range(options.flows)]
-                    for i in range(len(times)-1):
-                        for j in range(options.flows):
-                            departureTime = times[i]
-                            arrivalTime = times[i+1]
-                            period = options.period[i]
-                            origin, destination, intermediate = origins_destinations[j]
-                            generate_one(j, departureTime, arrivalTime, period, origin, destination, intermediate, i)
-                except Exception as exc:
-                    print(exc, file=sys.stderr)
+                for _ in range(options.flows):
+                    idx = generate_one(idx, time)
 
         fouttrips.write("</routes>\n")
 
     # call duarouter for routes or validated trips
     args = [DUAROUTER, '-n', options.netfile, '-r', options.tripfile, '--ignore-errors',
-            '--begin', str(options.begin), '--end', str(options.end),
-            '--alternatives-output', 'NUL',
-            '--no-step-log']
+            '--begin', str(options.begin), '--end', str(options.end), '--no-step-log']
     if options.additional is not None:
         args += ['--additional-files', options.additional]
     if options.carWalkMode is not None:
@@ -705,8 +610,6 @@ def main(options):
         args += ['--persontrip.walk-opposite-factor', options.walkoppositefactor]
     if options.remove_loops:
         args += ['--remove-loops']
-    if options.randomRoutingFactor != 1:
-        args += ['--weights.random-factor', str(options.randomRoutingFactor)]
     if options.vtypeout is not None:
         args += ['--vtype-output', options.vtypeout]
     if options.junctionTaz:
@@ -716,22 +619,12 @@ def main(options):
     else:
         args += ['-v']
 
-    options_to_forward = sumolib.options.get_prefixed_options(options)
-    if 'duarouter' in options_to_forward:
-        for option in options_to_forward['duarouter']:
-            option[0] = '--' + option[0]
-            if option[0] not in args:
-                args += option
-            else:
-                raise ValueError("The argument '%s' has already been passed without the duarouter prefix." % option[0])
-
     if options.routefile:
         args2 = args + ['-o', options.routefile]
         print("calling", " ".join(args2))
         sys.stdout.flush()
         subprocess.call(args2)
         sys.stdout.flush()
-        sumolib.xml.insertOptionsHeader(options.routefile, options)
 
     if options.validate:
         # write to temporary file because the input is read incrementally
@@ -745,7 +638,6 @@ def main(options):
         sys.stdout.flush()
         os.remove(options.tripfile)  # on windows, rename does not overwrite
         os.rename(tmpTrips, options.tripfile)
-        sumolib.xml.insertOptionsHeader(options.tripfile, options)
 
     if options.weights_outprefix:
         idPrefix = ""

@@ -31,7 +31,6 @@
 #include <utils/geom/Position.h>
 #include <utils/geom/PositionVector.h>
 #include <microsim/transportables/MSTransportable.h>
-#include <microsim/transportables/MSStageMoving.h>
 
 
 // ===========================================================================
@@ -69,7 +68,7 @@ public:
     public:
         /// constructor
         MSPersonStage_Walking(const std::string& personID, const ConstMSEdgeVector& route, MSStoppingPlace* toStop, SUMOTime walkingTime,
-                              double speed, double departPos, double arrivalPos, double departPosLat, int departLane = -1, const std::string& routeID = "");
+                              double speed, double departPos, double arrivalPos, double departPosLat, int departLane = -1);
 
         /// destructor
         ~MSPersonStage_Walking();
@@ -89,9 +88,6 @@ public:
         double getDistance() const {
             return walkDistance();
         }
-
-        /// @brief return index of current edge within route
-        int getRoutePosition() const;
 
         std::string getStageDescription(const bool isPerson) const {
             UNUSED_PARAMETER(isPerson);
@@ -124,10 +120,6 @@ public:
         /// @brief move forward and return whether the person arrived
         bool moveToNextEdge(MSTransportable* person, SUMOTime currentTime, int prevDir, MSEdge* nextInternal = nullptr);
 
-        void activateEntryReminders(MSTransportable* person);
-
-        void activateLeaveReminders(MSTransportable* person, const MSLane* lane, double lastPos, SUMOTime t, bool arrived);
-
         /// @brief accessors to be used by MSPModel
         //@{
         double getMaxSpeed(const MSTransportable* const person) const;
@@ -141,7 +133,9 @@ public:
         }
         //@}
 
+
     private:
+
         /// @brief compute total walking distance
         double walkDistance() const;
 
@@ -149,7 +143,9 @@ public:
          * @note Must be called when the previous stage changes myDepartPos from the default*/
         double computeAverageSpeed() const;
 
+
     private:
+
         /// the time the person is walking
         SUMOTime myWalkingTime;
 
@@ -161,6 +157,21 @@ public:
 
         /// @brief optional exit time tracking for vehroute output
         std::vector<SUMOTime>* myExitTimes;
+
+        class arrival_finder {
+        public:
+            /// constructor
+            explicit arrival_finder(SUMOTime time) : myTime(time) {}
+
+            /// comparison operator
+            bool operator()(double t) const {
+                return myTime > t;
+            }
+
+        private:
+            /// the searched arrival time
+            SUMOTime myTime;
+        };
 
     private:
         /// @brief Invalidated copy constructor.

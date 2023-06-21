@@ -111,17 +111,6 @@ public:
     */
     bool haveGrabbed() const;
 
-    /** @brief Returns the current zoom value stored in the corresponding spin dialer
-     * @return The current zoom value in the spin dialer
-    */
-    double getZoomValue() const;
-
-
-    /** @brief Resets the zoom spin dialer
-     * @param[in] zoom the value to set the spin dialer to
-     */
-    void setZoomValue(double zoom);
-
 protected:
     FOX_CONSTRUCTOR(GUIDialog_EditViewport)
 
@@ -130,33 +119,27 @@ protected:
 
 private:
     /// @brief The calling view
-    GUISUMOAbstractView* myParent = nullptr;
+    GUISUMOAbstractView* myParent;
 
     /// @brief The old viewport
     Position myOldLookFrom, myOldLookAt;
     double myOldRotation;
 
     /// @brief load button
-    FXButton* myLoadButton = nullptr;
+    FXButton* myLoadButton;
 
     /// @brief save button
-    FXButton* mySaveButton = nullptr;
+    FXButton* mySaveButton;
 
     /// @brief The spin dialers used to change the view
-    FXRealSpinner* myZoom = nullptr;
-    FXRealSpinner* myXOff = nullptr;
-    FXRealSpinner* myYOff = nullptr;
-    FXRealSpinner* myZOff = nullptr;
-    FXRealSpinner* myRotation = nullptr;
+    FXRealSpinner* myZoom, *myXOff, *myYOff, *myZOff, *myRotation;
 
     /// @brief The spin dialers used to change the view at (osg only)
-    FXRealSpinner* myLookAtX = nullptr;
-    FXRealSpinner* myLookAtY = nullptr;
-    FXRealSpinner* myLookAtZ = nullptr;
+    FXRealSpinner* myLookAtX, *myLookAtY, *myLookAtZ;
 
     /// @brief OK button
-    FXButton* myOKButton = nullptr;
+    FXButton* myOKButton;
 
     /// @brief Cancel button
-    FXButton* myCancelButton = nullptr;
+    FXButton* myCancelButton;
 };

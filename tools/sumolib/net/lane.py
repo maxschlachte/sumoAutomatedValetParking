@@ -23,7 +23,7 @@ import sumolib.geomhelper
 from functools import reduce
 
 # taken from sumo/src/utils/common/SUMOVehicleClass.cpp
-SUMO_VEHICLE_CLASSES = set([
+SUMO_VEHICLE_CLASSES = (
     "public_emergency",  # deprecated
     "public_authority",  # deprecated
     "public_army",       # deprecated
@@ -58,19 +58,20 @@ SUMO_VEHICLE_CLASSES = set([
     "evehicle",
     "ship",
     "custom1",
-    "custom2"])
+    "custom2")
 
 
 def get_allowed(allow, disallow):
-    """Normalize the given string attributes as a set of all allowed vClasses."""
+    """ Normalize the given string attributes as a list of all allowed vClasses."""
     if allow is None and disallow is None:
         return SUMO_VEHICLE_CLASSES
     elif disallow is None:
-        return set(allow.split())
+        return allow.split()
     elif disallow == "all":
-        return set()
+        return ()
     else:
-        return SUMO_VEHICLE_CLASSES.difference(disallow.split())
+        disallow = disallow.split()
+        return tuple([c for c in SUMO_VEHICLE_CLASSES if c not in disallow])
 
 
 def addJunctionPos(shape, fromPos, toPos):
@@ -230,10 +231,6 @@ class Lane:
             if conn.getToLane() == toLane or conn.getViaLaneID() == toLane.getID():
                 return conn
         return None
-
-    def getPermissions(self):
-        """return the allowed vehicle classes"""
-        return self._allowed
 
     def allows(self, vClass):
         """true if this lane allows the given vehicle class"""

@@ -33,7 +33,8 @@
 
 GNEParkingSpace::GNEParkingSpace(GNENet* net) :
     GNEAdditional("", net, GLO_PARKING_SPACE, SUMO_TAG_PARKING_SPACE, "",
-{}, {}, {}, {}, {}, {}),
+{}, {}, {}, {}, {}, {}, {}, {},
+std::map<std::string, std::string>()),
 mySlope(0) {
     // reset default values
     resetDefaultValues();
@@ -42,10 +43,10 @@ mySlope(0) {
 
 GNEParkingSpace::GNEParkingSpace(GNENet* net, GNEAdditional* parkingAreaParent, const Position& pos,
                                  const std::string& width, const std::string& length, const std::string& angle, double slope,
-                                 const std::string& name, const Parameterised::Map& parameters) :
+                                 const std::string& name, const std::map<std::string, std::string>& parameters) :
     GNEAdditional(net, GLO_PARKING_SPACE, SUMO_TAG_PARKING_SPACE, name,
-{}, {}, {}, {parkingAreaParent}, {}, {}),
-Parameterised(parameters),
+{}, {}, {}, {parkingAreaParent}, {}, {}, {}, {},
+parameters),
 myPosition(pos),
 myWidth(width),
 myLength(length),
@@ -70,7 +71,7 @@ GNEParkingSpace::getMoveOperation() {
         const Position mousePosition = myNet->getViewNet()->getPositionInformation();
         // check if we're editing width or height
         if (myShapeLength.back().distanceSquaredTo2D(mousePosition) <= (snap_radius * snap_radius)) {
-            // edit length
+            // edit lenght
             return new GNEMoveOperation(this, myShapeLength, false, GNEMoveOperation::OperationType::LENGTH);
         } else if (myShapeWidth.front().distanceSquaredTo2D(mousePosition) <= (snap_radius * snap_radius)) {
             // edit width
@@ -109,7 +110,7 @@ GNEParkingSpace::writeAdditional(OutputDevice& device) const {
         device.writeAttr(SUMO_ATTR_ANGLE, myAngle);
     }
     if (getAttribute(SUMO_ATTR_SLOPE) != myTagProperty.getDefaultValue(SUMO_ATTR_SLOPE)) {
-        device.writeAttr(SUMO_ATTR_SLOPE, mySlope);
+        device.writeAttr(SUMO_ATTR_SLOPE, myAngle);
     }
     // write parameters (Always after children to avoid problems with additionals.xsd)
     writeParams(device);
@@ -119,13 +120,13 @@ GNEParkingSpace::writeAdditional(OutputDevice& device) const {
 
 void
 GNEParkingSpace::updateGeometry() {
-    // get width an length
+    // get width an lenght
     const double width = getAttributeDouble(SUMO_ATTR_WIDTH) <= 0 ? POSITION_EPS : getAttributeDouble(SUMO_ATTR_WIDTH);
-    const double length = getAttributeDouble(SUMO_ATTR_LENGTH) <= 0 ? POSITION_EPS : getAttributeDouble(SUMO_ATTR_LENGTH);
-    // calculate shape length
+    const double lenght = getAttributeDouble(SUMO_ATTR_LENGTH) <= 0 ? POSITION_EPS : getAttributeDouble(SUMO_ATTR_LENGTH);
+    // calculate shape lenght
     myShapeLength.clear();
     myShapeLength.push_back(Position(0, 0));
-    myShapeLength.push_back(Position(0, length));
+    myShapeLength.push_back(Position(0, lenght));
     // rotate
     myShapeLength.rotate2D(DEG2RAD(getAttributeDouble(SUMO_ATTR_ANGLE)));
     // move
@@ -148,24 +149,18 @@ GNEParkingSpace::getPositionInView() const {
 
 
 void
-GNEParkingSpace::updateCenteringBoundary(const bool updateGrid) {
-    // remove additional from grid
-    if (updateGrid) {
-        myNet->removeGLObjectFromGrid(this);
-    }
+GNEParkingSpace::updateCenteringBoundary(const bool /*updateGrid*/) {
     // first reset boundary
     myAdditionalBoundary.reset();
     // add position
     myAdditionalBoundary.add(myPosition);
-    // grow width and length
+    // grow width and lenght
     myAdditionalBoundary.grow(myShapeLength.length2D());
     myAdditionalBoundary.grow(myShapeWidth.length2D());
     // grow
     myAdditionalBoundary.grow(10);
-    // add additional into RTREE again
-    if (updateGrid) {
-        myNet->addGLObjectIntoGrid(this);
-    }
+    // update centering boundary of parent
+    getParentAdditionals().front()->updateCenteringBoundary(true);
 }
 
 
@@ -187,10 +182,6 @@ GNEParkingSpace::drawGL(const GUIVisualizationSettings& s) const {
     const double parkingAreaExaggeration = getExaggeration(s);
     // first check if additional has to be drawn
     if (myNet->getViewNet()->getDataViewOptions().showAdditionals() && s.drawAdditionals(parkingAreaExaggeration)) {
-        // check if boundary has to be drawn
-        if (s.drawBoundaries) {
-            GLHelper::drawBoundary(getCenteringBoundary());
-        }
         // obtain  values
         const double width = myShapeWidth.length2D() * 0.5 + (parkingAreaExaggeration * 0.1);
         const double angle = getAttributeDouble(SUMO_ATTR_ANGLE);
@@ -252,7 +243,7 @@ std::string
 GNEParkingSpace::getAttribute(SumoXMLAttr key) const {
     switch (key) {
         case SUMO_ATTR_ID:
-            return getMicrosimID();
+            return getID();
         case SUMO_ATTR_POSITION:
             return toString(myPosition);
         case SUMO_ATTR_NAME:
@@ -289,12 +280,6 @@ GNEParkingSpace::getAttributeDouble(SumoXMLAttr key) const {
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
-}
-
-
-const Parameterised::Map&
-GNEParkingSpace::getACParametersMap() const {
-    return getParametersMap();
 }
 
 
@@ -341,10 +326,16 @@ GNEParkingSpace::isValid(SumoXMLAttr key, const std::string& value) {
         case GNE_ATTR_SELECTED:
             return canParse<bool>(value);
         case GNE_ATTR_PARAMETERS:
-            return areParametersValid(value);
+            return Parameterised::areParametersValid(value);
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
+}
+
+
+bool
+GNEParkingSpace::isAttributeEnabled(SumoXMLAttr /* key */) const {
+    return true;
 }
 
 

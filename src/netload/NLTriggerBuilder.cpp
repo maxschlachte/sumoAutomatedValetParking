@@ -51,7 +51,6 @@
 #include "NLTriggerBuilder.h"
 #include <utils/xml/SUMOXMLDefinitions.h>
 #include <utils/xml/XMLSubSys.h>
-#include <libsumo/TraCIConstants.h>
 
 
 #include <mesosim/MELoop.h>
@@ -109,6 +108,7 @@ NLTriggerBuilder::buildVaporizer(const SUMOSAXAttributes& attrs) {
 }
 
 
+
 void
 NLTriggerBuilder::parseAndBuildLaneSpeedTrigger(MSNet& net, const SUMOSAXAttributes& attrs,
         const std::string& base) {
@@ -146,7 +146,6 @@ NLTriggerBuilder::parseAndBuildLaneSpeedTrigger(MSNet& net, const SUMOSAXAttribu
     }
 }
 
-
 void
 NLTriggerBuilder::parseAndBuildChargingStation(MSNet& net, const SUMOSAXAttributes& attrs) {
     bool ok = true;
@@ -173,7 +172,6 @@ NLTriggerBuilder::parseAndBuildChargingStation(MSNet& net, const SUMOSAXAttribut
 
     buildChargingStation(net, id, lane, frompos, topos, name, chargingPower, efficiency, chargeInTransit, chargeDelay);
 }
-
 
 void
 NLTriggerBuilder::parseAndBuildOverheadWireSegment(MSNet& net, const SUMOSAXAttributes& attrs) {
@@ -237,28 +235,31 @@ NLTriggerBuilder::parseAndBuildOverheadWireSection(MSNet& net, const SUMOSAXAttr
     }
 
     // @todo This may be a relict of older approach to processing the attributes ...
-    std::string segmentStrings = attrs.get<std::string>(SUMO_ATTR_OVERHEAD_WIRE_SEGMENTS, substationId.c_str(), ok);
+    std::string segmentStrings = attrs.get<std::string>(SUMO_ATTR_OVERHEAD_WIRE_SECTION, substationId.c_str(), ok);
     if (!ok) {
-        throw InvalidArgument("Segments referenced by Traction substation '" + substationId + "' are not declared .");
+        throw InvalidArgument("Segments referenced by Traction Substation '" + substationId + "' are not declared .");
     }
 
     // process forbidden internal lanes
-    const std::vector<std::string>& forbiddenInnerLanesIDs = attrs.getOpt<std::vector<std::string> >(SUMO_ATTR_OVERHEAD_WIRE_FORBIDDEN, substationId.c_str(), ok);
-    /// @todo for cycle abbreviation?
-    for (const std::string& laneID : forbiddenInnerLanesIDs) {
-        MSLane* lane = MSLane::dictionary(laneID);
-        if (lane != nullptr) {
-            substation->addForbiddenLane(lane);
-        } else {
-            throw InvalidArgument("Unknown lane '" + laneID + "' in Traction substation '" + substationId + "'.");
+    /// @todo Check if this is necessary, maybe just a getStringVector() is enough.
+    std::string forbiddenInnerLanesStrings = attrs.getOpt<std::string>(SUMO_ATTR_OVERHEAD_WIRE_FORBIDDEN, 0, ok, "");
+    if (forbiddenInnerLanesStrings != "") {
+        std::vector<std::string> forbiddenInnerLanesIDs = attrs.getStringVector(SUMO_ATTR_OVERHEAD_WIRE_FORBIDDEN);
+        /// @todo for cycle abbreviation?
+        for (std::vector<std::string>::iterator i = forbiddenInnerLanesIDs.begin(); i != forbiddenInnerLanesIDs.end(); ++i) {
+            MSLane* lane = MSLane::dictionary(*i);
+            if (lane != nullptr) {
+                substation->addForbiddenLane(lane);
+            }
         }
     }
+
 
     // @todo Check this as well ...
     // Original version from 2018
     // std::vector<std::string> segmentIDs;
     // SUMOSAXAttributes::parseStringVector(segmentStrings, segmentIDs);
-    const std::vector<std::string>& segmentIDs = attrs.get<std::vector<std::string> >(SUMO_ATTR_OVERHEAD_WIRE_SEGMENTS, substationId.c_str(), ok);
+    std::vector<std::string> segmentIDs = attrs.getStringVector(SUMO_ATTR_OVERHEAD_WIRE_SECTION);
     std::vector<MSOverheadWire*> segments;
 
     // ----------------------------------------------
@@ -266,20 +267,21 @@ NLTriggerBuilder::parseAndBuildOverheadWireSection(MSNet& net, const SUMOSAXAttr
     // ----------------------------------------------
 
     // Adding internal overhead wire segments (segments on neighboring inner lanes if a connection between two regular lane with overhead wire segment exists)
-    for (const std::string& segmentID : segmentIDs) {
+    for (std::vector<std::string>::iterator it_segment = segmentIDs.begin(); it_segment != segmentIDs.end(); ++it_segment) {
+
         const MSLane* connection = nullptr;
-        MSOverheadWire* ovrhdSegment = dynamic_cast<MSOverheadWire*>(MSNet::getInstance()->getStoppingPlace(segmentID, SUMO_TAG_OVERHEAD_WIRE_SEGMENT));
+        MSOverheadWire* ovrhdSegment = dynamic_cast<MSOverheadWire*>(MSNet::getInstance()->getStoppingPlace(*it_segment, SUMO_TAG_OVERHEAD_WIRE_SEGMENT));
         std::string neigboringOvrhdSegmentID;
         MSOverheadWire* neigboringOvrhdSegment;
         MSTractionSubstation* neigboringOvrhdSegmentTractionSubstation;
         if (ovrhdSegment == nullptr) {
-            throw InvalidArgument("The OverheadWireSegment with id='" + segmentID + "' referenced by OverheadWireSegment for substation '" + substationId + "' was not defined.");
+            throw InvalidArgument("The OverheadWireSegment with id='" + (*it_segment) + "' referenced by OverheadWireSgment for substation '" + substationId + "' was not defined.");
         }
 
         MSTractionSubstation* ts = ovrhdSegment->getTractionSubstation();
         if (!(ts == substation || ts == nullptr)) {
             std::string tsName = ts->getID();
-            throw InvalidArgument("The OverheadWireSegment '" + segmentID + "' referenced by OverheadWireSegment for substation '" + substationId + "' is already assigned to substation '" + tsName + "'.");
+            throw InvalidArgument("The OverheadWireSegment '" + (*it_segment) + "' referenced by OverheadWireSgment for substation '" + substationId + "' is already assigned to substation '" + tsName + "'.");
         }
         ovrhdSegment->setTractionSubstation(substation);
 
@@ -348,27 +350,28 @@ NLTriggerBuilder::parseAndBuildOverheadWireSection(MSNet& net, const SUMOSAXAttr
     // ----- *** adding segments into the electric circuit*** -----
 
     // setting nullptr for substation (a fragment from old version of adding segments into the circuit)
-    for (const std::string& segmentID : segmentIDs) {
-        MSOverheadWire* ovrhdSegment = dynamic_cast<MSOverheadWire*>(MSNet::getInstance()->getStoppingPlace(segmentID, SUMO_TAG_OVERHEAD_WIRE_SEGMENT));
+    for (std::vector<std::string>::iterator it_segment = segmentIDs.begin(); it_segment != segmentIDs.end(); ++it_segment) {
+        MSOverheadWire* ovrhdSegment = dynamic_cast<MSOverheadWire*>(MSNet::getInstance()->getStoppingPlace(*it_segment, SUMO_TAG_OVERHEAD_WIRE_SEGMENT));
         ovrhdSegment->setTractionSubstation(nullptr);
     }
 
-    for (const std::string& segmentID : segmentIDs) {
-        if (segmentID == "") {
+    for (std::vector<std::string>::iterator it_segment = segmentIDs.begin(); it_segment != segmentIDs.end(); ++it_segment) {
+        if (*it_segment == "") {
             continue;
         }
-        MSOverheadWire* ovrhdSegment = dynamic_cast<MSOverheadWire*>(MSNet::getInstance()->getStoppingPlace(segmentID, SUMO_TAG_OVERHEAD_WIRE_SEGMENT));
+        MSOverheadWire* ovrhdSegment = dynamic_cast<MSOverheadWire*>(MSNet::getInstance()->getStoppingPlace(*it_segment, SUMO_TAG_OVERHEAD_WIRE_SEGMENT));
         substation->addOverheadWireSegmentToCircuit(ovrhdSegment);
         segments.push_back(ovrhdSegment);
     }
 
     // adding overhead wire clamp
-    std::string clampsString = attrs.getOpt<std::string>(SUMO_ATTR_OVERHEAD_WIRE_CLAMPS, nullptr, ok, "");
+    std::string clampsString = attrs.getOpt<std::string>(SUMO_ATTR_OVERHEAD_WIRE_CLAMPS, 0, ok, "");
     if (clampsString != "" && MSGlobals::gOverheadWireSolver) {
 #ifdef HAVE_EIGEN
-        const std::vector<std::string>& clampIDs = attrs.get<std::vector<std::string> >(SUMO_ATTR_OVERHEAD_WIRE_CLAMPS, nullptr, ok);
-        for (const std::string& clampID : clampIDs) {
-            MSTractionSubstation::OverheadWireClamp* clamp = substation->findClamp(clampID);
+        std::vector<std::string> clampIDs = attrs.getStringVector(SUMO_ATTR_OVERHEAD_WIRE_CLAMPS);
+        MSTractionSubstation::OverheadWireClamp* clamp = nullptr;
+        for (std::vector<std::string>::iterator it_clamp = clampIDs.begin(); it_clamp != clampIDs.end(); ++it_clamp) {
+            clamp = substation->findClamp(*it_clamp);
             if (clamp != nullptr) {
                 if (clamp->start->getTractionSubstation() == substation && clamp->end->getTractionSubstation() == substation) {
                     substation->addOverheadWireClampToCircuit(clamp->id, clamp->start, clamp->end);
@@ -376,13 +379,13 @@ NLTriggerBuilder::parseAndBuildOverheadWireSection(MSNet& net, const SUMOSAXAttr
                     clamp->usage = true;
                 } else {
                     if (clamp->start->getTractionSubstation() != substation) {
-                        WRITE_WARNING("A connecting overhead wire start segment '" + clamp->start->getID() + "' defined for overhead wire clamp '" + clampID + "' is not assigned to the traction substation '" + substationId + "'.");
+                        WRITE_WARNING("A connecting overhead wire start segment '" + clamp->start->getID() + "' defined for overhead wire clamp '" + (*it_clamp) + "' is not assigned to the traction substation '" + substationId + "'.");
                     } else {
-                        WRITE_WARNING("A connecting overhead wire end segment '" + clamp->end->getID() + "' defined for overhead wire clamp '" + clampID + "' is not assigned to the traction substation '" + substationId + "'.");
+                        WRITE_WARNING("A connecting overhead wire end segment '" + clamp->end->getID() + "' defined for overhead wire clamp '" + (*it_clamp) + "' is not assigned to the traction substation '" + substationId + "'.");
                     }
                 }
             } else {
-                WRITE_WARNING("The overhead wire clamp '" + clampID + "' defined in an overhead wire section was not assigned to the substation '" + substationId + "'. Please define proper <overheadWireClamp .../> in additional files before defining overhead wire section.");
+                WRITE_WARNING("The overhead wire clamp '" + (*it_clamp) + "' defined in an overhead wire section was not assigned to the substation '" + substationId + "'. Please define proper <overheadWireClamp .../> in additional files before defining overhead wire section.");
             }
         }
 #else
@@ -495,13 +498,13 @@ NLTriggerBuilder::parseAndBuildStoppingPlace(MSNet& net, const SUMOSAXAttributes
 
     MSLane* lane = getLane(attrs, toString(element), id);
     // get the positions
-    double frompos = attrs.getOpt<double>(SUMO_ATTR_STARTPOS, id.c_str(), ok, 0.);
+    double frompos = attrs.getOpt<double>(SUMO_ATTR_STARTPOS, id.c_str(), ok, 0);
     double topos = attrs.getOpt<double>(SUMO_ATTR_ENDPOS, id.c_str(), ok, lane->getLength());
     const bool friendlyPos = attrs.getOpt<bool>(SUMO_ATTR_FRIENDLY_POS, id.c_str(), ok, false);
     if (!ok || (myHandler->checkStopPos(frompos, topos, lane->getLength(), POSITION_EPS, friendlyPos) != SUMORouteHandler::StopPos::STOPPOS_VALID)) {
         throw InvalidArgument("Invalid position for " + toString(element) + " '" + id + "'.");
     }
-    const std::vector<std::string>& lines = attrs.getOpt<std::vector<std::string> >(SUMO_ATTR_LINES, id.c_str(), ok);
+    const std::vector<std::string>& lines = attrs.getOptStringVector(SUMO_ATTR_LINES, id.c_str(), ok, false);
     int defaultCapacity;
     SumoXMLAttr capacityAttr;
     if (element != SUMO_TAG_CONTAINER_STOP) {
@@ -563,8 +566,8 @@ NLTriggerBuilder::parseAndBeginParkingArea(MSNet& net, const SUMOSAXAttributes& 
     double width = attrs.getOpt<double>(SUMO_ATTR_WIDTH, id.c_str(), ok, 0);
     double length = attrs.getOpt<double>(SUMO_ATTR_LENGTH, id.c_str(), ok, 0);
     double angle = attrs.getOpt<double>(SUMO_ATTR_ANGLE, id.c_str(), ok, 0);
-    const std::string name = attrs.getOpt<std::string>(SUMO_ATTR_NAME, id.c_str(), ok);
-    const std::string departPos = attrs.getOpt<std::string>(SUMO_ATTR_DEPARTPOS, id.c_str(), ok);
+    const std::string name = attrs.getOpt<std::string>(SUMO_ATTR_NAME, id.c_str(), ok, "");
+    const std::string departPos = attrs.getOpt<std::string>(SUMO_ATTR_DEPARTPOS, id.c_str(), ok, "");
     // (qpk): get exit lane from parameter
     MSLane* exitLane = MSLane::dictionary(attrs.getOpt<std::string>(SUMO_ATTR_EXIT_LANE, id.c_str(), ok, ""));
     // (chs): parse attributes power, efficiency and charge delay
@@ -574,7 +577,7 @@ NLTriggerBuilder::parseAndBeginParkingArea(MSNet& net, const SUMOSAXAttributes& 
     if (!ok || (myHandler->checkStopPos(frompos, topos, lane->getLength(), POSITION_EPS, friendlyPos) != SUMORouteHandler::StopPos::STOPPOS_VALID)) {
         throw InvalidArgument("Invalid position for parking area '" + id + "'.");
     }
-    const std::vector<std::string>& lines = attrs.getOpt<std::vector<std::string> >(SUMO_ATTR_LINES, id.c_str(), ok);
+    const std::vector<std::string>& lines = attrs.getOptStringVector(SUMO_ATTR_LINES, id.c_str(), ok, false);
     // build the parking area
     // (chs): pass power, efficiency and charge delay to beginParkingArea()
     beginParkingArea(net, id, lines, lane, frompos, topos, capacity, width, length, angle, name, onRoad, departPos, exitLane, power, efficiency, chargeDelay);
@@ -589,6 +592,9 @@ NLTriggerBuilder::parseAndAddLotEntry(const SUMOSAXAttributes& attrs) {
     if (myParkingArea == nullptr) {
         throw ProcessError();
     }
+    double width = attrs.getOpt<double>(SUMO_ATTR_WIDTH, "", ok, myParkingArea->getWidth());
+    double length = attrs.getOpt<double>(SUMO_ATTR_LENGTH, "", ok, myParkingArea->getLength());
+    double angle = attrs.getOpt<double>(SUMO_ATTR_ANGLE, "", ok, myParkingArea->getAngle());
     // get the positions
     double x = attrs.get<double>(SUMO_ATTR_X, "", ok);
     if (!ok) {
@@ -605,12 +611,8 @@ NLTriggerBuilder::parseAndAddLotEntry(const SUMOSAXAttributes& attrs) {
     double z = attrs.getOpt<double>(SUMO_ATTR_Z, "", ok, 0.);
     myLastZ = z;
     // (qpk): save last lot width for usage in possible further subspaces
-    double width = attrs.getOpt<double>(SUMO_ATTR_WIDTH, "", ok, myParkingArea->getWidth());
-    // (qpk): save last lot width for usage in possible further subspaces
     myLastWidth = width;
     myLastSubChargeIdx = 0;
-    double length = attrs.getOpt<double>(SUMO_ATTR_LENGTH, "", ok, myParkingArea->getLength());
-    double angle = attrs.getOpt<double>(SUMO_ATTR_ANGLE, "", ok, myParkingArea->getAngle());
     double slope = attrs.getOpt<double>(SUMO_ATTR_SLOPE, "", ok, 0.);
     // (chs): if the attribute chargingpower is a non negative value create the lot as a lot for charging
     double power = attrs.getOpt<double>(SUMO_ATTR_CHARGINGPOWER, "", ok, myParkingArea->getChargingPower());
@@ -619,7 +621,7 @@ NLTriggerBuilder::parseAndAddLotEntry(const SUMOSAXAttributes& attrs) {
     SUMOTime chargeDelay = 0.;
     int spaceRow = attrs.getOpt<int>(SUMO_ATTR_ROWLENGTH, "", ok, 1);
     for (int s = 0; s < MAX2(1,spaceRow); s++) {
-        if(power > 0) {
+        if(power >= 0) {
             efficiency = attrs.getOpt<double>(SUMO_ATTR_EFFICIENCY, "", ok, myParkingArea->getChargingEfficiency());
             SUMOTime chargeDelay = attrs.getOptSUMOTimeReporting(SUMO_ATTR_CHARGEDELAY, "", ok, 0);
             std::string id = myParkingArea->getID() + "_cs_" + toString(s) + "_0";
@@ -633,17 +635,14 @@ NLTriggerBuilder::parseAndAddLotEntry(const SUMOSAXAttributes& attrs) {
         for(int i = 0; i < numOfSubspaces; i++) {
             double xs = xl + (cos(3.14159265 * (angle-90) / 180) * length) * (i+1);
             double ys = yl + (sin(3.14159265 * (angle-90) / 180) * length) * (i+1);
-            if(power > 0) {
+            if(power >= 0) {
                 std::string id = myParkingArea->getID() + "_cs_" + toString(s) + "_" + toString(i+1);
                 chargingSpace = new MSChargingSpace(id, power, efficiency, chargeDelay);
             }
             myParkingArea->addSubspace(xs, ys, z, width, length, angle, slope, chargingSpace);
         }
     }
-    // add the lot entry
-    //addLotEntry(x, y, z, width, length, angle, slope);
 }
-
 
 // (qpk): definition of parsing method for subspaces
 void
@@ -675,7 +674,7 @@ NLTriggerBuilder::parseAndAddSubspace(const SUMOSAXAttributes& attrs) {
         y = myLastY + (sin(3.14159265 * (angle-90) / 180) * length);
     }
     myLastY = y;
-    // (chs): if the attribute chargingpower is a non negative value create the subspace as a lot for charging
+    // MS_EDIT (chs): if the attribute chargingpower is a non negative value create the subspace as a lot for charging
     double power = attrs.getOpt<double>(SUMO_ATTR_CHARGINGPOWER, "", ok, myParkingArea->getChargingPower());
     double efficiency = 0.;
     SUMOTime chargeDelay = 0.;
@@ -721,7 +720,7 @@ NLTriggerBuilder::parseAndBuildCalibrator(MSNet& net, const SUMOSAXAttributes& a
         edge = &lane->getEdge();
     }
     const double pos = getPosition(attrs, lane, "calibrator", id, edge);
-    const SUMOTime period = attrs.getOptPeriod(id.c_str(), ok, DELTA_T); // !!! no error handling
+    const SUMOTime freq = attrs.getOptSUMOTimeReporting(SUMO_ATTR_FREQUENCY, id.c_str(), ok, DELTA_T); // !!! no error handling
     const std::string vTypes = attrs.getOpt<std::string>(SUMO_ATTR_VTYPES, id.c_str(), ok, "");
     std::string file = getFileName(attrs, base, true);
     std::string outfile = attrs.getOpt<std::string>(SUMO_ATTR_OUTPUT, id.c_str(), ok, "");
@@ -741,12 +740,12 @@ NLTriggerBuilder::parseAndBuildCalibrator(MSNet& net, const SUMOSAXAttributes& a
                           + "' defined for lane '" + lane->getID()
                           + "' will collect data for all lanes of edge '" + edge->getID() + "'.");
         }
-        METriggeredCalibrator* trigger = buildMECalibrator(net, id, edge, pos, file, outfile, period, probe, invalidJamThreshold, vTypes);
+        METriggeredCalibrator* trigger = buildMECalibrator(net, id, edge, pos, file, outfile, freq, probe, invalidJamThreshold, vTypes);
         if (file == "") {
             trigger->registerParent(SUMO_TAG_CALIBRATOR, myHandler);
         }
     } else {
-        MSCalibrator* trigger = buildCalibrator(net, id, edge, lane, pos, file, outfile, period, probe, invalidJamThreshold, vTypes);
+        MSCalibrator* trigger = buildCalibrator(net, id, edge, lane, pos, file, outfile, freq, probe, invalidJamThreshold, vTypes);
         if (file == "") {
             trigger->registerParent(SUMO_TAG_CALIBRATOR, myHandler);
         }
@@ -755,13 +754,16 @@ NLTriggerBuilder::parseAndBuildCalibrator(MSNet& net, const SUMOSAXAttributes& a
 
 
 void
-NLTriggerBuilder::parseAndBuildRerouter(MSNet& net, const SUMOSAXAttributes& attrs) {
+NLTriggerBuilder::parseAndBuildRerouter(MSNet& net, const SUMOSAXAttributes& attrs,
+                                        const std::string& base) {
     bool ok = true;
     // get the id, throw if not given or empty...
     std::string id = attrs.get<std::string>(SUMO_ATTR_ID, nullptr, ok);
     if (!ok) {
         throw ProcessError();
     }
+    // get the file name to read further definitions from
+    std::string file = getFileName(attrs, base, true);
     MSEdgeVector edges;
     for (const std::string& edgeID : attrs.get<std::vector<std::string> >(SUMO_ATTR_EDGES, id.c_str(), ok)) {
         MSEdge* edge = MSEdge::dictionary(edgeID);
@@ -786,10 +788,13 @@ NLTriggerBuilder::parseAndBuildRerouter(MSNet& net, const SUMOSAXAttributes& att
         throw InvalidArgument("Could not parse MSTriggeredRerouter '" + id + "'.");
     }
     // (cre): pass priority attribute
-    //MSTriggeredRerouter* trigger = buildRerouter(net, id, edges, prob, off, timeThreshold, vTypes);
-    MSTriggeredRerouter* trigger = buildRerouter(net, id, edges, prob, prio, off, timeThreshold, vTypes);
+    MSTriggeredRerouter* trigger = buildRerouter(net, id, edges, prob, prio, file, off, timeThreshold, vTypes);
     // read in the trigger description
-    trigger->registerParent(SUMO_TAG_REROUTER, myHandler);
+    if (file == "") {
+        trigger->registerParent(SUMO_TAG_REROUTER, myHandler);
+    } else if (!XMLSubSys::runParser(*trigger, file)) {
+        throw ProcessError();
+    }
 }
 
 
@@ -835,12 +840,13 @@ NLTriggerBuilder::buildCalibrator(MSNet& /*net*/, const std::string& id,
 
 MSTriggeredRerouter*
 NLTriggerBuilder::buildRerouter(MSNet&, const std::string& id,
-                                MSEdgeVector& edges, double prob,
+                                MSEdgeVector& edges,
+                                double prob,
                                 // (utl): add prio parameter
-                                double prio, bool off,
-                                SUMOTime timeThreshold, const std::string& vTypes) {
-    // (cre): pass prio parameter
-    return new MSTriggeredRerouter(id, edges, prob, prio, off, timeThreshold, vTypes);
+                                double prio, const std::string& file, bool off,
+                                SUMOTime timeThreshold,
+                                const std::string& vTypes) {
+    return new MSTriggeredRerouter(id, edges, prob, prio, file, off, timeThreshold, vTypes);
 }
 
 

@@ -34,6 +34,10 @@
 #include "MSDevice_BTsender.h"
 #include "MSDevice_Example.h"
 #include "MSDevice_Battery.h"
+// (cre): include device header
+#include "MSDevice_eParkingReroute.h"
+// (pki): include device header
+#include "MSDevice_ParkingInfo.h"
 #include "MSDevice_SSM.h"
 #include "MSDevice_ToC.h"
 #include "MSDevice_DriverState.h"
@@ -42,21 +46,16 @@
 #include "MSDevice_Taxi.h"
 #include "MSDevice_GLOSA.h"
 #include "MSDevice_ElecHybrid.h"
-// (cre): include device header
-#include "MSDevice_eParkingReroute.h"
-// (pki): include device header
-#include "MSDevice_ParkingInfo.h"
 #include "MSTransportableDevice_Routing.h"
 #include "MSTransportableDevice_FCD.h"
 #include "MSRoutingEngine.h"
-#include "MSDevice_Friction.h"
 
 
 // ===========================================================================
 // static member variables
 // ===========================================================================
 std::map<std::string, std::set<std::string> > MSDevice::myExplicitIDs;
-SumoRNG MSDevice::myEquipmentRNG("deviceEquipment");
+SumoRNG MSDevice::myEquipmentRNG;
 
 // ===========================================================================
 // debug flags
@@ -78,6 +77,10 @@ MSDevice::insertOptions(OptionsCont& oc) {
     MSDevice_BTsender::insertOptions(oc);
     MSDevice_Example::insertOptions(oc);
     MSDevice_Battery::insertOptions(oc);
+    // (cre): create options for MSDevice_eParkingReroute
+    MSDevice_eParkingReroute::insertOptions(oc);
+    // (pki): create options for MSDevice_ParkingInfo
+    MSDevice_ParkingInfo::insertOptions(oc);
     MSDevice_SSM::insertOptions(oc);
     MSDevice_ToC::insertOptions(oc);
     MSDevice_DriverState::insertOptions(oc);
@@ -88,11 +91,6 @@ MSDevice::insertOptions(OptionsCont& oc) {
     MSDevice_GLOSA::insertOptions(oc);
     MSDevice_Tripinfo::insertOptions(oc);
     MSDevice_Vehroutes::insertOptions(oc);
-    MSDevice_Friction::insertOptions(oc);
-    // (cre): create options for MSDevice_eParkingReroute
-    MSDevice_eParkingReroute::insertOptions(oc);
-    // (pki): create options for MSDevice_ParkingInfo
-    MSDevice_ParkingInfo::insertOptions(oc);
 
     MSTransportableDevice_Routing::insertOptions(oc);
     MSTransportableDevice_FCD::insertOptions(oc);
@@ -117,6 +115,10 @@ MSDevice::buildVehicleDevices(SUMOVehicle& v, std::vector<MSVehicleDevice*>& int
     MSDevice_BTsender::buildVehicleDevices(v, into);
     MSDevice_Example::buildVehicleDevices(v, into);
     MSDevice_Battery::buildVehicleDevices(v, into);
+    // (cre): build MSDevice_eParkingReroute
+    MSDevice_eParkingReroute::buildVehicleDevices(v, into);
+    // (pki): build MSDevice_ParkingInfo
+    MSDevice_ParkingInfo::buildVehicleDevices(v, into);
     MSDevice_SSM::buildVehicleDevices(v, into);
     MSDevice_ToC::buildVehicleDevices(v, into);
     MSDevice_DriverState::buildVehicleDevices(v, into);
@@ -125,11 +127,6 @@ MSDevice::buildVehicleDevices(SUMOVehicle& v, std::vector<MSVehicleDevice*>& int
     MSDevice_ElecHybrid::buildVehicleDevices(v, into);
     MSDevice_Taxi::buildVehicleDevices(v, into);
     MSDevice_GLOSA::buildVehicleDevices(v, into);
-    MSDevice_Friction::buildVehicleDevices(v, into);
-    // (cre): build MSDevice_eParkingReroute
-    MSDevice_eParkingReroute::buildVehicleDevices(v, into);
-    // (pki): build MSDevice_ParkingInfo
-    MSDevice_ParkingInfo::buildVehicleDevices(v, into);
 }
 
 

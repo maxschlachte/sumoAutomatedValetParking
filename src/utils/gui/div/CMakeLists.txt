@@ -30,8 +30,6 @@ set(utils_gui_div_STAT_SRCS
    GUIGeometry.cpp
    GUIDottedGeometry.h
    GUIDottedGeometry.cpp
-   GUIGlobalPostDrawing.h
-   GUIGlobalPostDrawing.cpp
 )
 
 add_library(utils_gui_div STATIC ${utils_gui_div_STAT_SRCS})

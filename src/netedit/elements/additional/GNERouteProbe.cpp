@@ -19,6 +19,7 @@
 /****************************************************************************/
 #include <config.h>
 
+#include <utils/gui/images/GUITextureSubSys.h>
 #include <utils/gui/div/GLHelper.h>
 #include <netedit/GNEViewNet.h>
 #include <netedit/GNEUndoList.h>
@@ -35,22 +36,21 @@
 
 GNERouteProbe::GNERouteProbe(GNENet* net) :
     GNEAdditional("", net, GLO_ROUTEPROBE, SUMO_TAG_ROUTEPROBE, "",
-{}, {}, {}, {}, {}, {}),
-myPeriod(SUMOTime_MAX_PERIOD),
+{}, {}, {}, {}, {}, {}, {}, {},
+std::map<std::string, std::string>()),
+    myFrequency(0),
 myBegin(0) {
-    // reset default values
-    resetDefaultValues();
     // update centering boundary without updating grid
     updateCenteringBoundary(false);
 }
 
 
-GNERouteProbe::GNERouteProbe(const std::string& id, GNENet* net, GNEEdge* edge, const SUMOTime period, const std::string& name,
-                             const std::string& filename, SUMOTime begin, const Parameterised::Map& parameters) :
+GNERouteProbe::GNERouteProbe(const std::string& id, GNENet* net, GNEEdge* edge, const SUMOTime frequency, const std::string& name,
+                             const std::string& filename, SUMOTime begin, const std::map<std::string, std::string>& parameters) :
     GNEAdditional(id, net, GLO_ROUTEPROBE, SUMO_TAG_ROUTEPROBE, name,
-{}, {edge}, {}, {}, {}, {}),
-Parameterised(parameters),
-myPeriod(period),
+{}, {edge}, {}, {}, {}, {}, {}, {},
+parameters),
+myFrequency(frequency),
 myFilename(filename),
 myBegin(begin) {
     // update centering boundary without updating grid
@@ -69,9 +69,7 @@ GNERouteProbe::writeAdditional(OutputDevice& device) const {
     // write parameters
     device.writeAttr(SUMO_ATTR_ID, getID());
     device.writeAttr(SUMO_ATTR_BEGIN, time2string(myBegin));
-    if (getAttribute(SUMO_ATTR_PERIOD).size() > 0) {
-        device.writeAttr(SUMO_ATTR_PERIOD, time2string(myPeriod));
-    }
+    device.writeAttr(SUMO_ATTR_FREQUENCY, time2string(myFrequency));
     device.writeAttr(SUMO_ATTR_EDGE, getParentEdges().front()->getID());
     if (!myAdditionalName.empty()) {
         device.writeAttr(SUMO_ATTR_NAME, myAdditionalName);
@@ -206,20 +204,15 @@ std::string
 GNERouteProbe::getAttribute(SumoXMLAttr key) const {
     switch (key) {
         case SUMO_ATTR_ID:
-            return getMicrosimID();
+            return getID();
         case SUMO_ATTR_EDGE:
             return getParentEdges().front()->getID();
         case SUMO_ATTR_NAME:
             return myAdditionalName;
         case SUMO_ATTR_FILE:
             return myFilename;
-        case SUMO_ATTR_PERIOD:
         case SUMO_ATTR_FREQUENCY:
-            if (myPeriod == SUMOTime_MAX_PERIOD) {
-                return "";
-            } else {
-                return time2string(myPeriod);
-            }
+            return time2string(myFrequency);
         case SUMO_ATTR_BEGIN:
             return time2string(myBegin);
         case GNE_ATTR_SELECTED:
@@ -243,12 +236,6 @@ GNERouteProbe::getAttributeDouble(SumoXMLAttr key) const {
 }
 
 
-const Parameterised::Map&
-GNERouteProbe::getACParametersMap() const {
-    return getParametersMap();
-}
-
-
 void
 GNERouteProbe::setAttribute(SumoXMLAttr key, const std::string& value, GNEUndoList* undoList) {
     if (value == getAttribute(key)) {
@@ -259,7 +246,6 @@ GNERouteProbe::setAttribute(SumoXMLAttr key, const std::string& value, GNEUndoLi
         case SUMO_ATTR_EDGE:
         case SUMO_ATTR_NAME:
         case SUMO_ATTR_FILE:
-        case SUMO_ATTR_PERIOD:
         case SUMO_ATTR_FREQUENCY:
         case SUMO_ATTR_BEGIN:
         case GNE_ATTR_SELECTED:
@@ -269,6 +255,12 @@ GNERouteProbe::setAttribute(SumoXMLAttr key, const std::string& value, GNEUndoLi
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
+}
+
+
+bool
+GNERouteProbe::isAttributeEnabled(SumoXMLAttr /* key */) const {
+    return true;
 }
 
 
@@ -302,19 +294,18 @@ GNERouteProbe::isValid(SumoXMLAttr key, const std::string& value) {
             return SUMOXMLDefinitions::isValidAttribute(value);
         case SUMO_ATTR_FILE:
             return SUMOXMLDefinitions::isValidFilename(value);
-        case SUMO_ATTR_PERIOD:
         case SUMO_ATTR_FREQUENCY:
             if (value.empty()) {
                 return true;
             } else {
-                return (canParse<double>(value) && (parse<double>(value) >= 0));
+                return canParse<SUMOTime>(value);
             }
         case SUMO_ATTR_BEGIN:
             return canParse<SUMOTime>(value);
         case GNE_ATTR_SELECTED:
             return canParse<bool>(value);
         case GNE_ATTR_PARAMETERS:
-            return areParametersValid(value);
+            return Parameterised::areParametersValid(value);
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
@@ -337,13 +328,8 @@ GNERouteProbe::setAttribute(SumoXMLAttr key, const std::string& value) {
         case SUMO_ATTR_FILE:
             myFilename = value;
             break;
-        case SUMO_ATTR_PERIOD:
         case SUMO_ATTR_FREQUENCY:
-            if (value.empty()) {
-                myPeriod = SUMOTime_MAX_PERIOD;
-            } else {
-                myPeriod = string2time(value);
-            }
+            myFrequency = parse<SUMOTime>(value);
             break;
         case SUMO_ATTR_BEGIN:
             myBegin = parse<SUMOTime>(value);

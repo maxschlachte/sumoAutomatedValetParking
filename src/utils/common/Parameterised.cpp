@@ -33,7 +33,7 @@
 Parameterised::Parameterised() {}
 
 
-Parameterised::Parameterised(const Parameterised::Map& mapArg) :
+Parameterised::Parameterised(const std::map<std::string, std::string>& mapArg) :
     myMap(mapArg) {
 }
 
@@ -54,7 +54,7 @@ Parameterised::unsetParameter(const std::string& key) {
 
 
 void
-Parameterised::updateParameters(const Parameterised::Map& mapArg) {
+Parameterised::updateParameters(const std::map<std::string, std::string>& mapArg) {
     for (const auto& keyValue : mapArg) {
         setParameter(keyValue.first, keyValue.second);
     }
@@ -122,7 +122,7 @@ Parameterised::clearParameter() {
 }
 
 
-const Parameterised::Map&
+const std::map<std::string, std::string>&
 Parameterised::getParametersMap() const {
     return myMap;
 }
@@ -156,7 +156,7 @@ Parameterised::setParameters(const Parameterised& params) {
 
 
 void
-Parameterised::setParametersMap(const Parameterised::Map& paramsMap) {
+Parameterised::setParametersMap(const std::map<std::string, std::string>& paramsMap) {
     // first clear map
     myMap.clear();
     // set parameter
@@ -203,38 +203,6 @@ Parameterised::areParametersValid(const std::string& value, bool report, const s
             // report depending of flag
             if (report) {
                 WRITE_WARNING("Invalid format of parameter (" + keyValueStr + ")");
-            }
-            return false;
-        }
-    }
-    // all ok, then return true
-    return true;
-}
-
-
-bool
-Parameterised::areAttributesValid(const std::string& value, bool report, const std::string kvsep, const std::string sep) {
-    std::vector<std::string> parameters = StringTokenizer(value, sep).getVector();
-    // first check if parsed parameters are valid
-    for (const auto& keyValueStr : parameters) {
-        // check if parameter is valid
-        if (isParameterValid(keyValueStr, kvsep, sep)) {
-            // separate key and value
-            const auto attr = StringTokenizer(value, kvsep).getVector().front();
-            // get first letter
-            const auto letter = StringTokenizer(value, kvsep).getVector().front().front();
-            // check key
-            if (!((letter >= 'a') && (letter <= 'z')) && !((letter >= 'A') && (letter <= 'Z'))) {
-                // report depending of flag
-                if (report) {
-                    WRITE_WARNING("Invalid format of atribute '" + attr + "'. Attribute must start with a letter");
-                }
-                return false;
-            }
-        } else {
-            // report depending of flag
-            if (report) {
-                WRITE_WARNING("Invalid format of atribute (" + keyValueStr + ")");
             }
             return false;
         }

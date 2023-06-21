@@ -37,17 +37,19 @@ GNEChange_EnableAttribute::GNEChange_EnableAttribute(GNEAttributeCarrier* ac, co
     myAC(ac),
     myKey(key),
     myOrigValue(ac->isAttributeEnabled(key)),
-    myNewValue(value) {
+    myNewValue(value),
+    myPreviousParameters(-1) {
     myAC->incRef("GNEChange_EnableAttribute " + myAC->getTagProperty().getTagStr());
 }
 
 
-GNEChange_EnableAttribute::GNEChange_EnableAttribute(GNEAttributeCarrier* ac, const SumoXMLAttr key, const bool value, const int /* previousParameters */) :
+GNEChange_EnableAttribute::GNEChange_EnableAttribute(GNEAttributeCarrier* ac, const SumoXMLAttr key, const bool value, const int previousParameters) :
     GNEChange(ac->getTagProperty().getSupermode(), true, false),
     myAC(ac),
     myKey(key),
     myOrigValue(ac->isAttributeEnabled(key)),
-    myNewValue(value) {
+    myNewValue(value),
+    myPreviousParameters(previousParameters) {
     myAC->incRef("GNEChange_EnableAttribute " + myAC->getTagProperty().getTagStr());
 }
 
@@ -70,11 +72,11 @@ GNEChange_EnableAttribute::undo() {
     // show extra information for tests
     WRITE_DEBUG("Setting previous attribute into " + myAC->getTagStr() + " '" + myAC->getID() + "'");
     // set original value
-    myAC->toggleAttribute(myKey, myOrigValue);
+    myAC->toogleAttribute(myKey, myOrigValue, myPreviousParameters);
     // check if networkElements, additional or shapes has to be saved
     if (myAC->getTagProperty().isNetworkElement()) {
         myAC->getNet()->requireSaveNet(true);
-    } else if (myAC->getTagProperty().isAdditionalElement()) {
+    } else if (myAC->getTagProperty().isAdditionalElement() || myAC->getTagProperty().isShape()) {
         myAC->getNet()->requireSaveAdditionals(true);
     } else if (myAC->getTagProperty().isDemandElement()) {
         myAC->getNet()->requireSaveDemandElements(true);
@@ -87,11 +89,11 @@ GNEChange_EnableAttribute::redo() {
     // show extra information for tests
     WRITE_DEBUG("Setting new attribute into " + myAC->getTagStr() + " '" + myAC->getID() + "'");
     // set new attributes
-    myAC->toggleAttribute(myKey, myNewValue);
+    myAC->toogleAttribute(myKey, myNewValue, myPreviousParameters);
     // check if networkElements, additional or shapes has to be saved
     if (myAC->getTagProperty().isNetworkElement()) {
         myAC->getNet()->requireSaveNet(true);
-    } else if (myAC->getTagProperty().isAdditionalElement()) {
+    } else if (myAC->getTagProperty().isAdditionalElement() || myAC->getTagProperty().isShape()) {
         myAC->getNet()->requireSaveAdditionals(true);
     } else if (myAC->getTagProperty().isDemandElement()) {
         myAC->getNet()->requireSaveDemandElements(true);

@@ -84,9 +84,7 @@ public:
     /// @{
     /// @brief Returns the full name appearing in the tool tip
     /// @return This object's typed id
-    inline const std::string& getFullName() const {
-        return myFullName;
-    }
+    const std::string& getFullName() const;
 
     /// @brief Returns the name of the parent object (if any)
     /// @return This object's parent id
@@ -94,9 +92,7 @@ public:
 
     /// @brief Returns the numerical id of the object
     /// @return This object's gl-id
-    inline GUIGlID getGlID() const {
-        return myGlID;
-    }
+    GUIGlID getGlID() const;
 
     /// @}
 
@@ -130,9 +126,7 @@ public:
     virtual GUIParameterTableWindow* getTypeParameterWindow(GUIMainWindow& app, GUISUMOAbstractView& parent);
 
     /// @brief Returns the id of the object as known to microsim
-    inline const std::string& getMicrosimID() const {
-        return myMicrosimID;
-    }
+    virtual const std::string& getMicrosimID() const;
 
     /// @brief Returns the name of the object (default "")
     virtual const std::string getOptionalName() const;
@@ -143,26 +137,9 @@ public:
 
     /// @brief Returns the type of the object as coded in GUIGlObjectType
     /// @see GUIGlObjectType
-    inline GUIGlObjectType getType() const {
-        return myGLObjectType;
-    }
+    GUIGlObjectType getType() const;
 
-    /// @brief Returns the priority of receiving mouse clicks
-    virtual double getClickPriority() const {
-        return (double)myGLObjectType;
-    }
-
-    /// @brief get blocking status
-    inline bool isBlocked() const {
-        return myAmBlocked;
-    }
-
-    /// @brief set blocking status
-    inline void setBlocked(const bool state = true) {
-        myAmBlocked = state;
-    }
-
-    /// @brief return exaggeration associated with this GLObject
+    /// @brief return exaggeration asociated with this GLObject
     virtual double getExaggeration(const GUIVisualizationSettings& s) const = 0;
 
     //// @brief Returns the boundary to which the view shall be centered in order to show the object
@@ -171,9 +148,6 @@ public:
     /// @brief Draws the object
     /// @param[in] s The settings for the current view (may influence drawing)
     virtual void drawGL(const GUIVisualizationSettings& s) const = 0;
-
-    /// @brief update GLObject (geometry, ID, etc.) (optional)
-    virtual void updateGLObject();
 
     virtual double getColorValue(const GUIVisualizationSettings& /*s*/, int /*activeScheme*/) const {
         return 0;
@@ -258,7 +232,7 @@ protected:
      * @param[in, filled] ret The popup menu to add the entry to
      * @param[in] addSeparator Whether a separator shall be added, too
      */
-    void buildPositionCopyEntry(GUIGLObjectPopupMenu* ret, const GUIMainWindow& app) const;
+    void buildPositionCopyEntry(GUIGLObjectPopupMenu* ret, bool addSeparator = true);
 
     /** @brief Builds an entry which allows to open the manipulator window
      * @param[in, filled] ret The popup menu to add the entry to
@@ -276,7 +250,7 @@ protected:
 
 private:
     /// @brief The numerical id of the object
-    const GUIGlID myGlID;
+    GUIGlID myGlID;
 
     /// @brief The type of the object
     const GUIGlObjectType myGLObjectType;
@@ -286,9 +260,6 @@ private:
 
     /// @brief full name of GL Object
     std::string myFullName;
-
-    /// @brief whether the object can be deleted
-    bool myAmBlocked;
 
     /// @brief Parameter table windows which refer to this object
     std::set<GUIParameterTableWindow*> myParamWindows;
@@ -300,6 +271,9 @@ private:
     /// @brief OSG Node of this GL object
     osg::Node* myOSGNode;
 #endif
+
+    /// @brief LinkStates (Currently unused)
+    // static StringBijection<SumoXMLLinkStateValue> LinkStates;
 
     /// @brief vector for TypeNames Initializer
     static StringBijection<GUIGlObjectType>::Entry GUIGlObjectTypeNamesInitializer[];

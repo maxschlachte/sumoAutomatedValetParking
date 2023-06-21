@@ -93,16 +93,6 @@ MSDevice_Transportable::notifyMoveInternal(const SUMOTrafficObject& veh,
     notifyMove(const_cast<SUMOTrafficObject&>(veh), -1, travelledDistanceFrontOnLane, veh.getEdge()->getVehicleMaxSpeed(&veh));
 }
 
-bool
-MSDevice_Transportable::anyLeavingAtStop(const MSStop& stop) const {
-    for (const MSTransportable* t : myTransportables) {
-        MSStageDriving* const stage = dynamic_cast<MSStageDriving*>(t->getCurrentStage());
-        if (stage->canLeaveVehicle(t, myHolder, stop)) {
-            return true;
-        }
-    }
-    return false;
-}
 
 bool
 MSDevice_Transportable::notifyMove(SUMOTrafficObject& /*tObject*/, double /*oldPos*/, double newPos, double newSpeed) {
@@ -120,11 +110,11 @@ MSDevice_Transportable::notifyMove(SUMOTrafficObject& /*tObject*/, double /*oldP
         if (veh.isStopped()) {
             myStopped = true;
             MSStop& stop = veh.getNextStop();
-            const SUMOTime boardingDuration = veh.getVehicleType().getLoadingDuration(!myAmContainer);
+            const SUMOTime boardingDuration = myAmContainer ? veh.getVehicleType().getLoadingDuration() : veh.getVehicleType().getBoardingDuration();
             for (std::vector<MSTransportable*>::iterator i = myTransportables.begin(); i != myTransportables.end();) {
                 MSTransportable* transportable = *i;
                 MSStageDriving* const stage = dynamic_cast<MSStageDriving*>(transportable->getCurrentStage());
-                if (stage->canLeaveVehicle(transportable, myHolder, stop)) {
+                if (stage->canLeaveVehicle(transportable, myHolder)) {
                     if (stop.timeToBoardNextPerson - DELTA_T > currentTime) {
                         // try deboarding again in the next step
                         myStopped = false;

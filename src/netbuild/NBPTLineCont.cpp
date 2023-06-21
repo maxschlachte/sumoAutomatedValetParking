@@ -18,7 +18,6 @@
 ///
 // Container for NBPTLine during netbuild
 /****************************************************************************/
-#include <config.h>
 
 #include <iostream>
 #include <utils/common/MsgHandler.h>

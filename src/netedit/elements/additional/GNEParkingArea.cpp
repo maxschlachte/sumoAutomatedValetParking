@@ -34,7 +34,7 @@
 // ===========================================================================
 
 GNEParkingArea::GNEParkingArea(GNENet* net) :
-    GNEStoppingPlace("", net, GLO_PARKING_AREA, SUMO_TAG_PARKING_AREA, nullptr, 0, 0, "", false, Parameterised::Map()),
+    GNEStoppingPlace("", net, GLO_PARKING_AREA, SUMO_TAG_PARKING_AREA, nullptr, 0, 0, "", false, std::map<std::string, std::string>()),
     myRoadSideCapacity(0),
     myOnRoad(false),
     myWidth(0),
@@ -47,7 +47,7 @@ GNEParkingArea::GNEParkingArea(GNENet* net) :
 
 GNEParkingArea::GNEParkingArea(const std::string& id, GNELane* lane, GNENet* net, const double startPos, const double endPos,
                                const std::string& departPos, const std::string& name, bool friendlyPosition, int roadSideCapacity, bool onRoad, double width,
-                               const double length, double angle, const Parameterised::Map& parameters) :
+                               const double length, double angle, const std::map<std::string, std::string>& parameters) :
     GNEStoppingPlace(id, net, GLO_PARKING_AREA, SUMO_TAG_PARKING_AREA, lane, startPos, endPos, name, friendlyPosition, parameters),
     myDepartPos(departPos),
     myRoadSideCapacity(roadSideCapacity),
@@ -92,12 +92,6 @@ GNEParkingArea::writeAdditional(OutputDevice& device) const {
     if (getAttribute(SUMO_ATTR_LENGTH) != myTagProperty.getDefaultValue(SUMO_ATTR_LENGTH)) {
         device.writeAttr(SUMO_ATTR_LENGTH, myLength);
     }
-    if (getAttribute(SUMO_ATTR_ANGLE) != myTagProperty.getDefaultValue(SUMO_ATTR_ANGLE)) {
-        device.writeAttr(SUMO_ATTR_ANGLE, myAngle);
-    }
-    if (getAttribute(SUMO_ATTR_DEPARTPOS) != myTagProperty.getDefaultValue(SUMO_ATTR_DEPARTPOS)) {
-        device.writeAttr(SUMO_ATTR_DEPARTPOS, myDepartPos);
-    }
     // write all parking spaces
     for (const auto& space : getChildAdditionals()) {
         if (space->getTagProperty().getTag() == SUMO_TAG_PARKING_SPACE) {
@@ -116,7 +110,7 @@ GNEParkingArea::updateGeometry() {
     const double offsetSign = OptionsCont::getOptions().getBool("lefthand") ? -1 : 1;
     // calculate spaceDim
     const double spaceDim = myRoadSideCapacity > 0 ? (getAttributeDouble(SUMO_ATTR_ENDPOS) - getAttributeDouble(SUMO_ATTR_STARTPOS)) / myRoadSideCapacity * getParentLanes().front()->getLengthGeometryFactor() : 7.5;
-    // calculate length
+    // calculate lenght
     const double length = (myLength > 0) ? myLength : spaceDim;
     // Update common geometry of stopping place
     setStoppingPlaceGeometry(myWidth);
@@ -206,6 +200,12 @@ GNEParkingArea::drawGL(const GUIVisualizationSettings& s) const {
                 GUIDottedGeometry::drawDottedContourShape(GUIDottedGeometry::DottedContourType::FRONT, s, myAdditionalGeometry.getShape(), myWidth * 0.5,
                         parkingAreaExaggeration, true, true);
             }
+            // draw child spaces
+            for (const auto& parkingSpace : getChildAdditionals()) {
+                if (parkingSpace->getTagProperty().getTag() == SUMO_TAG_PARKING_SPACE) {
+                    parkingSpace->drawGL(s);
+                }
+            }
             // draw child demand elements
             for (const auto& demandElement : getChildDemandElements()) {
                 if (!demandElement->getTagProperty().isPlacedInRTree()) {
@@ -225,7 +225,7 @@ std::string
 GNEParkingArea::getAttribute(SumoXMLAttr key) const {
     switch (key) {
         case SUMO_ATTR_ID:
-            return getMicrosimID();
+            return getID();
         case SUMO_ATTR_LANE:
             return getParentLanes().front()->getID();
         case SUMO_ATTR_STARTPOS:
@@ -359,12 +359,8 @@ GNEParkingArea::isValid(SumoXMLAttr key, const std::string& value) {
             } else if (canParse<double>(value)) {
                 // parse value
                 const double departPos = parse<double>(value);
-                if (departPos >= 0) {
-                    if (isTemplate()) {
-                        return true;
-                    } else {
-                        return (departPos <= getParentLanes().front()->getParentEdge()->getNBEdge()->getFinalLength());
-                    }
+                if ((departPos >= 0) && (departPos <= getParentLanes().front()->getParentEdge()->getNBEdge()->getFinalLength())) {
+                    return true;
                 } else {
                     return false;
                 }
@@ -376,7 +372,7 @@ GNEParkingArea::isValid(SumoXMLAttr key, const std::string& value) {
         case SUMO_ATTR_FRIENDLY_POS:
             return canParse<bool>(value);
         case SUMO_ATTR_ROADSIDE_CAPACITY:
-            return canParse<int>(value) && (parse<int>(value) >= 0);
+            return canParse<double>(value) && (parse<double>(value) >= 0);
         case SUMO_ATTR_ONROAD:
             return canParse<bool>(value);
         case SUMO_ATTR_WIDTH:
@@ -392,7 +388,7 @@ GNEParkingArea::isValid(SumoXMLAttr key, const std::string& value) {
         case GNE_ATTR_SELECTED:
             return canParse<bool>(value);
         case GNE_ATTR_PARAMETERS:
-            return areParametersValid(value);
+            return Parameterised::areParametersValid(value);
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
@@ -484,11 +480,7 @@ GNEParkingArea::setAttribute(SumoXMLAttr key, const std::string& value) {
             }
             break;
         case SUMO_ATTR_LENGTH:
-            if (value.empty()) {
-                myLength = 0;
-            } else {
-                myLength = parse<double>(value);
-            }
+            myLength = parse<double>(value);
             // update geometry of all spaces
             for (const auto& space : getChildAdditionals()) {
                 space->updateGeometry();

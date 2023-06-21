@@ -19,18 +19,9 @@
 
 from __future__ import absolute_import
 from __future__ import print_function
-import os
 import sys
 import re
 from collections import defaultdict
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from sumolib.options import ArgumentParser  # noqa
-
-
-def parse_args():
-    optParser = ArgumentParser()
-    optParser.add_argument("logfile", help="log file")
-    return optParser.parse_args()
 
 
 def parse_log(logfile, edges=True, aggregate=3600):
@@ -113,4 +104,4 @@ def main(logfile):
 
 
 if __name__ == "__main__":
-    main(parse_args().logfile)
+    main(*sys.argv[1:])

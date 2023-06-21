@@ -87,8 +87,6 @@ public:
     SUMOTime endBoarding = SUMOTime_MAX;
     /// @brief whether this an opposite-direction stop
     bool isOpposite = false;
-    /// @brief whether the decision to skip this stop has been made
-    bool skipOnDemand = false;
 
     /// @brief Write the current stop configuration (used for state saving)
     void write(OutputDevice& dev) const;
@@ -107,18 +105,8 @@ public:
 
     const MSEdge* getEdge() const;
 
-    /// @brief return flags as used by Vehicle::getStopState
-    int getStateFlagsOld() const;
+private:
+    /// @brief Invalidated assignment operator
+    MSStop& operator=(const MSStop& src) = delete;
 
-    /// @brief return minimum stop duration when starting stop at time
-    SUMOTime getMinDuration(SUMOTime time) const;
-
-    /// @brief return until / ended time
-    SUMOTime getUntil() const;
-
-    /// @brief return speed for passing waypoint / skipping on-demand stop
-    double getSpeed() const;
-
-    /// @brief whether the stop is in range of the given position
-    bool isInRange(const double pos, const double tolerance) const;
 };

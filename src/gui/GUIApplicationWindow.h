@@ -42,7 +42,6 @@
 // ===========================================================================
 // class declarations
 // ===========================================================================
-class Command;
 class GUILoadThread;
 class GUIRunThread;
 class GUIMessageWindow;
@@ -89,13 +88,10 @@ public:
     virtual void detach();
     /// @}
 
-    void loadOnStartup(const bool wait = false);
+    void loadOnStartup();
 
-    GUIRunThread* getRunner() {
-        return myRunThread;
-    }
 
-    void dependentBuild(const bool isLibsumo);
+    void dependentBuild();
 
     void setStatusBarText(const std::string& text);
 
@@ -143,9 +139,6 @@ public:
     /// @brief Called on reload
     long onCmdReload(FXObject*, FXSelector, void*);
 
-    /// @brief Called on quick-reload
-    long onCmdQuickReload(FXObject*, FXSelector, void*);
-
     /// @brief Called on opening a recent file
     long onCmdOpenRecent(FXObject*, FXSelector, void*);
 
@@ -184,9 +177,6 @@ public:
     /// @brief Toggle gaming mode
     long onCmdGaming(FXObject*, FXSelector, void*);
 
-    /// @brief Toggle draw junction shape
-    long onCmdToggleDrawJunctionShape(FXObject*, FXSelector, void*);
-
     /// @brief Toggle full screen mode
     long onCmdFullScreen(FXObject*, FXSelector, void*);
 
@@ -217,17 +207,8 @@ public:
     /// @brief Called on "save state"
     long onCmdSaveState(FXObject*, FXSelector, void*);
 
-    /// @brief Called on "save state"
-    long onCmdLoadState(FXObject*, FXSelector, void*);
-
     /// @brief Called on "time toggle"
     long onCmdTimeToggle(FXObject*, FXSelector, void*);
-
-    /// @brief Called on "delay inc"
-    long onCmdDelayInc(FXObject*, FXSelector, void*);
-
-    /// @brief Called on "delay dec"
-    long onCmdDelayDec(FXObject*, FXSelector, void*);
 
     /// @brief Called on "delay toggle"
     long onCmdDelayToggle(FXObject*, FXSelector, void*);
@@ -319,9 +300,6 @@ public:
 
     const std::vector<SUMOTime> retrieveBreakpoints() const;
 
-    /// @brief register custom hotkey action
-    void addHotkey(int key, Command* press, Command* release);
-
 protected:
     virtual void addToWindowsMenu(FXMenuPane*) { }
 
@@ -371,16 +349,10 @@ protected:
     /// @brief information whether the gui is currently loading and the load-options shall be greyed out
     bool myAmLoading;
 
-    /// @brief whether we are reloading the simulation
-    bool myIsReload;
-
-    /// @brief last modification time of the gui setting file
-    long long  myGuiSettingsFileMTime;
-
     /// @brief the submenus
     FXMenuPane* myFileMenu = nullptr, *myEditMenu = nullptr, *mySelectByPermissions = nullptr, *mySettingsMenu = nullptr,
                 *myLocatorMenu, *myControlMenu = nullptr,
-                                 *myWindowMenu, *myHelpMenu = nullptr;
+                                 *myWindowsMenu, *myHelpMenu = nullptr;
 
     /// @brief the menu cascades
     FXMenuCascade* mySelectLanesMenuCascade = nullptr;
@@ -482,9 +454,5 @@ protected:
 
     /// last time the simulation view was redrawn due to a simStep
     long myLastStepEventMillis;
-
-    /// @brief custom hotkeys
-    std::map<int, Command*> myHotkeyPress;
-    std::map<int, Command*> myHotkeyRelease;
 
 };

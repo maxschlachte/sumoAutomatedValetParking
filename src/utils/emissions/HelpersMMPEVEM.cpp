@@ -22,18 +22,31 @@
 // (DOI: 10.1109/ITSC48978.2021.9564463).
 // Teaching and Research Area Mechatronics in Mobile Propulsion (MMP), RWTH Aachen
 /****************************************************************************/
-#include <config.h>
 
+
+#include <utils/emissions/CharacteristicMap.h>
+
+#ifdef _MSC_VER
+#define _USE_MATH_DEFINES
+#endif
+#include <cmath>
+
+#include <utils/emissions/HelpersMMPEVEM.h>
 #include <utils/common/SUMOTime.h>
 #include <utils/common/StringUtils.h>
 #include <utils/geom/GeomHelper.h>
-#include <utils/emissions/CharacteristicMap.h>
-#include <utils/emissions/HelpersMMPEVEM.h>
 
 
-// ===========================================================================
-// method definitions
-// ===========================================================================
+
+
+// Constants
+const double EPS = 1e-6;
+const double G = 9.81;         // Gravitational acceleration [m/s^2]
+const double RHO_AIR = 1.204;  // Air density [kg/m^3]
+
+
+
+
 /**
  * \brief Compute the power consumption of an EV powertrain in a certain state.
  *
@@ -75,8 +88,6 @@ bool calcPowerConsumption(double m, double r_wheel, double Theta, double c_rr,
                           double U_battery_0, double P_const,
                           const CharacteristicMap& ref_powerLossMap, double dt, double v, double a,
                           double alpha, double& ref_powerConsumption) {
-    const double EPS = 1e-6;
-    const double RHO_AIR = 1.204;  // Air density [kg/m^3]
     bool b_stateValid = true;
 
     // Mass factor [1]
@@ -87,9 +98,9 @@ bool calcPowerConsumption(double m, double r_wheel, double Theta, double c_rr,
     // Force required for the desired acceleration [N]
     double F_a = m * a * e_i;
     // Grade resistance [N]
-    double F_gr = m * GRAVITY * std::sin(DEG2RAD(alpha));
+    double F_gr = m * G * std::sin(DEG2RAD(alpha));
     // Rolling resistance [N]
-    double F_rr = m * GRAVITY * std::cos(DEG2RAD(alpha)) * c_rr;
+    double F_rr = m * G * std::cos(DEG2RAD(alpha)) * c_rr;
     if (std::abs(v_mean) <= EPS) {
         F_rr = 0;
     }
@@ -256,3 +267,4 @@ double HelpersMMPEVEM::compute(const SUMOEmissionClass /* c */,
         return std::nan("");
     }
 }
+

@@ -121,7 +121,7 @@ GUIEdge::getTotalLength(bool includeInternal, bool eachLane) {
         const MSEdge* edge = i->second;
         if (includeInternal || !edge->isInternal()) {
             // @note needs to be change once lanes may have different length
-            result += edge->getLength() * (eachLane ? (double)edge->getLanes().size() : 1.);
+            result += edge->getLength() * (eachLane ? edge->getLanes().size() : 1);
         }
     }
     return result;
@@ -169,7 +169,7 @@ GUIEdge::getPopUpMenu(GUIMainWindow& app, GUISUMOAbstractView& parent) {
     }
     MESegment* segment = getSegmentAtPosition(parent.getPositionInformation());
     GUIDesigns::buildFXMenuCommand(ret, "segment: " + toString(segment->getIndex()), nullptr, nullptr, 0);
-    buildPositionCopyEntry(ret, app);
+    buildPositionCopyEntry(ret, false);
     return ret;
 }
 
@@ -184,10 +184,8 @@ GUIEdge::getParameterWindow(GUIMainWindow& app,
     ret->mkItem("length [m]", false, (*myLanes)[0]->getLength());
     ret->mkItem("street name", false, getStreetName());
     ret->mkItem("pending insertions [#]", true, new FunctionBinding<GUIEdge, double>(this, &GUIEdge::getPendingEmits));
-    ret->mkItem("mean friction [%]", true, new FunctionBinding<GUIEdge, double>(this, &MSEdge::getMeanFriction, 100.));
     ret->mkItem("mean vehicle speed [m/s]", true, new FunctionBinding<GUIEdge, double>(this, &GUIEdge::getMeanSpeed));
     ret->mkItem("routing speed [m/s]", true, new FunctionBinding<MSEdge, double>(this, &MSEdge::getRoutingSpeed));
-    ret->mkItem("time penalty [s]", true, new FunctionBinding<MSEdge, double>(this, &MSEdge::getTimePenalty));
     ret->mkItem("brutto occupancy [%]", true, new FunctionBinding<GUIEdge, double>(this, &GUIEdge::getBruttoOccupancy, 100.));
     ret->mkItem("flow [veh/h/lane]", true, new FunctionBinding<GUIEdge, double>(this, &GUIEdge::getFlow));
     ret->mkItem("#vehicles", true, new CastingFunctionBinding<GUIEdge, int, int>(this, &MSEdge::getVehicleNumber));
@@ -292,7 +290,7 @@ GUIEdge::drawGL(const GUIVisualizationSettings& s) const {
     if (drawEdgeName || drawInternalEdgeName || drawCwaEdgeName || drawStreetName || drawEdgeValue) {
         GUILane* lane1 = dynamic_cast<GUILane*>((*myLanes)[0]);
         if (lane1 != nullptr && lane2 != nullptr) {
-            const bool spreadSuperposed = s.spreadSuperposed && getBidiEdge() != nullptr;
+            const bool spreadSuperposed = s.spreadSuperposed && getBidiEdge() != nullptr && lane2->drawAsRailway(s);
             Position p = lane1->getShape().positionAtOffset(lane1->getShape().length() / (double) 2.);
             p.add(lane2->getShape().positionAtOffset(lane2->getShape().length() / (double) 2.));
             p.mul(.5);
@@ -603,8 +601,7 @@ void
 GUIEdge::addRerouter() {
     MSEdgeVector edges;
     edges.push_back(this);
-    // (utl): pass prio as 0 for dynamic rerouters
-    GUITriggeredRerouter* rr = new GUITriggeredRerouter(getID() + "_dynamic_rerouter", edges, 1, 0, false, 0, "",
+    GUITriggeredRerouter* rr = new GUITriggeredRerouter(getID() + "_dynamic_rerouter", edges, 1, 0, "", false, 0, "",
             GUINet::getGUIInstance()->getVisualisationSpeedUp());
 
     MSTriggeredRerouter::RerouteInterval ri;

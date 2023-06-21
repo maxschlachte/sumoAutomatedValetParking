@@ -102,16 +102,8 @@ MSVehicleTransfer::checkInsertions(SUMOTime time) {
             // handle parking vehicles
             if (time != desc.myTransferTime) {
                 // avoid calling processNextStop twice in the transfer step
-                const MSLane* lane = desc.myVeh->getLane();
-                // lane must be locked because pedestrians may be added in during stop processing while existing passengers are being drawn simultaneously
-                if (lane != nullptr) {
-                    lane->getVehiclesSecure();
-                }
                 desc.myVeh->processNextStop(1);
                 desc.myVeh->updateParkingState();
-                if (lane != nullptr) {
-                    lane->releaseVehicles();
-                }
             }
             if (desc.myVeh->keepStopping(true)) {
                 i++;
@@ -127,15 +119,17 @@ MSVehicleTransfer::checkInsertions(SUMOTime time) {
         if (desc.myParking) {
             MSParkingArea* pa = desc.myVeh->getCurrentParkingArea();
             const double departPos = pa != nullptr ? pa->getInsertionPosition(*desc.myVeh) : desc.myVeh->getPositionOnLane();
+            const bool validExit = pa != nullptr ? pa->vehicleIsOnValidExitSpace(*((const SUMOVehicle*)desc.myVeh)) : true;
             // handle parking vehicles
             desc.myVeh->setIdling(true);
             // (qpk): check if vehicle is on valid exit space in order to only check those vehicles for successful insertion
-            if (pa->vehicleIsOnValidExitSpace(*((const SUMOVehicle*)desc.myVeh)) && desc.myVeh->getMutableLane()->isInsertionSuccess(desc.myVeh, 0, departPos, desc.myVeh->getLateralPositionOnLane(),
+            if (validExit && desc.myVeh->getMutableLane()->isInsertionSuccess(desc.myVeh, 0, departPos, desc.myVeh->getLateralPositionOnLane(),
                     false, MSMoveReminder::NOTIFICATION_PARKING)) {
                 MSNet::getInstance()->informVehicleStateListener(desc.myVeh, MSNet::VehicleState::ENDING_PARKING);
                 desc.myVeh->getMutableLane()->removeParking(desc.myVeh);
                 // at this point we are in the lane, blocking traffic & if required we configure the exit manoeuvre
-                if (MSGlobals::gModelParkingManoeuver && desc.myVeh->setExitManoeuvre()) {
+                // (qpk): check if pa is nullptr, otherwise setExitManoeuvre won't work
+                if (pa != nullptr && MSGlobals::gModelParkingManoeuver && desc.myVeh->setExitManoeuvre()) {
                     MSNet::getInstance()->informVehicleStateListener(desc.myVeh, MSNet::VehicleState::MANEUVERING);
                 }
                 desc.myVeh->setIdling(false);

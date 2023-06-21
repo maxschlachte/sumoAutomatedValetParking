@@ -17,7 +17,6 @@
 ///
 // C++ TraCI client API implementation
 /****************************************************************************/
-#include <config.h>
 
 #define LIBTRACI 1
 #include <iterator>
@@ -147,10 +146,6 @@ Edge::getLastStepMeanSpeed(const std::string& edgeID) {
     return Dom::getDouble(libsumo::LAST_STEP_MEAN_SPEED, edgeID);
 }
 
-double
-Edge::getMeanFriction(const std::string& edgeID) {
-    return Dom::getDouble(libsumo::VAR_FRICTION, edgeID);
-}
 
 double
 Edge::getLastStepOccupancy(const std::string& edgeID) {
@@ -243,11 +238,6 @@ Edge::setEffort(const std::string& edgeID, double effort, double beginSeconds, d
 void
 Edge::setMaxSpeed(const std::string& edgeID, double speed) {
     Dom::setDouble(libsumo::VAR_MAXSPEED, edgeID, speed);
-}
-
-void
-Edge::setFriction(const std::string& edgeID, double friction) {
-    Dom::setDouble(libsumo::VAR_MAXSPEED, edgeID, friction);
 }
 
 }

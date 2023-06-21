@@ -219,18 +219,28 @@ error and will yield in a program stop:
 
 The right-of-way computation at each intersection is based on the `type` of
 the node. For the types *priority* and *priority_stop*, the
-right-of-way also depends on the `importance` of the incoming and outgoing
-edges as explained in the following. Generally, the traffic direction
-with the edges of highest importance will get the right of way.
+right-of-way also depends on the `priority`-values of the incoming and outgoing
+edges. The [edge priorities are also influenced by speed and lane count](#edge_priorities). Generally, the traffic direction
+with the highest edge priorities will get the right of way.
 
 !!! note
     Right-of-way computation also influences connection-guessing and the generated traffic light program.
 
+### Modifying Right-of-Way
+
+The right-of-way can be customized by specifying [additional prohibitions](#setting_connection_priorities) and by
+specifying the [connection attribute](#explicitly_setting_which_edge_lane_is_connected_to_which)
+`pass="true"`.
+
+Since version 1.1.0, the algorithm for computing right-of-way from the
+edge priorities can be switched between two modes using `<node>`-attribute
+*rightOfWay*.
+
 ### rightOfWay="default"
-This mode is the default and it is useful if the *priority*
+This mode is useful if the *priority*
 attribute of the edges cannot be relied on to determine right-of-way all
-by itself. It sorts edges according to attributes *priority*, *speed* and
-*laneNumber*. The two incoming edges with the highest position are
+by itself. It sorts edges according to *priority*, *speed* and
+*laneNumber*. The 2 incoming edges with the highest position are
 determined and will receive right-of-way. All other edges will be
 classified as minor.
 
@@ -269,16 +279,6 @@ If a vehicle is braking in the simulation, the responsible foe vehicle
 
 !!! caution
     Never attempt to modify the junction logic within a ***.net.xml*** file manually as there are subtle inter-dependencies with other data structures in the network. Nevertheless, it may be useful to [look into the .net.xml to understand right-of-way](../Networks/SUMO_Road_Networks.md#requests)
-    
-### Modifying Right-of-Way
-
-The right-of-way can be customized by specifying [additional prohibitions](#setting_connection_priorities) and by
-specifying the [connection attribute](#explicitly_setting_which_edge_lane_is_connected_to_which)
-`pass="true"`.
-
-Since version 1.1.0, the algorithm for computing right-of-way from the
-edge priorities can be switched between two modes using `<node>`-attribute
-*rightOfWay*.    
 
 ## Fringe
 
@@ -562,9 +562,8 @@ The definition of a lane contains the following optional attributes:
 | speed          | float                                                                                                               | speed in meters per second                                                                                                                 |
 | width          | float                                                                                                               | width in meters (used for visualization)                                                                                                   |
 | endOffset      | float \>= 0                                                                                                         | Move the stop line back from the intersection by the given amount (effectively shortening the lane and locally enlarging the intersection) |
-| shape          | List of positions; each position is encoded in x,y or x,y,z in meters (do not separate the numbers with a space\!). | A custom shape for this lane.<br><br>**Note:** The lane lengths will be averaged in the generated network. Lane-changing will ignore gaps between lanes.    
-| type          | string | a custom type description for this lane (only informational) |
-| acceleration  | bool | whether this lane is a motorway acceleration lane (default *false*) |
+| shape          | List of positions; each position is encoded in x,y or x,y,z in meters (do not separate the numbers with a space\!). | A custom shape for this lane.<br><br>**Note:** The lane lengths will be averaged in the generated network. Lane-changing will ignore gaps between lanes.     |
+type          | string | a custom type description for this lane (only informational) |
 
 See "Vehicle Classes" for further information about [allowed vehicle classes](../Definition_of_Vehicles,_Vehicle_Types,_and_Routes.md#abstract_vehicle_class)
 and their usage.

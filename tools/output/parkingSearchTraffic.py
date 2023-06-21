@@ -22,14 +22,6 @@ import os
 import sys
 sys.path.append(os.path.join(os.environ["SUMO_HOME"], 'tools'))
 import sumolib  # noqa
-from sumolib.options import ArgumentParser  # noqa
-
-
-def parse_args():
-    optParser = ArgumentParser()
-    optParser.add_argument("net", help="net file")
-    optParser.add_argument("routes", help="route file")
-    return optParser.parse_args()
 
 
 def main(net, routes):
@@ -69,5 +61,4 @@ def main(net, routes):
 
 
 if __name__ == "__main__":
-    options = parse_args()
-    main(options.net, options.routes)
+    main(*sys.argv[1:])

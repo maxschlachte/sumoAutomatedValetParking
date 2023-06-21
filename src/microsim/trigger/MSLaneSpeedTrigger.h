@@ -48,7 +48,7 @@ class MSLane;
  * responsible for from a file and sets it.
  * Lanes with variable speeds are so possible.
  */
-class MSLaneSpeedTrigger : public MSTrigger, public SUMOSAXHandler {
+class MSLaneSpeedTrigger : public MSTrigger, public SUMOSAXHandler, public Command {
 public:
     /** @brief Constructor
      *
@@ -73,9 +73,8 @@ public:
      * @see Command
      * @see MSEventControl
      */
-    SUMOTime executeSpeedChange(SUMOTime currentTime);
+    SUMOTime execute(SUMOTime currentTime);
 
-    SUMOTime executeFrictionChange(SUMOTime currentTime);
 
     SUMOTime processCommand(bool move2next, SUMOTime currentTime);
 
@@ -89,9 +88,6 @@ public:
 
     /// Returns the current speed
     double getCurrentSpeed() const;
-
-    /// Returns the current friction
-    double getCurrentFriction() const;
 
     /// @brief return all MSLaneSpeedTrigger instances
     static const std::map<std::string, MSLaneSpeedTrigger*>& getInstances() {
@@ -130,11 +126,11 @@ protected:
     /** the lane the trigger is responsible for */
     std::vector<MSLane*> myDestLanes;
 
-    /// The original speed allowed on the lanes
-    const double myDefaultSpeed;
+    /** the speed that will be set on the next call */
+    double myCurrentSpeed;
 
-    /// The original friction on the lanes
-    const double myDefaultFriction;
+    /// The original speed allowed on the lanes
+    double myDefaultSpeed;
 
     /// The information whether the read speed shall be overridden
     bool myAmOverriding;
@@ -143,9 +139,7 @@ protected:
     double mySpeedOverrideValue;
 
     std::vector<std::pair<SUMOTime, double> > myLoadedSpeeds;
-    std::vector<std::pair<SUMOTime, double> > myLoadedFrictions;
-    std::vector<std::pair<SUMOTime, double> >::iterator myCurrentSpeedEntry;
-    std::vector<std::pair<SUMOTime, double> >::iterator myCurrentFrictionEntry;
+    std::vector<std::pair<SUMOTime, double> >::iterator myCurrentEntry;
     static std::map<std::string, MSLaneSpeedTrigger*> myInstances;
 
 private:

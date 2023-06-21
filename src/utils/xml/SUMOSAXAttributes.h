@@ -26,7 +26,6 @@
 #include <vector>
 #include <set>
 
-#include <utils/common/StringUtils.h>
 #include <utils/common/SUMOTime.h>
 #include <utils/common/ToString.h>
 #include <utils/common/UtilExceptions.h>
@@ -98,7 +97,7 @@ public:
      * @return The read value if given and correct; the default value if the attribute does not exist;  -1 if an error occurred
      */
     template <typename T>
-    T getOpt(int attr, const char* objectid, bool& ok, T defaultValue = T(), bool report = true) const;
+    T getOpt(int attr, const char* objectid, bool& ok, T defaultValue, bool report = true) const;
 
 
     /** @brief Tries to read given attribute assuming it is a SUMOTime
@@ -121,25 +120,6 @@ public:
                                   bool report = true) const;
 
 
-    /** @brief Tries to read the SUMOTime 'period' attribute
-     *
-     * If 'period' cannot be found, tries 'freq' as an alias.
-     *
-     * If an error occurs (the attribute is not there, it is not numeric), "ok" is
-     *  set to false and an error message is written to MsgHandler::getErrorInstance.
-     *
-     * Otherwise, "ok" is not changed.
-     *
-     * In dependence to the used time representation, either get<int> or get<double>
-     *  is used.
-     *
-     * @param[in] objectid The name of the parsed object; used for error message generation
-     * @param[out] ok Whether the value could be read
-     * @param[in] report Whether errors shall be written to msg handler's error instance
-     * @return The read value if given and correct; -1 if an error occurred
-     */
-    SUMOTime getPeriod(const char* objectid, bool& ok, bool report = true) const;
-
 
     /** @brief Tries to read given attribute assuming it is a SUMOTime
      *
@@ -161,28 +141,6 @@ public:
      */
     SUMOTime getOptSUMOTimeReporting(int attr, const char* objectid, bool& ok,
                                      SUMOTime defaultValue, bool report = true) const;
-
-
-    /** @brief Tries to read the SUMOTime 'period' attribute
-     *
-     * If 'period' cannot be found, tries 'freq' as an alias.
-     *
-     * If both attributes do not exist in the current element, the default value is returned.
-     * If an error occurs on parsing (the attribute is empty, it is not numeric), "ok" is
-     *  set to false. If report is true an error message is written to MsgHandler::getErrorInstance.
-     *
-     * Otherwise, "ok" is not changed.
-     *
-     * In dependence to the used time representation, either get<int> or get<double>
-     *  is used.
-     *
-     * @param[in] objectid The name of the parsed object; used for error message generation
-     * @param[out] ok Whether the value could be read
-     * @param[in] defaultValue The value to return if the attribute is not within the element
-     * @param[in] report Whether errors shall be written to msg handler's error instance
-     * @return The read value if given and correct; the default value if the attribute does not exist;  -1 if an error occurred
-     */
-    SUMOTime getOptPeriod(const char* objectid, bool& ok, SUMOTime defaultValue, bool report = true) const;
 
 
 
@@ -220,9 +178,7 @@ public:
      * @exception EmptyData If the attribute is not known or the attribute value is an empty string
      * @exception BoolFormatException If the attribute value can not be parsed to a bool
      */
-    inline bool getBool(int id) const {
-        return StringUtils::toBool(getString(id));
-    }
+    virtual bool getBool(int id) const = 0;
 
     /**
      * @brief Returns the int-value of the named (by its enum-value) attribute
@@ -239,9 +195,7 @@ public:
      * @exception EmptyData If the attribute is not known or the attribute value is an empty string
      * @exception NumberFormatException If the attribute value can not be parsed to an int
      */
-    inline int getInt(int id) const {
-        return StringUtils::toInt(getString(id));
-    }
+    virtual int getInt(int id) const = 0;
 
 
     /**
@@ -259,9 +213,7 @@ public:
      * @exception EmptyData If the attribute is not known or the attribute value is an empty string
      * @exception NumberFormatException If the attribute value can not be parsed to an int
      */
-    virtual long long int getLong(int id) const {
-        return StringUtils::toLong(getString(id));
-    }
+    virtual long long int getLong(int id) const = 0;
 
 
     /**
@@ -276,7 +228,7 @@ public:
      * @return The attribute's value as a string, if it could be read and parsed
      * @exception EmptyData If the attribute is not known or the attribute value is an empty string
      */
-    virtual std::string getString(int id, bool* isPresent = nullptr) const = 0;
+    virtual std::string getString(int id) const = 0;
 
 
     /**
@@ -291,7 +243,8 @@ public:
      * @return The attribute's value as a string, if it could be read and parsed
      * @exception EmptyData If the attribute is not known or the attribute value is an empty string
      */
-    virtual std::string getStringSecure(int id, const std::string& def) const = 0;
+    virtual std::string getStringSecure(int id,
+                                        const std::string& def) const = 0;
 
 
     /**
@@ -309,9 +262,7 @@ public:
      * @exception EmptyData If the attribute is not known or the attribute value is an empty string
      * @exception NumberFormatException If the attribute value can not be parsed to an double
      */
-    inline double getFloat(int id) const {
-        return StringUtils::toDouble(getString(id));
-    }
+    virtual double getFloat(int id) const = 0;
 
 
     /**
@@ -343,6 +294,87 @@ public:
      */
     virtual std::string getStringSecure(const std::string& id,
                                         const std::string& def) const = 0;
+
+
+    /**
+     * @brief Returns the value of the named attribute
+     *
+     * Tries to retrieve the attribute from the the attribute list.
+     * @return The attribute's value as a string, if it could be read and parsed
+     */
+    virtual SumoXMLEdgeFunc getEdgeFunc(bool& ok) const = 0;
+
+
+    /**
+     * @brief Returns the value of the named attribute
+     *
+     * Tries to retrieve the attribute from the the attribute list.
+     * @return The attribute's value as a string, if it could be read and parsed
+     */
+    virtual SumoXMLNodeType getNodeType(bool& ok) const = 0;
+
+    /**
+     * @brief Returns the right-of-way method
+     */
+    virtual RightOfWay getRightOfWay(bool& ok) const = 0;
+
+    /// @brief returns fringe type
+    virtual FringeType getFringeType(bool& ok) const = 0;
+
+    /**
+     * @brief Returns the value of the named attribute
+     *
+     * Tries to retrieve the attribute from the the attribute list.
+     * @return The attribute's value as a RGBColor, if it could be read and parsed
+     */
+    virtual RGBColor getColor() const = 0;
+
+    /** @brief Tries to read given attribute assuming it is a Position
+     *
+     * @param[in] attr The id of the attribute to read
+     * @return The read value if given and not empty; empty position if an error occurred
+     */
+    virtual Position getPosition(int attr) const = 0;
+
+    /** @brief Tries to read given attribute assuming it is a PositionVector
+     *
+     * @param[in] attr The id of the attribute to read
+     * @return The read value if given and not empty; empty position vector if an error occurred
+     */
+    virtual PositionVector getShape(int attr) const = 0;
+
+    /** @brief Tries to read given attribute assuming it is a Boundary
+     *
+     * @param[in] attr The id of the attribute to read
+     * @return The read value if given and not empty; empty Boundary if an error occurred
+     */
+    virtual Boundary getBoundary(int attr) const = 0;
+
+    /** @brief Tries to read given attribute assuming it is a string vector
+     *
+     * The behavior is similar to Python's string.split(), so multiple consecutive
+     *  whitespace do not generate empty strings and leading and trailing whitespace is silently omitted.
+     *
+     * @param[in] attr The id of the attribute to read
+     * @return The read value if given and not empty; empty vector if an error occurred
+     */
+    const std::vector<std::string> getStringVector(int attr) const;
+
+    /// @brief convenience function to avoid the default argument and the template stuff at getOpt<>
+    const std::vector<std::string> getOptStringVector(int attr, const char* objectid, bool& ok, bool report = true) const;
+
+    /** @brief Tries to read given attribute assuming it is an int vector
+     *
+     * The behavior is similar to Python's string.split(), so multiple consecutive
+     *  whitespace do not generate empty strings and leading and trailing whitespace is silently omitted.
+     *
+     * @param[in] attr The id of the attribute to read
+     * @return The read value if given and not empty; empty vector if an error occurred
+     */
+    const std::vector<int> getIntVector(int attr) const;
+
+    /// @brief convenience function to avoid the default argument and the template stuff at getOpt<>
+    const std::vector<int> getOptIntVector(int attr, const char* objectid, bool& ok, bool report = true) const;
     //}
 
 
@@ -352,6 +384,7 @@ public:
      * @return The name of the described attribute
      */
     virtual std::string getName(int attr) const = 0;
+
 
     /** @brief Prints all attribute names and values into the given stream
      *
@@ -363,10 +396,12 @@ public:
      */
     virtual std::vector<std::string> getAttributeNames() const = 0;
 
+
     /// @brief return the objecttype to which these attributes belong
     const std::string& getObjectType() const {
         return myObjectType;
     }
+
 
     friend std::ostream& operator<<(std::ostream& os, const SUMOSAXAttributes& src);
 
@@ -378,7 +413,7 @@ public:
 
 
 protected:
-    template <typename T> T fromString(const std::string& value) const;
+    template <typename T> T getInternal(const int attr) const;
     void emitUngivenError(const std::string& attrname, const char* objectid) const;
     void emitEmptyError(const std::string& attrname, const char* objectid) const;
     void emitFormatError(const std::string& attrname, const std::string& type, const char* objectid) const;
@@ -404,44 +439,80 @@ inline std::ostream& operator<<(std::ostream& os, const SUMOSAXAttributes& src) 
 
 template<typename X> struct invalid_return {
     static const X value;
+    static const std::string type;
 };
 
-#define INVALID_RETURN(TYPE) \
-template<> struct invalid_return<TYPE> { \
-    static const TYPE value; \
-}
-INVALID_RETURN(std::string);
-INVALID_RETURN(int);
-INVALID_RETURN(long long int);
-INVALID_RETURN(double);
-INVALID_RETURN(bool);
-INVALID_RETURN(RGBColor);
-INVALID_RETURN(Position);
-INVALID_RETURN(PositionVector);
-INVALID_RETURN(Boundary);
-INVALID_RETURN(SumoXMLEdgeFunc);
-INVALID_RETURN(SumoXMLNodeType);
-INVALID_RETURN(RightOfWay);
-INVALID_RETURN(FringeType);
-INVALID_RETURN(std::vector<std::string>);
-INVALID_RETURN(std::vector<int>);
+template<> struct invalid_return<bool> {
+    static const bool value;
+    static const std::string type;
+};
+
+template<> struct invalid_return<int> {
+    static const int value;
+    static const std::string type;
+};
+
+template<> struct invalid_return<long long int> {
+    static const long long int value;
+    static const std::string type;
+};
+
+template<> struct invalid_return<double> {
+    static const double value;
+    static const std::string type;
+};
+
+template<> struct invalid_return<std::string> {
+    static const std::string value;
+    static const std::string type;
+};
+
+template<> struct invalid_return<RGBColor> {
+    static const RGBColor value;
+    static const std::string type;
+};
+
+template<> struct invalid_return<Position> {
+    static const Position value;
+    static const std::string type;
+};
+
+template<> struct invalid_return<PositionVector> {
+    static const PositionVector value;
+    static const std::string type;
+};
+
+template<> struct invalid_return<Boundary> {
+    static const Boundary value;
+    static const std::string type;
+};
+
+template<> struct invalid_return<std::vector<std::string> > {
+    static const std::vector<std::string> value;
+    static const std::string type;
+};
+
+template<> struct invalid_return<std::vector<int> > {
+    static const std::vector<int> value;
+    static const std::string type;
+};
 
 
 template <typename T>
 T SUMOSAXAttributes::get(int attr, const char* objectid,
                          bool& ok, bool report) const {
-    try {
-        bool isPresent = true;
-        const std::string& strAttr = getString(attr, &isPresent);
-        if (isPresent) {
-            return fromString<T>(strAttr);
-        }
+    if (!hasAttribute(attr)) {
         if (report) {
             emitUngivenError(getName(attr), objectid);
         }
-    } catch (const FormatException& e) {
+        ok = false;
+        return invalid_return<T>::value;
+    }
+    try {
+        return getInternal<T>(attr);
+    } catch (FormatException&) {
         if (report) {
-            emitFormatError(getName(attr), e.what(), objectid);
+            emitFormatError(getName(attr), "of type " + invalid_return<T>::type, objectid);
         }
     } catch (EmptyData&) {
         if (report) {
@@ -456,16 +527,14 @@ T SUMOSAXAttributes::get(int attr, const char* objectid,
 template <typename T>
 T SUMOSAXAttributes::getOpt(int attr, const char* objectid,
                             bool& ok, T defaultValue, bool report) const {
-    try {
-        bool isPresent = true;
-        const std::string& strAttr = getString(attr, &isPresent);
-        if (isPresent) {
-            return fromString<T>(strAttr);
-        }
+    if (!hasAttribute(attr)) {
         return defaultValue;
-    } catch (const FormatException& e) {
+    }
+    try {
+        return getInternal<T>(attr);
+    } catch (FormatException&) {
         if (report) {
-            emitFormatError(getName(attr), e.what(), objectid);
+            emitFormatError(getName(attr), "of type " + invalid_return<T>::type, objectid);
         }
     } catch (EmptyData&) {
         if (report) {

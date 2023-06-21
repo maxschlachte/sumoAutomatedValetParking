@@ -30,7 +30,7 @@
 
 GNEVTypeDistribution::GNEVTypeDistribution(GNENet* net) :
     GNEDemandElement("", net, GLO_VTYPE, SUMO_TAG_VTYPE_DISTRIBUTION, GNEPathManager::PathElement::Options::DEMAND_ELEMENT,
-{}, {}, {}, {}, {}, {}) {
+{}, {}, {}, {}, {}, {}, {}, {}) {
     // reset default values
     resetDefaultValues();
 }
@@ -38,7 +38,7 @@ GNEVTypeDistribution::GNEVTypeDistribution(GNENet* net) :
 
 GNEVTypeDistribution::GNEVTypeDistribution(GNENet* net, const std::string& vTypeID) :
     GNEDemandElement(vTypeID, net, GLO_VTYPE, SUMO_TAG_VTYPE_DISTRIBUTION, GNEPathManager::PathElement::Options::DEMAND_ELEMENT,
-{}, {}, {}, {}, {}, {}) {
+{}, {}, {}, {}, {}, {}, {}, {}) {
 }
 
 
@@ -173,7 +173,7 @@ std::string
 GNEVTypeDistribution::getAttribute(SumoXMLAttr key) const {
     switch (key) {
         case SUMO_ATTR_ID:
-            return getMicrosimID();
+            return getID();
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
@@ -224,6 +224,24 @@ GNEVTypeDistribution::isValid(SumoXMLAttr key, const std::string& value) {
 }
 
 
+void
+GNEVTypeDistribution::enableAttribute(SumoXMLAttr /*key*/, GNEUndoList* /*undoList*/) {
+    // nothing to enable
+}
+
+
+void
+GNEVTypeDistribution::disableAttribute(SumoXMLAttr /*key*/, GNEUndoList* /*undoList*/) {
+    // nothing to disable
+}
+
+
+bool
+GNEVTypeDistribution::isAttributeEnabled(SumoXMLAttr /*key*/) const {
+    return true;
+}
+
+
 std::string
 GNEVTypeDistribution::getPopUpID() const {
     return getTagStr();
@@ -236,7 +254,7 @@ GNEVTypeDistribution::getHierarchyName() const {
 }
 
 
-const Parameterised::Map&
+const std::map<std::string, std::string>&
 GNEVTypeDistribution::getACParametersMap() const {
     throw InvalidArgument(getTagStr() + " doesn't have parameters");
 }
@@ -254,6 +272,12 @@ GNEVTypeDistribution::setAttribute(SumoXMLAttr key, const std::string& value) {
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
+}
+
+
+void
+GNEVTypeDistribution::toogleAttribute(SumoXMLAttr /*key*/, const bool /*value*/, const int /*previousParameters*/) {
+    // nothing to toogle
 }
 
 

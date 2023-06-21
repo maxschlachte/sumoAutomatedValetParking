@@ -103,5 +103,4 @@ public:
 
     virtual void writePadding(std::ostream& into, const std::string& val) = 0;
 
-    virtual bool wroteHeader() const = 0;
 };

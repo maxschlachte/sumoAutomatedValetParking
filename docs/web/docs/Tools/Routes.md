@@ -485,7 +485,4 @@ This tool generates a [tazRelation-file (OD-Matrix)](../Demand/Importing_O/D_Mat
 python tools/route/route2OD.py -r <route-file> -a <taz-file> -o <output-file>
 ```
 
-Not only route file but also trip file can be used as input. The tool will firstly try to find the start edge and the end edge of each trip or flows and match them to the respective origin and destination TAZ according to the input taz-file. The counts of the TAZ-relations will be calculated and saved. If only TAZ-information in the given trip or route file is available, this tool will directly calculate TAZ-based OD relation counts without using the information in the given taz-file, which connection edges locate in each TAZ. If the option **--edge-relations** is set, edge-based relation counts will be calculated and saved, only when start/end edge information is available. 
-
 When option **--interval TIME** (short **-i**) is set, the OD-Matrix will be split into time slices of the given duration.
-

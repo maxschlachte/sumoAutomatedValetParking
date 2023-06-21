@@ -136,7 +136,7 @@ MSCFModel_CACC::followSpeed(const MSVehicle* const veh, double speed, double gap
             std::cout << "Apply Safe speed, override=" << speedOverride << "\n";
         }
 #endif
-        return MAX2(0.0, vSafe + speedOverride);
+        return vSafe + speedOverride;
     }
     return vCACC;
 }

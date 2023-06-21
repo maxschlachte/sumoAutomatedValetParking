@@ -19,7 +19,6 @@
 ///
 // Tests the class GeomHelper
 /****************************************************************************/
-#include <config.h>
 
 #include <gtest/gtest.h>
 #include <utils/geom/Position.h>

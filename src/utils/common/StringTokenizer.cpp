@@ -198,11 +198,4 @@ StringTokenizer::getVector() {
 }
 
 
-std::set<std::string>
-StringTokenizer::getSet() {
-    std::vector<std::string> v = getVector();
-    return std::set<std::string>(v.begin(), v.end());
-}
-
-
 /****************************************************************************/

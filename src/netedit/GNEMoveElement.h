@@ -52,8 +52,7 @@ public:
         ONE_LANE_MOVEBOTH,
         TWO_LANES_MOVEFIRST,
         TWO_LANES_MOVESECOND,
-        TWO_LANES_MOVEBOTH_FIRST,
-        TWO_LANES_MOVEBOTH_SECOND,
+        TWO_LANES_MOVEBOTH,
     };
 
     /// @brief constructor for values with a single position (junctions, E3, ParkingSpaces...)
@@ -228,9 +227,6 @@ public:
     /// @brief constructor
     GNEMoveElement();
 
-    //// @brief empty destructor
-    virtual ~GNEMoveElement() {}
-
     /**@brief get move operation
      * @note returned GNEMoveOperation can be nullptr
      */
@@ -277,9 +273,6 @@ private:
 
     /// @brief calculate new lane
     static void calculateNewLane(const GNEViewNet* viewNet, const GNELane* originalLane, const GNELane*& newLane, double& laneOffset);
-
-    // @brief adjust both positions
-    static void adjustBothPositions(const GNEViewNet* viewNet, const GNEMoveOperation* moveOperation, GNEMoveResult& moveResult, const GNEMoveOffset& offset);
 
     /// @brief calculate width/height shape
     static PositionVector calculateExtrapolatedVector(const GNEMoveOperation* moveOperation, const GNEMoveResult& moveResult);

@@ -43,6 +43,12 @@ GNELaneTemplate::getHierarchicalElement() {
 }
 
 
+const std::string&
+GNELaneTemplate::getID() const {
+    return myLane->getID();
+}
+
+
 GUIGlObject*
 GNELaneTemplate::getGUIGlObject() {
     return nullptr;
@@ -72,10 +78,26 @@ GNELaneTemplate::isValid(SumoXMLAttr /*key*/, const std::string& /*value*/) {
     throw InvalidArgument("cannot be called in templates");
 }
 
+void
+GNELaneTemplate::enableAttribute(SumoXMLAttr /*key*/, GNEUndoList* /*undoList*/) {
+    throw InvalidArgument("cannot be called in templates");
+}
+
+
+void
+GNELaneTemplate::disableAttribute(SumoXMLAttr /*key*/, GNEUndoList* /*undoList*/) {
+    throw InvalidArgument("cannot be called in templates");
+}
+
 
 bool
 GNELaneTemplate::isAttributeEnabled(SumoXMLAttr /*key*/) const {
-    // All attributes are disabled in templates
+    return false;
+}
+
+
+bool
+GNELaneTemplate::isAttributeComputed(SumoXMLAttr /*key*/) const {
     return false;
 }
 
@@ -92,7 +114,7 @@ GNELaneTemplate::getHierarchyName() const {
 }
 
 
-const Parameterised::Map&
+const std::map<std::string, std::string>&
 GNELaneTemplate::getACParametersMap() const {
     return myLane->getACParametersMap();
 }
@@ -103,6 +125,11 @@ GNELaneTemplate::getACParametersMap() const {
 
 void
 GNELaneTemplate::setAttribute(SumoXMLAttr /*key*/, const std::string& /*value*/) {
+    throw InvalidArgument("cannot be called in templates");
+}
+
+void
+GNELaneTemplate::toogleAttribute(SumoXMLAttr /*key*/, const bool /*value*/, const int /*previousParameters*/) {
     throw InvalidArgument("cannot be called in templates");
 }
 

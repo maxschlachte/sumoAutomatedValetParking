@@ -34,40 +34,6 @@ class GNEDeleteFrame : public GNEFrame {
 public:
 
     // ===========================================================================
-    // class MultipleDeletePane
-    // ===========================================================================
-
-    class MultipleDeletePane : protected FXMenuPane {
-        // FOX-declarations
-        FXDECLARE(MultipleDeletePane)
-
-    public:
-        /// @brief Constructor
-        MultipleDeletePane(GNEDeleteFrame* deleteFrameParent, const std::vector<GNEDemandElement*>& clickedDemandElements);
-
-        /// @name FOX-callbacks
-        /// @{
-        /// @brief Called when user change an option
-        long onCmdSelect(FXObject*, FXSelector, void*);
-
-        /// @}
-
-    protected:
-        /// @brief FOX needs this
-        FOX_CONSTRUCTOR(MultipleDeletePane)
-
-    private:
-        /// @brief pointer to delete frame parent
-        GNEDeleteFrame* myDeleteFrameParent = nullptr;
-
-        /// @brief delete all elements
-        FXMenuCommand* myDeleteAllElements = nullptr;
-
-        /// @brief clicked demand elements
-        const std::vector<GNEDemandElement*> myClickedDemandElements;
-    };
-
-    // ===========================================================================
     // class DeleteOptions
     // ===========================================================================
 
@@ -123,6 +89,9 @@ public:
         /// @brief check if protect TAZ elements checkbox is enabled
         bool protectTAZs() const;
 
+        /// @brief check if protect shapes elements checkbox is enabled
+        bool protectShapes() const;
+
         /// @brief check if protect demand elements checkbox is enabled
         bool protectDemandElements() const;
 
@@ -135,6 +104,9 @@ public:
 
         /// @brief checkbox for enable/disable protect TAZs
         FXCheckButton* myProtectTAZs;
+
+        /// @brief checkbox for enable/disable protect shapes
+        FXCheckButton* myProtectShapes;
 
         /// @brief checkbox for enable/disable protect demand elements
         FXCheckButton* myProtectDemandElements;
@@ -193,6 +165,9 @@ protected:
         /// @brief constructor (for additionals)
         SubordinatedElements(const GNEAdditional* additional);
 
+        /// @brief constructor (for shapes)
+        SubordinatedElements(const GNEShape* shape);
+
         /// @brief constructor (for demandElements)
         SubordinatedElements(const GNEDemandElement* demandElement);
 
@@ -217,6 +192,18 @@ protected:
 
         /// @brief child additional (except TAZs)
         size_t myAdditionalChilds;
+
+        /// @brief parent TAZs
+        size_t myTAZParents;
+
+        /// @brief child TAZ
+        size_t myTAZChilds;
+
+        /// @brief parent shapes
+        size_t myShapeParents;
+
+        /// @brief child shape
+        size_t myShapeChilds;
 
         /// @brief parent demand elements
         size_t myDemandElementParents;
@@ -254,12 +241,9 @@ protected:
     bool selectedACsToDelete() const;
 
 private:
-    /// @brief MultipleDeletePane
-    MultipleDeletePane* myMultipleDeletePane = nullptr;
-
     /// @brief modul for delete options
-    DeleteOptions* myDeleteOptions = nullptr;
+    DeleteOptions* myDeleteOptions;
 
     /// @brief modul for protect elements
-    ProtectElements* myProtectElements = nullptr;
+    ProtectElements* myProtectElements;
 };

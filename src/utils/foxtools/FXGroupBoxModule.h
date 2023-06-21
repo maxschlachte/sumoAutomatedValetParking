@@ -23,9 +23,6 @@
 
 #include "fxheader.h"
 
-/// @brief class declaration
-class GNEFrame;
-
 /// @brief FXGroupBoxModule (based on FXGroupBox)
 class FXGroupBoxModule : protected FXVerticalFrame {
     FXDECLARE(FXGroupBoxModule)
@@ -33,18 +30,14 @@ class FXGroupBoxModule : protected FXVerticalFrame {
 public:
     /// @brief GroupBoxModule options
     enum Options {
-        NOTHING =       1 << 0, // Basic GroupBox
+        NOTHING =       1 << 0, // Collapsible groupBox
         COLLAPSIBLE =   1 << 1, // Collapsible groupBox
-        EXTENSIBLE =    1 << 2, // Extensible groupBox
-        SAVE =          1 << 3, // Save contents
-        LOAD =          1 << 4, // Load contents
+        SAVE =          1 << 2, // Save contents
+        LOAD =          1 << 3, // Load contents
     };
 
-    /// @brief constructor for frames
-    FXGroupBoxModule(GNEFrame* frame, const std::string& text, const int options = Options::COLLAPSIBLE);
-
-    /// @brief constructor for fix dialogs
-    FXGroupBoxModule(FXVerticalFrame* contentFrame, const std::string& text, const int options = Options::NOTHING);
+    /// @brief constructor
+    FXGroupBoxModule(FXVerticalFrame* contentFrame, const std::string& text, const int options = Options::COLLAPSIBLE);
 
     /// @brief destructor
     ~FXGroupBoxModule();
@@ -52,7 +45,7 @@ public:
     /// @brief set text
     void setText(const std::string& text);
 
-    /// @brief get collapsable frame (used by all elements that will be collapsed if button is toggled)
+    /// @brief get collapsable frame (used by all elements that will be collapsed if button is toogled)
     FXVerticalFrame* getCollapsableFrame();
 
     /// @brief draw FXGroupBoxModule
@@ -60,15 +53,6 @@ public:
 
     /// @brief collapse GroupBoxModule
     long onCmdCollapseButton(FXObject*, FXSelector, void*);
-
-    /// @brief extends GroupBoxModule
-    long onCmdExtendButton(FXObject*, FXSelector, void*);
-
-    /// @brief reset GroupBoxModule
-    long onCmdResetButton(FXObject*, FXSelector, void*);
-
-    /// @brief update reset GroupBoxModule
-    long onUpdResetButton(FXObject*, FXSelector, void*);
 
     /// @brief save contents
     long onCmdSaveButton(FXObject*, FXSelector, void*);
@@ -87,14 +71,11 @@ protected:
     virtual bool loadContents() const;
 
     /// @brief enable or disable save buttons
-    void toggleSaveButton(const bool value);
+    void toogleSaveButton(const bool value);
 
 private:
     /// @brief GroupBoxModule options
     const int myOptions;
-
-    /// @brief GNEFrame in which this GroupBox is placed
-    GNEFrame* myFrameParent = nullptr;
 
     /// @brief vertical collapsable frame
     FXVerticalFrame* myCollapsableFrame = nullptr;
@@ -104,12 +85,6 @@ private:
 
     /// @brief button for collapse elements
     FXButton* myCollapseButton = nullptr;
-
-    /// @brief button for extend elements
-    FXButton* myExtendButton = nullptr;
-
-    /// @brief button for reset frame width
-    FXButton* myResetWidthButton = nullptr;
 
     /// @brief button for save elements
     FXButton* mySaveButton = nullptr;

@@ -21,10 +21,6 @@
 #include <config.h>
 
 #include <netedit/frames/GNEFrame.h>
-#include <netedit/frames/GNEAttributesCreator.h>
-#include <netedit/frames/GNEDemandSelector.h>
-#include <netedit/frames/GNETagSelector.h>
-#include <netedit/frames/GNEElementTree.h>
 
 
 // ===========================================================================
@@ -54,39 +50,39 @@ public:
     /**@brief add container plan element
      * @param objectsUnderCursor collection of objects under cursor after click over view
      * @param mouseButtonKeyPressed key pressed during click
-     * @return true if element was successfully added
+     * @return true if element was sucesfully added
      */
     bool addContainerPlanElement(const GNEViewNetHelper::ObjectsUnderCursor& objectsUnderCursor, const GNEViewNetHelper::MouseButtonKeyPressed& mouseButtonKeyPressed);
 
     /// @brief get path creator modul
-    GNEPathCreator* getPathCreator() const;
+    GNEFrameModules::PathCreator* getPathCreator() const;
 
 protected:
-    /// @brief Tag selected in GNETagSelector
+    /// @brief Tag selected in TagSelector
     void tagSelected();
 
     /// @brief selected demand element in DemandElementSelector
     void demandElementSelected();
 
     /// @brief create path
-    void createPath(const bool useLastRoute);
+    void createPath();
 
 private:
     /// @brief route handler
     GNERouteHandler myRouteHandler;
 
     /// @brief Container selectors
-    DemandElementSelector* myContainerSelector;
+    GNEFrameModules::DemandElementSelector* myContainerSelector;
 
     /// @brief containerPlan selector
-    GNETagSelector* myContainerPlanTagSelector;
+    GNEFrameModules::TagSelector* myContainerPlanTagSelector;
 
     /// @brief internal vehicle attributes
-    GNEAttributesCreator* myContainerPlanAttributes;
+    GNEFrameAttributeModules::AttributesCreator* myContainerPlanAttributes;
 
     /// @brief Path Creator
-    GNEPathCreator* myPathCreator;
+    GNEFrameModules::PathCreator* myPathCreator;
 
     /// @brief Container Hierarchy
-    GNEElementTree* myContainerHierarchy;
+    GNEFrameModules::HierarchicalElementTree* myContainerHierarchy;
 };

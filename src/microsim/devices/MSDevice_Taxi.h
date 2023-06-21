@@ -31,7 +31,6 @@
 class SUMOTrafficObject;
 class MSDispatch;
 class MSIdling;
-class MSDevice_Routing;
 struct Reservation;
 
 
@@ -138,6 +137,18 @@ public:
      * @see MSMoveReminder::Notification
      */
     bool notifyEnter(SUMOTrafficObject& veh, MSMoveReminder::Notification reason, const MSLane* enteredLane = 0);
+
+
+    /** @brief Saves arrival info
+     *
+     * @param[in] veh The leaving vehicle.
+     * @param[in] lastPos Position on the lane when leaving.
+     * @param[in] isArrival whether the vehicle arrived at its destination
+     * @param[in] isLaneChange whether the vehicle changed from the lane
+     * @return True if it did not leave the net.
+     */
+    bool notifyLeave(SUMOTrafficObject& veh, double lastPos,
+                     MSMoveReminder::Notification reason, const MSLane* enteredLane = 0);
     /// @}
 
 
@@ -163,7 +174,7 @@ public:
     void dispatchShared(std::vector<const Reservation*> reservations);
 
     /// @brief whether the given person is allowed to board this taxi
-    bool allowsBoarding(const MSTransportable* t) const;
+    bool allowsBoarding(MSTransportable* t) const;
 
     /// @brief called by MSDevice_Transportable upon loading a person
     void customerEntered(const MSTransportable* t);
@@ -190,19 +201,6 @@ public:
 
     static bool compatibleLine(const std::string& taxiLine, const std::string& rideLine);
 
-protected:
-    /** @brief Internal notification about the vehicle moves, see MSMoveReminder::notifyMoveInternal()
-     *
-     */
-    void notifyMoveInternal(const SUMOTrafficObject& veh,
-                            const double frontOnLane,
-                            const double timeOnLane,
-                            const double meanSpeedFrontOnLane,
-                            const double meanSpeedVehicleOnLane,
-                            const double travelledDistanceFrontOnLane,
-                            const double travelledDistanceVehicleOnLane,
-                            const double meanLengthOnLane);
-
 private:
     /** @brief Constructor
      *
@@ -210,8 +208,6 @@ private:
      * @param[in] id The ID of the device
      */
     MSDevice_Taxi(SUMOVehicle& holder, const std::string& id);
-
-    void updateMove(const SUMOTime traveltime, const double travelledDist);
 
     /// @brief prepare stop for the given action
     void prepareStop(ConstMSEdgeVector& edges,
@@ -247,14 +243,8 @@ private:
     /// @brief algorithm for controlling idle behavior
     MSIdling* myIdleAlgorithm;
 
-    /// @brief whether the taxi has reached it's schedule service end
-    bool myReachedServiceEnd = false;
-
     /// @brief reservations currently being served
     std::set<const Reservation*> myCurrentReservations;
-
-    /// @brief routing device (if the vehicle has one)
-    MSDevice_Routing* myRoutingDevice = nullptr;
 
     /// @brief the time between successive calls to the dispatcher
     static SUMOTime myDispatchPeriod;

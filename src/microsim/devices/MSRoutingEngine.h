@@ -25,7 +25,6 @@
 #include <set>
 #include <vector>
 #include <map>
-#include <thread>
 #include <utils/common/SUMOTime.h>
 #include <utils/common/WrappingCommand.h>
 #include <utils/router/SUMOAbstractRouter.h>
@@ -38,6 +37,7 @@
 #ifdef HAVE_FOX
 #include <utils/foxtools/FXWorkerThread.h>
 #endif
+
 
 // ===========================================================================
 // class definitions
@@ -187,9 +187,6 @@ private:
     /// @brief initialized edge speed storage into the given containers
     static void _initEdgeWeights(std::vector<double>& edgeSpeeds, std::vector<std::vector<double> >& pastEdgeSpeeds);
 
-    /// @brief returns RNG associated with the current thread
-    static SumoRNG* getThreadRNG();
-
 private:
     /// @brief The weights adaptation/overwriting command
     static Command* myEdgeWeightSettingCommand;
@@ -230,8 +227,6 @@ private:
 
     /// @brief The router to use
     static MSRouterProvider* myRouterProvider;
-
-    static std::map<std::thread::id, SumoRNG*> myThreadRNGs;
 
     /// @brief The container of pre-calculated routes
     static std::map<std::pair<const MSEdge*, const MSEdge*>, const MSRoute*> myCachedRoutes;

@@ -81,7 +81,6 @@
  * ----------------------------------------------------------------------- */
 #ifdef _MSC_VER
 #pragma warning(push)
-/* Disable warning about using "this" in the constructor */
 #pragma warning(disable: 4355)
 #endif
 GUIVehicle::GUIVehicle(SUMOVehicleParameter* pars, const MSRoute* route,
@@ -158,19 +157,19 @@ GUIVehicle::getParameterWindow(GUIMainWindow& app,
     ret->mkItem("stop info", true, new FunctionBindingString<GUIVehicle>(this, &GUIVehicle::getStopInfo));
     ret->mkItem("line", false, myParameter->line);
     ret->mkItem("CO2 [mg/s]", true,
-                new FunctionBinding<GUIVehicle, double>(this, &MSVehicle::getEmissions<PollutantsInterface::CO2>));
+                new FunctionBinding<GUIVehicle, double>(this, &MSVehicle::getCO2Emissions));
     ret->mkItem("CO [mg/s]", true,
-                new FunctionBinding<GUIVehicle, double>(this, &MSVehicle::getEmissions<PollutantsInterface::CO>));
+                new FunctionBinding<GUIVehicle, double>(this, &MSVehicle::getCOEmissions));
     ret->mkItem("HC [mg/s]", true,
-                new FunctionBinding<GUIVehicle, double>(this, &MSVehicle::getEmissions<PollutantsInterface::HC>));
+                new FunctionBinding<GUIVehicle, double>(this, &MSVehicle::getHCEmissions));
     ret->mkItem("NOx [mg/s]", true,
-                new FunctionBinding<GUIVehicle, double>(this, &MSVehicle::getEmissions<PollutantsInterface::NO_X>));
+                new FunctionBinding<GUIVehicle, double>(this, &MSVehicle::getNOxEmissions));
     ret->mkItem("PMx [mg/s]", true,
-                new FunctionBinding<GUIVehicle, double>(this, &MSVehicle::getEmissions<PollutantsInterface::PM_X>));
-    ret->mkItem("fuel [mg/s]", true,
-                new FunctionBinding<GUIVehicle, double>(this, &MSVehicle::getEmissions<PollutantsInterface::FUEL>));
+                new FunctionBinding<GUIVehicle, double>(this, &MSVehicle::getPMxEmissions));
+    ret->mkItem("fuel [ml/s]", true,
+                new FunctionBinding<GUIVehicle, double>(this, &MSVehicle::getFuelConsumption));
     ret->mkItem("electricity [Wh/s]", true,
-                new FunctionBinding<GUIVehicle, double>(this, &MSVehicle::getEmissions<PollutantsInterface::ELEC>));
+                new FunctionBinding<GUIVehicle, double>(this, &MSVehicle::getElectricityConsumption));
     ret->mkItem("noise (Harmonoise) [dB]", true,
                 new FunctionBinding<GUIVehicle, double>(this, &MSVehicle::getHarmonoise_NoiseEmissions));
     ret->mkItem("devices", false, getDeviceDescription());
@@ -236,15 +235,13 @@ GUIVehicle::getTypeParameterWindow(GUIMainWindow& app,
         ret->mkItem("action step length [s]", false, myType->getActionStepLengthSecs());
     }
     ret->mkItem("person capacity", false, myType->getPersonCapacity());
-    ret->mkItem("boarding time", false, STEPS2TIME(myType->getLoadingDuration(true)));
+    ret->mkItem("boarding time", false, STEPS2TIME(myType->getBoardingDuration()));
     ret->mkItem("container capacity", false, myType->getContainerCapacity());
-    ret->mkItem("loading time", false, STEPS2TIME(myType->getLoadingDuration(false)));
+    ret->mkItem("loading time", false, STEPS2TIME(myType->getLoadingDuration()));
     if (MSGlobals::gLateralResolution > 0) {
         ret->mkItem("minGapLat", false, myType->getMinGapLat());
         ret->mkItem("maxSpeedLat", false, myType->getMaxSpeedLat());
-        ret->mkItem("latAlignment", false, myType->getPreferredLateralAlignment() == LatAlignmentDefinition::GIVEN
-                    ? toString(myType->getPreferredLateralAlignmentOffset())
-                    : toString(myType->getPreferredLateralAlignment()));
+        ret->mkItem("latAlignment", false, toString(myType->getPreferredLateralAlignment()));
     } else if (MSGlobals::gLaneChangeDuration > 0) {
         ret->mkItem("maxSpeedLat", false, myType->getMaxSpeedLat());
     }
@@ -305,7 +302,7 @@ GUIVehicle::drawAction_drawCarriageClass(const GUIVisualizationSettings& s, bool
     double upscaleLength = exaggeration;
     if (exaggeration > 1 && totalLength > 5) {
         // reduce the length/width ratio because this is not usefull at high zoom
-        const double widthLengthFactor = totalLength / 5;
+        const double widthLengthFactor = totalLength / getVType().getWidth();
         const double shrinkFactor = MIN2(widthLengthFactor, sqrt(upscaleLength));
         upscaleLength /= shrinkFactor;
     }
@@ -403,7 +400,7 @@ GUIVehicle::drawAction_drawCarriageClass(const GUIVisualizationSettings& s, bool
         GLHelper::pushMatrix();
         glTranslated(front.x(), front.y(), getType());
         glRotated(angle, 0, 0, 1);
-        if (!asImage || !GUIBaseVehicleHelper::drawAction_drawVehicleAsImage(s, getVType().getImgFile(), this, getVType().getWidth() * exaggeration, curCLength)) {
+        if (!asImage || !GUIBaseVehicleHelper::drawAction_drawVehicleAsImage(s, getVType().getImgFile(), this, getVType().getWidth(), curCLength / exaggeration)) {
             switch (getVType().getGuiShape()) {
                 case SUMOVehicleShape::TRUCK_SEMITRAILER:
                 case SUMOVehicleShape::TRUCK_1TRAILER:
@@ -559,17 +556,17 @@ GUIVehicle::getColorValue(const GUIVisualizationSettings& s, int activeScheme) c
         case 13:
             return getLane()->getVehicleMaxSpeed(this);
         case 14:
-            return getEmissions<PollutantsInterface::CO2>();
+            return getCO2Emissions();
         case 15:
-            return getEmissions<PollutantsInterface::CO>();
+            return getCOEmissions();
         case 16:
-            return getEmissions<PollutantsInterface::PM_X>();
+            return getPMxEmissions();
         case 17:
-            return getEmissions<PollutantsInterface::NO_X>();
+            return getNOxEmissions();
         case 18:
-            return getEmissions<PollutantsInterface::HC>();
+            return getHCEmissions();
         case 19:
-            return getEmissions<PollutantsInterface::FUEL>();
+            return getFuelConsumption();
         case 20:
             return getHarmonoise_NoiseEmissions();
         case 21:
@@ -585,7 +582,7 @@ GUIVehicle::getColorValue(const GUIVisualizationSettings& s, int activeScheme) c
         case 26:
             return STEPS2TIME(getDepartDelay());
         case 27:
-            return getEmissions<PollutantsInterface::ELEC>();
+            return getElectricityConsumption();
         case 28:
             return getTimeLossSeconds();
         case 29:
@@ -599,7 +596,7 @@ GUIVehicle::getColorValue(const GUIVisualizationSettings& s, int activeScheme) c
             std::string val = getPrefixedParameter(s.vehicleParam, error);
             try {
                 if (val == "") {
-                    return GUIVisualizationSettings::MISSING_DATA;
+                    return 0;
                 } else {
                     return StringUtils::toDouble(val);
                 }
@@ -608,7 +605,7 @@ GUIVehicle::getColorValue(const GUIVisualizationSettings& s, int activeScheme) c
                     return StringUtils::toBool(val);
                 } catch (BoolFormatException&) {
                     WRITE_WARNING("Vehicle parameter '" + myParameter->getParameter(s.vehicleParam, "0") + "' key '" + s.vehicleParam + "' is not a number for vehicle '" + getID() + "'");
-                    return GUIVisualizationSettings::MISSING_DATA;
+                    return -1;
                 }
             }
     }
@@ -668,8 +665,6 @@ GUIVehicle::drawRouteHelper(const GUIVisualizationSettings& s, const MSRoute& r,
         // simulation time has already advanced so isRemoteControlled is always false
         const std::string offRoadLabel = hasInfluencer() && getInfluencer()->isRemoteAffected(SIMSTEP) ? "offRoad" : "teleporting";
         GLHelper::drawTextSettings(s.vehicleValue, offRoadLabel, getPosition(), s.scale, s.angle, 1.0);
-    } else if (myLane->isInternal()) {
-        bestLaneIndex++;
     }
     for (; i != r.end(); ++i) {
         const GUILane* lane;
@@ -868,7 +863,7 @@ GUIVehicle::selectBlockingFoes() const {
             // the vehicle to enter the junction first has priority
             const GUIVehicle* leader = dynamic_cast<const GUIVehicle*>(it->vehAndGap.first);
             if (leader != nullptr) {
-                if (isLeader(dpi.myLink, leader, it->vehAndGap.second)) {
+                if (isLeader(dpi.myLink, leader)) {
                     gSelected.select(leader->getGlID());
 #ifdef DEBUG_FOES
                     std::cout << "      linkLeader=" << leader->getID() << "\n";

@@ -47,14 +47,14 @@
 
 #include <osgview/GUIOSGHeader.h>
 
+//#define GUIJunctionWrapper_DEBUG_DRAW_NODE_SHAPE_VERTICES
+
 // ===========================================================================
 // method definitions
 // ===========================================================================
 GUIJunctionWrapper::GUIJunctionWrapper(MSJunction& junction, const std::string& tllID):
     GUIGlObject(GLO_JUNCTION, junction.getID()),
     myJunction(junction),
-    myTesselation(junction.getID(), "", RGBColor::MAGENTA, junction.getShape(), false, true, 0),
-    myExaggeration(1),
     myTLLID(tllID) {
     if (myJunction.getShape().size() == 0) {
         Position pos = myJunction.getPosition();
@@ -86,7 +86,6 @@ GUIJunctionWrapper::GUIJunctionWrapper(MSJunction& junction, const std::string& 
             }
         }
     }
-    myTesselation.getShapeRef().closePolygon();
 }
 
 
@@ -102,7 +101,7 @@ GUIJunctionWrapper::getPopUpMenu(GUIMainWindow& app,
     buildNameCopyPopupEntry(ret);
     buildSelectionPopupEntry(ret);
     buildShowParamsPopupEntry(ret);
-    buildPositionCopyEntry(ret, app);
+    buildPositionCopyEntry(ret, false);
     return ret;
 }
 
@@ -151,19 +150,20 @@ GUIJunctionWrapper::drawGL(const GUIVisualizationSettings& s) const {
 
             // recognize full transparency and simply don't draw
             if (color.alpha() != 0) {
-                if ((exaggeration > 1 || myExaggeration > 1) && exaggeration != myExaggeration) {
-                    myExaggeration = exaggeration;
-                    myTesselation.setShape(myJunction.getShape());
-                    myTesselation.getShapeRef().closePolygon();
-                    myTesselation.getShapeRef().scaleRelative(exaggeration);
-                    myTesselation.myTesselation.clear();
+                PositionVector shape = myJunction.getShape();
+                shape.closePolygon();
+                if (exaggeration > 1) {
+                    shape.scaleRelative(exaggeration);
                 }
                 glTranslated(0, 0, getType());
                 if (s.scale * myMaxSize < 40.) {
-                    GLHelper::drawFilledPoly(myTesselation.getShape(), true);
+                    GLHelper::drawFilledPoly(shape, true);
                 } else {
-                    myTesselation.drawTesselation(myTesselation.getShape());
+                    GLHelper::drawFilledPolyTesselated(shape, true);
                 }
+#ifdef GUIJunctionWrapper_DEBUG_DRAW_NODE_SHAPE_VERTICES
+                GLHelper::debugVertices(shape, 80 / s.scale);
+#endif
                 // make small junctions more visible when coloring by type
                 if (myJunction.getType() == SumoXMLNodeType::RAIL_SIGNAL && s.junctionColorer.getActive() == 2) {
                     glTranslated(myJunction.getPosition().x(), myJunction.getPosition().y(), getType() + 0.05);
@@ -172,9 +172,6 @@ GUIJunctionWrapper::drawGL(const GUIVisualizationSettings& s) const {
             }
             GLHelper::popName();
             GLHelper::popMatrix();
-            if (s.geometryIndices.show(this)) {
-                GLHelper::debugVertices(myJunction.getShape(), s.geometryIndices, s.scale);
-            }
         }
     }
     if (myIsInternal) {

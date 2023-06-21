@@ -25,6 +25,7 @@
 #include <microsim/MSVehicle.h>
 #include <microsim/trigger/MSChargingStation.h>
 #include <utils/common/SUMOTime.h>
+#include <utils/emissions/EnergyParams.h>
 // (chs): include charging space header
 #include <microsim/trigger/MSChargingSpace.h>
 
@@ -33,7 +34,7 @@
 // class declarations
 // ===========================================================================
 class SUMOVehicle;
-class MSDevice_Emissions;
+
 
 // ===========================================================================
 // class definitions
@@ -102,7 +103,9 @@ private:
     * @param[in] preInsertionPeriod The route search period before insertion
     */
     MSDevice_Battery(SUMOVehicle& holder, const std::string& id, const double actualBatteryCapacity, const double maximumBatteryCapacity,
-                     const double powerMax, const double stoppingTreshold);
+                     const double powerMax, const double stoppingTreshold, const EnergyParams& param);
+
+    void checkParam(const SumoXMLAttr paramKey, const double lower = 0., const double upper = std::numeric_limits<double>::infinity());
 
 public:
     /// @brief Get the actual vehicle's Battery Capacity in Wh
@@ -168,6 +171,11 @@ public:
     /// @brief Increase myVehicleStopped
     void increaseVehicleStoppedTimer();
 
+    /// @brief retrieve parameters for the energy consumption model
+    const EnergyParams& getEnergyParams() const {
+        return myParam;
+    }
+
     // (pki): getter for myTotalChargingTime
     /// @brief getter for myTotalChargingTime
     SUMOTime getTotalChargingTime() const;
@@ -193,6 +201,9 @@ protected:
     /// @brief Parameter, stopping vehicle treshold [myStoppingTreshold >= 0]
     double myStoppingTreshold;
 
+    /// @brief Parameter collection
+    EnergyParams myParam;
+
     /// @brief Parameter, Vehicle's last angle
     double myLastAngle;
 
@@ -204,6 +215,18 @@ protected:
 
     /// @brief Parameter, Moment, wich the vehicle has beging to charging
     SUMOTime myChargingStartTime;
+
+    // (pki): accumulated charging time
+    /// @brief Accumulated time the vehicle spend charging
+    SUMOTime myTotalChargingTime;
+
+    // (pki): accumulated time the vehicle is standing on a charging space but is not charging
+    /// @brief Accumulated time the vehicle spend on a charging space without charging
+    SUMOTime myTotalBlockingTime;
+
+    // (pki): accumulated charge deltas
+    /// @brief Accumulated charged power
+    double myTotalEnergyCharged;
 
     /// @brief Parameter, Vehicle consum during a time step (by default is 0.)
     double myConsum;
@@ -236,18 +259,6 @@ protected:
     // (chs): declare a string for storing the current charging space id
     /// @brief string for storing the current charging space id
     std::string myActChargingSpaceID;
-
-    // (pki): accumulated charging time
-    /// @brief Accumulated time the vehicle spend charging
-    SUMOTime myTotalChargingTime;
-
-    // (pki): accumulated time the vehicle is standing on a charging space but is not charging
-    /// @brief Accumulated time the vehicle spend on a charging space without charging
-    SUMOTime myTotalBlockingTime;
-
-    // (pki): accumulated charge deltas
-    /// @brief Accumulated charged power
-    double myTotalEnergyCharged;
 
 private:
     /// @brief Invalidated copy constructor.

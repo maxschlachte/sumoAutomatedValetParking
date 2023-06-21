@@ -34,7 +34,7 @@
 
 GNEVType::GNEVType(GNENet* net) :
     GNEDemandElement("", net, GLO_VTYPE, SUMO_TAG_VTYPE, GNEPathManager::PathElement::Options::DEMAND_ELEMENT,
-{}, {}, {}, {}, {}, {}),
+{}, {}, {}, {}, {}, {}, {}, {}),
 SUMOVTypeParameter(""),
 myDefaultVehicleType(true),
 myDefaultVehicleTypeModified(false) {
@@ -47,12 +47,13 @@ myDefaultVehicleTypeModified(false) {
 
 GNEVType::GNEVType(GNENet* net, const std::string& vTypeID, const SUMOVehicleClass& defaultVClass) :
     GNEDemandElement(vTypeID, net, GLO_VTYPE, SUMO_TAG_VTYPE, GNEPathManager::PathElement::Options::DEMAND_ELEMENT,
-{}, {}, {}, {}, {}, {}),
+{}, {}, {}, {}, {}, {}, {}, {}),
 SUMOVTypeParameter(vTypeID),
 myDefaultVehicleType(true),
 myDefaultVehicleTypeModified(false) {
     // set default vehicle class
     vehicleClass = defaultVClass;
+    parametersSet |= VTYPEPARS_VEHICLECLASS_SET;
     // init Rail Visualization Parameters
     initRailVisualizationParameters();
 }
@@ -60,7 +61,7 @@ myDefaultVehicleTypeModified(false) {
 
 GNEVType::GNEVType(GNENet* net, const SUMOVTypeParameter& vTypeParameter) :
     GNEDemandElement(vTypeParameter.id, net, GLO_VTYPE, SUMO_TAG_VTYPE, GNEPathManager::PathElement::Options::DEMAND_ELEMENT,
-{}, {}, {}, {}, {}, {}),
+{}, {}, {}, {}, {}, {}, {}, {}),
 SUMOVTypeParameter(vTypeParameter),
 myDefaultVehicleType(false),
 myDefaultVehicleTypeModified(false) {
@@ -71,7 +72,7 @@ myDefaultVehicleTypeModified(false) {
 
 GNEVType::GNEVType(GNENet* net, const std::string& vTypeID, GNEVType* vTypeOriginal) :
     GNEDemandElement(vTypeID, net, GLO_VTYPE, vTypeOriginal->getTagProperty().getTag(), GNEPathManager::PathElement::Options::DEMAND_ELEMENT,
-{}, {}, {}, {}, {}, {}),
+{}, {}, {}, {}, {}, {}, {}, {}),
 SUMOVTypeParameter(*vTypeOriginal),
 myDefaultVehicleType(false),
 myDefaultVehicleTypeModified(false) {
@@ -95,7 +96,7 @@ void
 GNEVType::writeDemandElement(OutputDevice& device) const {
     // only write default vehicle types if it was modified
     if (myDefaultVehicleType) {
-        if (myDefaultVehicleTypeModified || (getParentDemandElements().size() > 0)) {
+        if (myDefaultVehicleTypeModified) {
             write(device);
         }
     } else {
@@ -219,7 +220,7 @@ GNEVType::getAttribute(SumoXMLAttr key) const {
     VClassDefaultValues defaultValues(vehicleClass);
     switch (key) {
         case SUMO_ATTR_ID:
-            return getMicrosimID();
+            return getID();
         case GNE_ATTR_VTYPE_DISTRIBUTION:
             if (getParentDemandElements().empty()) {
                 return "";
@@ -275,6 +276,12 @@ GNEVType::getAttribute(SumoXMLAttr key) const {
             /* case SUMO_ATTR_LCA_EXPERIMENTAL1: */
             return getLCParamString(key, myTagProperty.getDefaultValue(key));
         //
+        case SUMO_ATTR_COLLISION_MINGAP_FACTOR:
+        case SUMO_ATTR_TMP1:
+        case SUMO_ATTR_TMP2:
+        case SUMO_ATTR_TMP3:
+        case SUMO_ATTR_TMP4:
+        case SUMO_ATTR_TMP5:
         case SUMO_ATTR_CF_EIDM_USEVEHDYNAMICS:
         case SUMO_ATTR_CF_EIDM_MAX_VEH_PREVIEW:
         case SUMO_ATTR_CF_EIDM_T_LOOK_AHEAD:
@@ -290,13 +297,6 @@ GNEVType::getAttribute(SumoXMLAttr key) const {
         case SUMO_ATTR_CF_EIDM_T_ACC_MAX:
         case SUMO_ATTR_CF_EIDM_M_FLATNESS:
         case SUMO_ATTR_CF_EIDM_M_BEGIN:
-            return getCFParamString(key, myTagProperty.getDefaultValue(key));
-        case SUMO_ATTR_COLLISION_MINGAP_FACTOR:
-        case SUMO_ATTR_TMP1:
-        case SUMO_ATTR_TMP2:
-        case SUMO_ATTR_TMP3:
-        case SUMO_ATTR_TMP4:
-        case SUMO_ATTR_TMP5:
         case SUMO_ATTR_CF_PWAGNER2009_TAULAST:
         case SUMO_ATTR_CF_PWAGNER2009_APPROB:
         case SUMO_ATTR_CF_IDMM_ADAPT_FACTOR:
@@ -426,7 +426,7 @@ GNEVType::getAttribute(SumoXMLAttr key) const {
                     return toString(latAlignmentOffset);
                 }
             } else {
-                return toString(defaultValues.latAlignmentProcedure);
+                return myTagProperty.getDefaultValue(SUMO_ATTR_LATALIGNMENT);
             }
         case SUMO_ATTR_MINGAP_LAT:
             if (wasSet(VTYPEPARS_MINGAP_LAT_SET)) {
@@ -476,12 +476,14 @@ GNEVType::getAttribute(SumoXMLAttr key) const {
             return getParametersStr();
         // other
         case GNE_ATTR_DEFAULT_VTYPE:
-            return toString(myDefaultVehicleType);
+            return toString((getID() == DEFAULT_VTYPE_ID) ||
+                            (getID() == DEFAULT_PEDTYPE_ID) ||
+                            (getID() == DEFAULT_BIKETYPE_ID));
         case GNE_ATTR_DEFAULT_VTYPE_MODIFIED:
             if (myDefaultVehicleType) {
                 return toString(myDefaultVehicleTypeModified);
             } else {
-                return False;
+                return toString(false);
             }
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
@@ -681,9 +683,7 @@ GNEVType::isValid(SumoXMLAttr key, const std::string& value) {
     switch (key) {
         case SUMO_ATTR_ID:
             // Vtypes and PTypes shares namespace
-            if (value == getID()) {
-                return true;
-            } else if (SUMOXMLDefinitions::isValidVehicleID(value) && (myNet->getAttributeCarriers()->retrieveDemandElement(SUMO_TAG_VTYPE, value, false) == nullptr)) {
+            if (SUMOXMLDefinitions::isValidVehicleID(value) && (myNet->getAttributeCarriers()->retrieveDemandElement(SUMO_TAG_VTYPE, value, false) == nullptr)) {
                 return true;
             } else {
                 return false;
@@ -708,6 +708,21 @@ GNEVType::isValid(SumoXMLAttr key, const std::string& value) {
         case SUMO_ATTR_TMP3:
         case SUMO_ATTR_TMP4:
         case SUMO_ATTR_TMP5:
+        case SUMO_ATTR_CF_EIDM_USEVEHDYNAMICS:
+        case SUMO_ATTR_CF_EIDM_MAX_VEH_PREVIEW:
+        case SUMO_ATTR_CF_EIDM_T_LOOK_AHEAD:
+        case SUMO_ATTR_CF_EIDM_T_PERSISTENCE_DRIVE:
+        case SUMO_ATTR_CF_EIDM_T_REACTION:
+        case SUMO_ATTR_CF_EIDM_T_PERSISTENCE_ESTIMATE:
+        case SUMO_ATTR_CF_EIDM_C_COOLNESS:
+        case SUMO_ATTR_CF_EIDM_SIG_LEADER:
+        case SUMO_ATTR_CF_EIDM_SIG_GAP:
+        case SUMO_ATTR_CF_EIDM_SIG_ERROR:
+        case SUMO_ATTR_CF_EIDM_JERK_MAX:
+        case SUMO_ATTR_CF_EIDM_EPSILON_ACC:
+        case SUMO_ATTR_CF_EIDM_T_ACC_MAX:
+        case SUMO_ATTR_CF_EIDM_M_FLATNESS:
+        case SUMO_ATTR_CF_EIDM_M_BEGIN:
         case SUMO_ATTR_CF_PWAGNER2009_TAULAST:
         case SUMO_ATTR_CF_PWAGNER2009_APPROB:
         case SUMO_ATTR_CF_IDMM_ADAPT_FACTOR:
@@ -719,36 +734,6 @@ GNEVType::isValid(SumoXMLAttr key, const std::string& value) {
         case SUMO_ATTR_CF_IDM_DELTA:
         case SUMO_ATTR_CF_IDM_STEPPING:
             return canParse<double>(value);
-        case SUMO_ATTR_CF_EIDM_USEVEHDYNAMICS:
-            return canParse<bool>(value);
-        case SUMO_ATTR_CF_EIDM_MAX_VEH_PREVIEW:
-            return canParse<int>(value) && (parse<int>(value) >= 0);
-        case SUMO_ATTR_CF_EIDM_T_LOOK_AHEAD:
-            return canParse<double>(value) && (parse<double>(value) >= 1);
-        case SUMO_ATTR_CF_EIDM_T_PERSISTENCE_DRIVE:
-            return canParse<double>(value) && (parse<double>(value) >= 1);
-        case SUMO_ATTR_CF_EIDM_T_REACTION:
-            return canParse<double>(value) && (parse<double>(value) >= 0);
-        case SUMO_ATTR_CF_EIDM_T_PERSISTENCE_ESTIMATE:
-            return canParse<double>(value) && (parse<double>(value) >= 1);
-        case SUMO_ATTR_CF_EIDM_C_COOLNESS:
-            return canParse<double>(value) && (parse<double>(value) >= 0) && (parse<double>(value) <= 1);
-        case SUMO_ATTR_CF_EIDM_SIG_LEADER:
-            return canParse<double>(value) && (parse<double>(value) >= 0) && (parse<double>(value) <= 1);
-        case SUMO_ATTR_CF_EIDM_SIG_GAP:
-            return canParse<double>(value) && (parse<double>(value) >= 0) && (parse<double>(value) <= 1);
-        case SUMO_ATTR_CF_EIDM_SIG_ERROR:
-            return canParse<double>(value) && (parse<double>(value) >= 0) && (parse<double>(value) <= 1);
-        case SUMO_ATTR_CF_EIDM_JERK_MAX:
-            return canParse<double>(value) && (parse<double>(value) >= 1);
-        case SUMO_ATTR_CF_EIDM_EPSILON_ACC:
-            return canParse<double>(value) && (parse<double>(value) >= 0);
-        case SUMO_ATTR_CF_EIDM_T_ACC_MAX:
-            return canParse<double>(value) && (parse<double>(value) >= 0);
-        case SUMO_ATTR_CF_EIDM_M_FLATNESS:
-            return canParse<double>(value) && (parse<double>(value) >= 1) && (parse<double>(value) <= 5);
-        case SUMO_ATTR_CF_EIDM_M_BEGIN:
-            return canParse<double>(value) && (parse<double>(value) >= 0) && (parse<double>(value) <= 1.5);
         case SUMO_ATTR_TRAIN_TYPE:
             // rail string
             return SUMOXMLDefinitions::TrainTypes.hasString(value);
@@ -881,6 +866,18 @@ GNEVType::isValid(SumoXMLAttr key, const std::string& value) {
 }
 
 
+void
+GNEVType::enableAttribute(SumoXMLAttr /*key*/, GNEUndoList* /*undoList*/) {
+    // nothing to enable
+}
+
+
+void
+GNEVType::disableAttribute(SumoXMLAttr /*key*/, GNEUndoList* /*undoList*/) {
+    // nothing to disable
+}
+
+
 bool
 GNEVType::isAttributeEnabled(SumoXMLAttr key) const {
     switch (key) {
@@ -928,7 +925,7 @@ GNEVType::getHierarchyName() const {
 }
 
 
-const Parameterised::Map&
+const std::map<std::string, std::string>&
 GNEVType::getACParametersMap() const {
     return getParametersMap();
 }
@@ -936,7 +933,7 @@ GNEVType::getACParametersMap() const {
 
 void
 GNEVType::overwriteVType(GNEDemandElement* vType, const SUMOVTypeParameter newVTypeParameter, GNEUndoList* undoList) {
-    // open undo list and overwrite all values of default VType
+    // open undo list and overwritte all values of default VType
     undoList->begin(vType->getTagProperty().getGUIIcon(), "update default " + vType->getTagStr() + " '" + DEFAULT_VTYPE_ID + "'");
     // CFM values
     if (!newVTypeParameter.getCFParamString(SUMO_ATTR_ACCEL, "").empty()) {
@@ -1381,27 +1378,6 @@ GNEVType::setAttribute(SumoXMLAttr key, const std::string& value) {
         case SUMO_ATTR_TMP3:
         case SUMO_ATTR_TMP4:
         case SUMO_ATTR_TMP5:
-        case SUMO_ATTR_CF_PWAGNER2009_TAULAST:
-        case SUMO_ATTR_CF_PWAGNER2009_APPROB:
-        case SUMO_ATTR_CF_IDMM_ADAPT_FACTOR:
-        case SUMO_ATTR_CF_IDMM_ADAPT_TIME:
-        case SUMO_ATTR_CF_WIEDEMANN_SECURITY:
-        case SUMO_ATTR_CF_WIEDEMANN_ESTIMATION:
-        case SUMO_ATTR_TRAIN_TYPE:
-        case SUMO_ATTR_K:
-        case SUMO_ATTR_CF_KERNER_PHI:
-        case SUMO_ATTR_CF_IDM_DELTA:
-        case SUMO_ATTR_CF_IDM_STEPPING:
-            // empty values means that value isn't set
-            if (value.empty()) {
-                const auto it = cfParameter.find(key);
-                if (it != cfParameter.end()) {
-                    cfParameter.erase(it);
-                }
-            } else {
-                cfParameter[key] = value;
-            }
-            break;
         case SUMO_ATTR_CF_EIDM_USEVEHDYNAMICS:
         case SUMO_ATTR_CF_EIDM_MAX_VEH_PREVIEW:
         case SUMO_ATTR_CF_EIDM_T_LOOK_AHEAD:
@@ -1417,8 +1393,19 @@ GNEVType::setAttribute(SumoXMLAttr key, const std::string& value) {
         case SUMO_ATTR_CF_EIDM_T_ACC_MAX:
         case SUMO_ATTR_CF_EIDM_M_FLATNESS:
         case SUMO_ATTR_CF_EIDM_M_BEGIN:
-            // empty or default values means that value isn't set
-            if (value.empty() || (canParse<double>(value) && (parse<double>(value) == parse<double>(myTagProperty.getDefaultValue(key))))) {
+        case SUMO_ATTR_CF_PWAGNER2009_TAULAST:
+        case SUMO_ATTR_CF_PWAGNER2009_APPROB:
+        case SUMO_ATTR_CF_IDMM_ADAPT_FACTOR:
+        case SUMO_ATTR_CF_IDMM_ADAPT_TIME:
+        case SUMO_ATTR_CF_WIEDEMANN_SECURITY:
+        case SUMO_ATTR_CF_WIEDEMANN_ESTIMATION:
+        case SUMO_ATTR_TRAIN_TYPE:
+        case SUMO_ATTR_K:
+        case SUMO_ATTR_CF_KERNER_PHI:
+        case SUMO_ATTR_CF_IDM_DELTA:
+        case SUMO_ATTR_CF_IDM_STEPPING:
+            // empty values means that value isn't set
+            if (value.empty()) {
                 const auto it = cfParameter.find(key);
                 if (it != cfParameter.end()) {
                     cfParameter.erase(it);
@@ -1706,13 +1693,13 @@ GNEVType::setAttribute(SumoXMLAttr key, const std::string& value) {
             }
             break;
         case SUMO_ATTR_LATALIGNMENT:
-            if (!value.empty() && (value != toString(defaultValues.latAlignmentProcedure))) {
+            if (!value.empty() && (value != myTagProperty.getDefaultValue(key))) {
                 parseLatAlignment(value, latAlignmentOffset, latAlignmentProcedure);
                 // mark parameter as set
                 parametersSet |= VTYPEPARS_LATALIGNMENT_SET;
             } else {
                 // set default value
-                parseLatAlignment(toString(defaultValues.latAlignmentProcedure), latAlignmentOffset, latAlignmentProcedure);
+                parseLatAlignment(myTagProperty.getDefaultValue(key), latAlignmentOffset, latAlignmentProcedure);
                 // unset parameter
                 parametersSet &= ~VTYPEPARS_LATALIGNMENT_SET;
             }
@@ -1845,6 +1832,12 @@ GNEVType::setAttribute(SumoXMLAttr key, const std::string& value) {
     if (myTagProperty.hasAttribute(key) && (myTagProperty.getAttributeProperties(key).requireUpdateGeometry())) {
         updateGeometry();
     }
+}
+
+
+void
+GNEVType::toogleAttribute(SumoXMLAttr /*key*/, const bool /*value*/, const int /*previousParameters*/) {
+    // nothing to toogle
 }
 
 

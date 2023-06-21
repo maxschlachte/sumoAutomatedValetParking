@@ -13,9 +13,9 @@
 /****************************************************************************/
 /// @file    GUIOSGHeader.h
 /// @author  Pablo Alvarez lopez
-/// @date    March 2021
+/// @date    Marz 2021
 ///
-// Headers for OSG -- Oldest supported version is OSG 3.2.1
+// Headers for OSG
 /****************************************************************************/
 #pragma once
 #include <config.h>
@@ -46,7 +46,6 @@
 #include <osg/Group>
 #include <osg/Light>
 #include <osg/LightSource>
-#include <osg/Material>
 #include <osg/Node>
 #include <osg/PositionAttitudeTransform>
 #include <osg/Sequence>
@@ -62,7 +61,6 @@
 #include <osgGA/TerrainManipulator>
 #include <osgGA/TrackballManipulator>
 #include <osgUtil/Tessellator>
-#include <osgUtil/SmoothingVisitor>
 #include <osgViewer/Viewer>
 #include <osgViewer/ViewerEventHandlers>
 

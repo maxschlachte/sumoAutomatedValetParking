@@ -163,9 +163,9 @@ public:
 
     /// @brief
     void norm2d() {
-        const double val = sqrt(myX * myX + myY * myY);
-        myX /= val;
-        myY /= val;
+        double val = sqrt(myX * myX + myY * myY);
+        myX = myX / val;
+        myY = myY / val;
     }
 
     /// @brief output operator

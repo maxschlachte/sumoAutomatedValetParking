@@ -458,16 +458,14 @@ Person::rerouteTraveltime(const std::string& personID) {
 
 
 void
-Person::moveTo(const std::string& personID, const std::string& laneID, double pos, double posLat) {
+Person::moveTo(const std::string& personID, const std::string& edgeID, double position) {
     tcpip::Storage content;
     content.writeUnsignedByte(libsumo::TYPE_COMPOUND);
-    content.writeInt(3);
+    content.writeInt(2);
     content.writeUnsignedByte(libsumo::TYPE_STRING);
-    content.writeString(laneID);
+    content.writeString(edgeID);
     content.writeUnsignedByte(libsumo::TYPE_DOUBLE);
-    content.writeDouble(pos);
-    content.writeUnsignedByte(libsumo::TYPE_DOUBLE);
-    content.writeDouble(posLat);
+    content.writeDouble(position);
     Dom::set(libsumo::VAR_MOVE_TO, personID, &content);
 }
 

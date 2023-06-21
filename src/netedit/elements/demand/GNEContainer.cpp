@@ -62,7 +62,7 @@ GNEContainer::GNEContainerPopupMenu::GNEContainerPopupMenu(GNEContainer* contain
     myContainer->buildPopupHeader(this, app);
     // build menu command for center button and copy cursor position to clipboard
     myContainer->buildCenterPopupEntry(this);
-    myContainer->buildPositionCopyEntry(this, app);
+    myContainer->buildPositionCopyEntry(this, false);
     // buld menu commands for names
     GUIDesigns::buildFXMenuCommand(this, ("Copy " + myContainer->getTagStr() + " name to clipboard").c_str(), nullptr, this, MID_COPY_NAME);
     GUIDesigns::buildFXMenuCommand(this, ("Copy " + myContainer->getTagStr() + " typed name to clipboard").c_str(), nullptr, this, MID_COPY_TYPED_NAME);
@@ -78,7 +78,7 @@ GNEContainer::GNEContainerPopupMenu::GNEContainerPopupMenu(GNEContainer* contain
         new FXMenuCascade(this, "transform to", nullptr, transformOperation);
         // Create menu comands for all transformations
         myTransformToContainer = GUIDesigns::buildFXMenuCommand(transformOperation, "Container", GUIIconSubSys::getIcon(GUIIcon::CONTAINER), this, MID_GNE_CONTAINER_TRANSFORM);
-        myTransformToContainerFlow = GUIDesigns::buildFXMenuCommand(transformOperation, "ContainerFlow", GUIIconSubSys::getIcon(GUIIcon::CONTAINERFLOW), this, MID_GNE_CONTAINER_TRANSFORM);
+        myTransformToContainerFlow = GUIDesigns::buildFXMenuCommand(transformOperation, "Container (embedded route)", GUIIconSubSys::getIcon(GUIIcon::CONTAINERFLOW), this, MID_GNE_CONTAINER_TRANSFORM);
         // check what menu command has to be disabled
         if (myContainer->getTagProperty().getTag() == SUMO_TAG_CONTAINER) {
             myTransformToContainer->disable();
@@ -117,7 +117,7 @@ GNEContainer::GNESelectedContainersPopupMenu::GNESelectedContainersPopupMenu(GNE
     container->buildPopupHeader(this, app);
     // build menu command for center button and copy cursor position to clipboard
     container->buildCenterPopupEntry(this);
-    container->buildPositionCopyEntry(this, app);
+    container->buildPositionCopyEntry(this, false);
     // buld menu commands for names
     GUIDesigns::buildFXMenuCommand(this, ("Copy " + container->getTagStr() + " name to clipboard").c_str(), nullptr, this, MID_COPY_NAME);
     GUIDesigns::buildFXMenuCommand(this, ("Copy " + container->getTagStr() + " typed name to clipboard").c_str(), nullptr, this, MID_COPY_TYPED_NAME);
@@ -144,13 +144,13 @@ GNEContainer::GNESelectedContainersPopupMenu::~GNESelectedContainersPopupMenu() 
 long
 GNEContainer::GNESelectedContainersPopupMenu::onCmdTransform(FXObject* obj, FXSelector, void*) {
     // iterate over all selected containers
-    for (const auto& container : mySelectedContainers) {
+    for (const auto& i : mySelectedContainers) {
         if ((obj == myTransformToContainer) &&
-                (container->getTagProperty().getTag() == myContainerTag)) {
-            GNERouteHandler::transformToContainer(container);
+                (i->getTagProperty().getTag() == myContainerTag)) {
+            GNERouteHandler::transformToContainer(i);
         } else if ((obj == myTransformToContainerFlow) &&
-                   (container->getTagProperty().getTag() == myContainerTag)) {
-            GNERouteHandler::transformToContainer(container);
+                   (i->getTagProperty().getTag() == myContainerTag)) {
+            GNERouteHandler::transformToContainer(i);
         }
     }
     return 1;
@@ -162,23 +162,18 @@ GNEContainer::GNESelectedContainersPopupMenu::onCmdTransform(FXObject* obj, FXSe
 
 GNEContainer::GNEContainer(SumoXMLTag tag, GNENet* net) :
     GNEDemandElement("", net, GLO_CONTAINER, tag, GNEPathManager::PathElement::Options::DEMAND_ELEMENT,
-{}, {}, {}, {}, {}, {}) {
+{}, {}, {}, {}, {}, {}, {}, {}) {
     // reset default values
     resetDefaultValues();
-    // set end and vehPerHours
-    toggleAttribute(SUMO_ATTR_END, 1);
-    toggleAttribute(SUMO_ATTR_CONTAINERSPERHOUR, 1);
 }
 
 
 GNEContainer::GNEContainer(SumoXMLTag tag, GNENet* net, GNEDemandElement* pType, const SUMOVehicleParameter& containerparameters) :
     GNEDemandElement(containerparameters.id, net, (tag == SUMO_TAG_CONTAINERFLOW) ? GLO_CONTAINERFLOW : GLO_CONTAINER, tag, GNEPathManager::PathElement::Options::DEMAND_ELEMENT,
-{}, {}, {}, {}, {pType}, {}),
+{}, {}, {}, {}, {}, {}, {pType}, {}),
 SUMOVehicleParameter(containerparameters) {
     // set manually vtypeID (needed for saving)
     vtypeid = pType->getID();
-    // adjust default flow attributes
-    adjustDefaultFlowAttributes(this);
 }
 
 
@@ -206,8 +201,13 @@ GNEContainer::getMoveOperation() {
 
 std::string
 GNEContainer::getBegin() const {
-    // obtain depart
-    std::string departStr = depart < 0 ? "0.00" : time2string(depart);
+    // obtain depart depending if is a Container, trip or routeFlow
+    std::string departStr;
+    if (myTagProperty.getTag() == SUMO_TAG_CONTAINERFLOW) {
+        departStr = toString(depart);
+    } else {
+        departStr = getDepart();
+    }
     // we need to handle depart as a tuple of 20 numbers (format: 000000...00<departTime>)
     departStr.reserve(20 - departStr.size());
     // add 0s at the beginning of departStr until we have 20 numbers
@@ -221,7 +221,7 @@ GNEContainer::getBegin() const {
 void
 GNEContainer::writeDemandElement(OutputDevice& device) const {
     // attribute VType musn't be written if is DEFAULT_PEDTYPE_ID
-    if (getParentDemandElements().at(0)->getID() == DEFAULT_CONTAINERTYPE_ID) {
+    if (getParentDemandElements().at(0)->getID() == DEFAULT_PEDTYPE_ID) {
         // unset VType parameter
         parametersSet &= ~VEHPARS_VTYPE_SET;
         // write container attributes (VType will not be written)
@@ -247,9 +247,6 @@ GNEContainer::writeDemandElement(OutputDevice& device) const {
         if (isAttributeEnabled(SUMO_ATTR_PERIOD)) {
             device.writeAttr(SUMO_ATTR_PERIOD, time2string(repetitionOffset));
         }
-        if (isAttributeEnabled(GNE_ATTR_POISSON)) {
-            device.writeAttr(SUMO_ATTR_PERIOD, "exp(" + time2string(repetitionOffset) + ")");
-        }
         if (isAttributeEnabled(SUMO_ATTR_PROB)) {
             device.writeAttr(SUMO_ATTR_PROB, repetitionProbability);
         }
@@ -257,8 +254,8 @@ GNEContainer::writeDemandElement(OutputDevice& device) const {
     // write parameters
     writeParams(device);
     // write child demand elements associated to this container (Rides, Walks...)
-    for (const auto& containerPlan : getChildDemandElements()) {
-        containerPlan->writeDemandElement(device);
+    for (const auto& i : getChildDemandElements()) {
+        i->writeDemandElement(device);
     }
     // close container tag
     device.closeTag();
@@ -267,21 +264,15 @@ GNEContainer::writeDemandElement(OutputDevice& device) const {
 
 GNEDemandElement::Problem
 GNEContainer::isDemandElementValid() const {
-    if (getChildDemandElements().size() == 0) {
-        return Problem::NO_PLANS;
-    } else {
-        return Problem::OK;
-    }
+    // a single container is always valid
+    return Problem::OK;
 }
 
 
 std::string
 GNEContainer::getDemandElementProblem() const {
-    if (getChildDemandElements().size() == 0) {
-        return "Container needs at least one plan";
-    } else {
-        return "";
-    }
+    // A single container cannot habe problem (but their children)
+    return "";
 }
 
 
@@ -399,20 +390,16 @@ GNEContainer::drawGL(const GUIVisualizationSettings& s) const {
             glTranslated(containerPosition.x(), containerPosition.y(), 0);
             glRotated(90, 0, 0, 1);
             // set container color
-            GLHelper::setColor(color);
+            setColor(s);
             // set scale
             glScaled(exaggeration, exaggeration, 1);
             // draw container depending of detail level
-            switch (s.containerQuality) {
-                case 0:
-                case 1:
-                case 2:
-                    drawAction_drawAsPoly();
-                    break;
-                case 3:
-                default:
-                    drawAction_drawAsImage(s);
-                    break;
+            if (s.drawDetail(s.detailSettings.personShapes, exaggeration)) {
+                GUIBasePersonHelper::drawAction_drawAsImage(0, length, width, file, SUMOVehicleShape::PEDESTRIAN, exaggeration);
+            } else if (s.drawDetail(s.detailSettings.personCircles, exaggeration)) {
+                GUIBasePersonHelper::drawAction_drawAsCircle(length, width, s.scale * exaggeration);
+            } else if (s.drawDetail(s.detailSettings.personTriangles, exaggeration)) {
+                GUIBasePersonHelper::drawAction_drawAsTriangle(0, length, width);
             }
             // pop matrix
             GLHelper::popMatrix();
@@ -430,11 +417,11 @@ GNEContainer::drawGL(const GUIVisualizationSettings& s) const {
             // check if dotted contours has to be drawn
             if (myNet->getViewNet()->isAttributeCarrierInspected(this)) {
                 // draw using drawDottedSquaredShape
-                GUIDottedGeometry::drawDottedSquaredShape(GUIDottedGeometry::DottedContourType::INSPECT, s, containerPosition, 0.5, 0.2, -2.5, 0, 0, exaggeration);
+                GUIDottedGeometry::drawDottedSquaredShape(GUIDottedGeometry::DottedContourType::INSPECT, s, containerPosition, 0.5, 0.5, 0, 0, 0, exaggeration);
             }
             if (myNet->getViewNet()->getFrontAttributeCarrier() == this) {
                 // draw using drawDottedSquaredShape
-                GUIDottedGeometry::drawDottedSquaredShape(GUIDottedGeometry::DottedContourType::FRONT, s, containerPosition, 0.5, 0.2, -2.5, 0, 0, exaggeration);
+                GUIDottedGeometry::drawDottedSquaredShape(GUIDottedGeometry::DottedContourType::FRONT, s, containerPosition, 0.5, 0.5, 0, 0, 0, exaggeration);
             }
         }
     }
@@ -482,7 +469,7 @@ GNEContainer::getAttribute(SumoXMLAttr key) const {
     std::string error;
     switch (key) {
         case SUMO_ATTR_ID:
-            return getMicrosimID();
+            return getID();
         case SUMO_ATTR_TYPE:
             return getParentDemandElements().at(0)->getID();
         case SUMO_ATTR_COLOR:
@@ -499,17 +486,7 @@ GNEContainer::getAttribute(SumoXMLAttr key) const {
             }
         // Specific of containers
         case SUMO_ATTR_DEPART:
-            if (departProcedure == DepartDefinition::TRIGGERED) {
-                return "triggered";
-            } else if (departProcedure == DepartDefinition::CONTAINER_TRIGGERED) {
-                return "containerTriggered";
-            } else if (departProcedure == DepartDefinition::SPLIT) {
-                return "split";
-            } else if (departProcedure == DepartDefinition::NOW) {
-                return "now";
-            } else {
-                return time2string(depart);
-            }
+            return toString(depart);
         // Specific of containerFlows
         case SUMO_ATTR_BEGIN:
             return time2string(depart);
@@ -518,7 +495,6 @@ GNEContainer::getAttribute(SumoXMLAttr key) const {
         case SUMO_ATTR_CONTAINERSPERHOUR:
             return toString(3600 / STEPS2TIME(repetitionOffset));
         case SUMO_ATTR_PERIOD:
-        case GNE_ATTR_POISSON:
             return time2string(repetitionOffset);
         case SUMO_ATTR_PROB:
             return toString(repetitionProbability);
@@ -539,7 +515,11 @@ double
 GNEContainer::getAttributeDouble(SumoXMLAttr key) const {
     switch (key) {
         case SUMO_ATTR_DEPARTPOS:
-            return STEPS2TIME(depart);
+            if (departPosProcedure == DepartPosDefinition::GIVEN) {
+                return departPos;
+            } else {
+                return 0;
+            }
         default:
             throw InvalidArgument(getTagStr() + " doesn't have a double attribute of type '" + toString(key) + "'");
     }
@@ -557,7 +537,13 @@ GNEContainer::getAttributePosition(SumoXMLAttr key) const {
                 return containerPlan->getPositionInView();
             } else {
                 // declare lane lane
-                const GNELane* lane = containerPlan->getParentEdges().front()->getLaneByAllowedVClass(SVC_IGNORING);
+                GNELane* lane = nullptr;
+                // update lane
+                if (containerPlan->getTagProperty().getTag() == GNE_TAG_WALK_ROUTE) {
+                    lane = containerPlan->getParentDemandElements().at(1)->getParentEdges().front()->getLaneByAllowedVClass(getVClass());
+                } else {
+                    lane = containerPlan->getParentEdges().front()->getLaneByAllowedVClass(getVClass());
+                }
                 // get position over lane shape
                 if (departPos <= 0) {
                     return lane->getLaneShape().front();
@@ -589,7 +575,6 @@ GNEContainer::setAttribute(SumoXMLAttr key, const std::string& value, GNEUndoLis
         case SUMO_ATTR_NUMBER:
         case SUMO_ATTR_CONTAINERSPERHOUR:
         case SUMO_ATTR_PERIOD:
-        case GNE_ATTR_POISSON:
         case SUMO_ATTR_PROB:
         //
         case GNE_ATTR_PARAMETERS:
@@ -628,15 +613,20 @@ GNEContainer::isValid(SumoXMLAttr key, const std::string& value) {
             return error.empty();
         }
         // Specific of containers
-        case SUMO_ATTR_DEPART:
-        case SUMO_ATTR_BEGIN: {
-            SUMOTime dummyDepart;
-            DepartDefinition dummyDepartProcedure;
-            parseDepart(value, toString(SUMO_TAG_CONTAINER), id, dummyDepart, dummyDepartProcedure, error);
-            // if error is empty, given value is valid
-            return error.empty();
+        case SUMO_ATTR_DEPART: {
+            if (canParse<double>(value)) {
+                return (parse<double>(value) >= 0);
+            } else {
+                return false;
+            }
         }
         // Specific of containerflows
+        case SUMO_ATTR_BEGIN:
+            if (canParse<double>(value)) {
+                return (parse<double>(value) >= 0);
+            } else {
+                return false;
+            }
         case SUMO_ATTR_END:
             if (value.empty()) {
                 return true;
@@ -654,7 +644,6 @@ GNEContainer::isValid(SumoXMLAttr key, const std::string& value) {
                 return false;
             }
         case SUMO_ATTR_PERIOD:
-        case GNE_ATTR_POISSON:
             if (value.empty()) {
                 return true;
             } else if (canParse<double>(value)) {
@@ -694,7 +683,6 @@ GNEContainer::enableAttribute(SumoXMLAttr key, GNEUndoList* undoList) {
         case SUMO_ATTR_NUMBER:
         case SUMO_ATTR_CONTAINERSPERHOUR:
         case SUMO_ATTR_PERIOD:
-        case GNE_ATTR_POISSON:
         case SUMO_ATTR_PROB:
             undoList->add(new GNEChange_EnableAttribute(this, key, true, parametersSet), true);
             return;
@@ -705,19 +693,8 @@ GNEContainer::enableAttribute(SumoXMLAttr key, GNEUndoList* undoList) {
 
 
 void
-GNEContainer::disableAttribute(SumoXMLAttr key, GNEUndoList* undoList) {
-    switch (key) {
-        case SUMO_ATTR_END:
-        case SUMO_ATTR_NUMBER:
-        case SUMO_ATTR_CONTAINERSPERHOUR:
-        case SUMO_ATTR_PERIOD:
-        case GNE_ATTR_POISSON:
-        case SUMO_ATTR_PROB:
-            undoList->add(new GNEChange_EnableAttribute(this, key, false, parametersSet), true);
-            return;
-        default:
-            throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
-    }
+GNEContainer::disableAttribute(SumoXMLAttr /*key*/, GNEUndoList* /*undoList*/) {
+    // nothing to disable
 }
 
 
@@ -732,8 +709,6 @@ GNEContainer::isAttributeEnabled(SumoXMLAttr key) const {
             return (parametersSet & VEHPARS_VPH_SET) != 0;
         case SUMO_ATTR_PERIOD:
             return (parametersSet & VEHPARS_PERIOD_SET) != 0;
-        case GNE_ATTR_POISSON:
-            return (parametersSet & VEHPARS_POISSON_SET) != 0;
         case SUMO_ATTR_PROB:
             return (parametersSet & VEHPARS_PROB_SET) != 0;
         default:
@@ -774,7 +749,7 @@ GNEContainer::getHierarchyName() const {
 }
 
 
-const Parameterised::Map&
+const std::map<std::string, std::string>&
 GNEContainer::getACParametersMap() const {
     return getParametersMap();
 }
@@ -784,51 +759,59 @@ GNEContainer::getACParametersMap() const {
 // ===========================================================================
 
 void
-GNEContainer::drawAction_drawAsPoly() const {
-    // obtain width and length
-    const double length = getParentDemandElements().at(0)->getAttributeDouble(SUMO_ATTR_LENGTH);
-    const double width = getParentDemandElements().at(0)->getAttributeDouble(SUMO_ATTR_WIDTH);
-    // draw pedestrian shape
-    glScaled(length * 0.2, width * 0.2, 1);
-    glBegin(GL_QUADS);
-    glVertex2d(0, 0.5);
-    glVertex2d(0, -0.5);
-    glVertex2d(-1, -0.5);
-    glVertex2d(-1, 0.5);
-    glEnd();
-    GLHelper::setColor(GLHelper::getColor().changedBrightness(-30));
-    glTranslated(0, 0, .045);
-    glBegin(GL_QUADS);
-    glVertex2d(-0.1, 0.4);
-    glVertex2d(-0.1, -0.4);
-    glVertex2d(-0.9, -0.4);
-    glVertex2d(-0.9, 0.4);
-    glEnd();
+GNEContainer::setColor(const GUIVisualizationSettings& s) const {
+    const GUIColorer& c = s.containerColorer;
+    if (!setFunctionalColor(c.getActive())) {
+        GLHelper::setColor(c.getScheme().getColor(getColorValue(s, c.getActive())));
+    }
 }
 
 
-void
-GNEContainer::drawAction_drawAsImage(const GUIVisualizationSettings& s) const {
-    const std::string& file = getParentDemandElements().at(0)->getAttribute(SUMO_ATTR_IMGFILE);
-    // obtain width and length
-    const double length = getParentDemandElements().at(0)->getAttributeDouble(SUMO_ATTR_LENGTH);
-    const double width = getParentDemandElements().at(0)->getAttributeDouble(SUMO_ATTR_WIDTH);
-    if (file != "") {
-        // @todo invent an option for controlling whether images should be rotated or not
-        //if (getVehicleType().getGuiShape() == SVS_CONTAINER) {
-        //    glRotated(RAD2DEG(getAngle() + M_PI / 2.), 0, 0, 1);
-        //}
-        int textureID = GUITexturesHelper::getTextureID(file);
-        if (textureID > 0) {
-            const double exaggeration = s.personSize.getExaggeration(s, this);
-            const double halfLength = length / 2.0 * exaggeration;
-            const double halfWidth = width / 2.0 * exaggeration;
-            GUITexturesHelper::drawTexturedBox(textureID, -halfWidth, -halfLength, halfWidth, halfLength);
+bool
+GNEContainer::setFunctionalColor(int /* activeScheme */) const {
+    /*
+    switch (activeScheme) {
+        case 0: {
+            if (getParameter().wasSet(VEHPARS_COLOR_SET)) {
+                GLHelper::setColor(getParameter().color);
+                return true;
+            }
+            if (getVehicleType().wasSet(VTYPEPARS_COLOR_SET)) {
+                GLHelper::setColor(getVehicleType().getColor());
+                return true;
+            }
+            return false;
         }
-    } else {
-        // fallback if no image is defined
-        drawAction_drawAsPoly();
+        case 2: {
+            if (getParameter().wasSet(VEHPARS_COLOR_SET)) {
+                GLHelper::setColor(getParameter().color);
+                return true;
+            }
+            return false;
+        }
+        case 3: {
+            if (getVehicleType().wasSet(VTYPEPARS_COLOR_SET)) {
+                GLHelper::setColor(getVehicleType().getColor());
+                return true;
+            }
+            return false;
+        }
+        case 8: { // color by angle
+            double hue = GeomHelper::naviDegree(getAngle());
+            GLHelper::setColor(RGBColor::fromHSV(hue, 1., 1.));
+            return true;
+        }
+        case 9: { // color randomly (by pointer)
+            const double hue = (long)this % 360; // [0-360]
+            const double sat = (((long)this / 360) % 67) / 100.0 + 0.33; // [0.33-1]
+            GLHelper::setColor(RGBColor::fromHSV(hue, sat, 1.));
+            return true;
+        }
+        default:
+            return false;
     }
+    */
+    return false;
 }
 
 // ===========================================================================
@@ -863,11 +846,9 @@ GNEContainer::setAttribute(SumoXMLAttr key, const std::string& value) {
             }
             break;
         case SUMO_ATTR_TYPE:
-            if (getID().size() > 0) {
-                replaceDemandElementParent(SUMO_TAG_VTYPE, value, 0);
-                // set manually vtypeID (needed for saving)
-                vtypeid = value;
-            }
+            replaceDemandElementParent(SUMO_TAG_VTYPE, value, 0);
+            // set manually vtypeID (needed for saving)
+            vtypeid = value;
             break;
         case SUMO_ATTR_COLOR:
             if (!value.empty() && (value != myTagProperty.getDefaultValue(key))) {
@@ -896,9 +877,13 @@ GNEContainer::setAttribute(SumoXMLAttr key, const std::string& value) {
             updateGeometry();
             break;
         // Specific of containers
-        case SUMO_ATTR_DEPART:
+        case SUMO_ATTR_DEPART: {
+            parseDepart(value, toString(SUMO_TAG_VEHICLE), id, depart, departProcedure, error);
+            break;
+        }
+        // Specific of containerFlows
         case SUMO_ATTR_BEGIN: {
-            parseDepart(value, toString(SUMO_TAG_CONTAINER), id, depart, departProcedure, error);
+            depart = string2time(value);
             break;
         }
         case SUMO_ATTR_END:
@@ -908,7 +893,6 @@ GNEContainer::setAttribute(SumoXMLAttr key, const std::string& value) {
             repetitionOffset = TIME2STEPS(3600 / parse<double>(value));
             break;
         case SUMO_ATTR_PERIOD:
-        case GNE_ATTR_POISSON:
             repetitionOffset = string2time(value);
             break;
         case SUMO_ATTR_PROB:
@@ -935,9 +919,12 @@ GNEContainer::setAttribute(SumoXMLAttr key, const std::string& value) {
 
 
 void
-GNEContainer::toggleAttribute(SumoXMLAttr key, const bool value) {
-    // set flow parameters
-    setFlowParameters(this, key, value);
+GNEContainer::toogleAttribute(SumoXMLAttr key, const bool value, const int previousParameters) {
+    if (value) {
+        GNERouteHandler::setFlowParameters(key, parametersSet);
+    } else {
+        parametersSet = previousParameters;
+    }
 }
 
 

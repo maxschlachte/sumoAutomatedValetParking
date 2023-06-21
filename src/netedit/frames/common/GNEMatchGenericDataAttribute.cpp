@@ -50,7 +50,7 @@ FXIMPLEMENT(GNEMatchGenericDataAttribute, FXGroupBoxModule, GNEMatchGenericDataA
 // ===========================================================================
 
 GNEMatchGenericDataAttribute::GNEMatchGenericDataAttribute(GNEElementSet* elementSet, SumoXMLTag defaultTag, SumoXMLAttr defaultAttr, const std::string& defaultValue) :
-    FXGroupBoxModule(elementSet->getSelectorFrameParent(), "Match GenericData Attribute"),
+    FXGroupBoxModule(elementSet->getSelectorFrameParent()->getContentFrame(), "Match GenericData Attribute"),
     myElementSet(elementSet),
     myIntervalSelector(nullptr),
     myBegin(nullptr),
@@ -62,13 +62,13 @@ GNEMatchGenericDataAttribute::GNEMatchGenericDataAttribute(GNEElementSet* elemen
     myMatchGenericDataString(nullptr) {
     // Create MFXIconComboBox for interval
     new FXLabel(getCollapsableFrame(), "Interval [begin, end]", nullptr, GUIDesignLabelThick);
-    myIntervalSelector = new MFXIconComboBox(getCollapsableFrame(), GUIDesignComboBoxNCol, true, this, MID_GNE_SELECTORFRAME_SETINTERVAL, GUIDesignComboBoxStaticExtended);
+    myIntervalSelector = new MFXIconComboBox(getCollapsableFrame(), GUIDesignComboBoxNCol, this, MID_GNE_SELECTORFRAME_SETINTERVAL, GUIDesignComboBoxStaticExtended);
     // Create textfield for begin and end
     FXHorizontalFrame* myHorizontalFrameBeginEnd = new FXHorizontalFrame(getCollapsableFrame(), GUIDesignAuxiliarHorizontalFrame);
     myBegin = new FXTextField(myHorizontalFrameBeginEnd, GUIDesignTextFieldNCol, this, MID_GNE_SELECTORFRAME_SETBEGIN, GUIDesignTextField);
     myEnd = new FXTextField(myHorizontalFrameBeginEnd, GUIDesignTextFieldNCol, this, MID_GNE_SELECTORFRAME_SETEND, GUIDesignTextField);
     // Create MFXIconComboBox for generic datas
-    myMatchGenericDataTagComboBox = new MFXIconComboBox(getCollapsableFrame(), GUIDesignComboBoxNCol, true, this, MID_GNE_SELECTORFRAME_SELECTTAG, GUIDesignComboBox);
+    myMatchGenericDataTagComboBox = new MFXIconComboBox(getCollapsableFrame(), GUIDesignComboBoxNCol, this, MID_GNE_SELECTORFRAME_SELECTTAG, GUIDesignComboBox);
     // Create listBox for Attributes
     myMatchGenericDataAttrComboBox = new FXComboBox(getCollapsableFrame(), GUIDesignComboBoxNCol, this, MID_GNE_SELECTORFRAME_SELECTATTRIBUTE, GUIDesignComboBox);
     // Create TextField for MatchGenericData string
@@ -199,8 +199,6 @@ GNEMatchGenericDataAttribute::onCmdSetBegin(FXObject*, FXSelector, void*) {
     // check if can be parsed to double
     if (GNEAttributeCarrier::canParse<double>(myBegin->getText().text()) &&
             GNEAttributeCarrier::canParse<double>(myEnd->getText().text())) {
-        // set value in double format
-        myBegin->setText(toString(GNEAttributeCarrier::parse<double>(myBegin->getText().text())).c_str());
         // set valid color text and kill focus
         myBegin->setTextColor(FXRGB(0, 0, 0));
         myBegin->killFocus();
@@ -227,8 +225,6 @@ GNEMatchGenericDataAttribute::onCmdSetEnd(FXObject*, FXSelector, void*) {
     // check if can be parsed to double
     if (GNEAttributeCarrier::canParse<double>(myBegin->getText().text()) &&
             GNEAttributeCarrier::canParse<double>(myEnd->getText().text())) {
-        // set value in double format
-        myEnd->setText(toString(GNEAttributeCarrier::parse<double>(myEnd->getText().text())).c_str());
         // set valid color text and kill focus
         myEnd->setTextColor(FXRGB(0, 0, 0));
         myEnd->killFocus();

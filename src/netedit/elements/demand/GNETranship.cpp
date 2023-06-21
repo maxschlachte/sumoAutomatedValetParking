@@ -36,10 +36,10 @@
 
 GNETranship::GNETranship(SumoXMLTag tag, GNENet* net) :
     GNEDemandElement("", net, GLO_TRANSHIP, tag, GNEPathManager::PathElement::Options::DEMAND_ELEMENT,
-{}, {}, {}, {}, {}, {}),
+{}, {}, {}, {}, {}, {}, {}, {}),
 mySpeed(0),
 myDepartPosition(0),
-myArrivalPosition(-1) {
+myArrivalPosition(0) {
     // reset default values
     resetDefaultValues();
 }
@@ -48,7 +48,7 @@ myArrivalPosition(-1) {
 GNETranship::GNETranship(GNENet* net, GNEDemandElement* containerParent, GNEEdge* fromEdge, GNEEdge* toEdge,
                          const double speed, const double departPosition, const double arrivalPosition) :
     GNEDemandElement(containerParent, net, GLO_TRANSHIP, GNE_TAG_TRANSHIP_EDGE, GNEPathManager::PathElement::Options::DEMAND_ELEMENT,
-{}, {fromEdge, toEdge}, {}, {}, {containerParent}, {}),
+{}, {fromEdge, toEdge}, {}, {}, {}, {}, {containerParent}, {}),
 mySpeed(speed),
 myDepartPosition(departPosition),
 myArrivalPosition(arrivalPosition) {
@@ -58,7 +58,7 @@ myArrivalPosition(arrivalPosition) {
 GNETranship::GNETranship(GNENet* net, GNEDemandElement* containerParent, GNEEdge* fromEdge, GNEAdditional* toContainerStop,
                          const double speed, const double departPosition, const double arrivalPosition) :
     GNEDemandElement(containerParent, net, GLO_TRANSHIP, GNE_TAG_TRANSHIP_CONTAINERSTOP, GNEPathManager::PathElement::Options::DEMAND_ELEMENT,
-{}, {fromEdge}, {}, {toContainerStop}, {containerParent}, {}),
+{}, {fromEdge}, {}, {toContainerStop}, {}, {}, {containerParent}, {}),
 mySpeed(speed),
 myDepartPosition(departPosition),
 myArrivalPosition(arrivalPosition) {
@@ -68,7 +68,7 @@ myArrivalPosition(arrivalPosition) {
 GNETranship::GNETranship(GNENet* net, GNEDemandElement* containerParent, std::vector<GNEEdge*> edges,
                          const double speed, const double departPosition, const double arrivalPosition) :
     GNEDemandElement(containerParent, net, GLO_TRANSHIP, GNE_TAG_TRANSHIP_EDGES, GNEPathManager::PathElement::Options::DEMAND_ELEMENT,
-{}, {edges}, {}, {}, {containerParent}, {}),
+{}, {edges}, {}, {}, {}, {}, {containerParent}, {}),
 mySpeed(speed),
 myDepartPosition(departPosition),
 myArrivalPosition(arrivalPosition) {
@@ -109,7 +109,7 @@ GNETranship::getPopUpMenu(GUIMainWindow& app, GUISUMOAbstractView& parent) {
     buildPopupHeader(ret, app);
     // build menu command for center button and copy cursor position to clipboard
     buildCenterPopupEntry(ret);
-    buildPositionCopyEntry(ret, app);
+    buildPositionCopyEntry(ret, false);
     // buld menu commands for names
     GUIDesigns::buildFXMenuCommand(ret, "Copy " + getTagStr() + " name to clipboard", nullptr, ret, MID_COPY_NAME);
     GUIDesigns::buildFXMenuCommand(ret, "Copy " + getTagStr() + " typed name to clipboard", nullptr, ret, MID_COPY_TYPED_NAME);
@@ -159,13 +159,38 @@ GNETranship::writeDemandElement(OutputDevice& device) const {
 
 GNEDemandElement::Problem
 GNETranship::isDemandElementValid() const {
-    return Problem::OK;
+    if (getParentEdges().size() == 2) {
+        if (getParentEdges().at(0) == getParentEdges().at(1)) {
+            // from and to are the same edges, then path is valid
+            return Problem::OK;
+        } else {
+            // check if exist a route between parent edges
+            if (myNet->getPathManager()->getPathCalculator()->calculateDijkstraPath(getParentDemandElements().at(0)->getVClass(), getParentEdges()).size() > 0) {
+                return Problem::OK;
+            } else {
+                return Problem::INVALID_PATH;
+            }
+        }
+    } else {
+        return Problem::INVALID_ELEMENT;
+    }
 }
 
 
 std::string
 GNETranship::getDemandElementProblem() const {
-    return "";
+    if (getParentEdges().size() == 0) {
+        return ("A tranship need at least one edge");
+    } else {
+        // check if exist at least a connection between every edge
+        for (int i = 1; i < (int)getParentEdges().size(); i++) {
+            if (myNet->getPathManager()->getPathCalculator()->consecutiveEdgesConnected(getParentDemandElements().front()->getVClass(), getParentEdges().at((int)i - 1), getParentEdges().at(i)) == false) {
+                return ("Edge '" + getParentEdges().at((int)i - 1)->getID() + "' and edge '" + getParentEdges().at(i)->getID() + "' aren't consecutives");
+            }
+        }
+        // there is connections bewteen all edges, then all ok
+        return "";
+    }
 }
 
 
@@ -300,7 +325,6 @@ GNETranship::getAttribute(SumoXMLAttr key) const {
     switch (key) {
         // Common container plan attributes
         case SUMO_ATTR_ID:
-        case GNE_ATTR_PARENT:
             return getParentDemandElements().front()->getID();
         case SUMO_ATTR_FROM:
             return getParentEdges().front()->getID();
@@ -329,6 +353,8 @@ GNETranship::getAttribute(SumoXMLAttr key) const {
             return toString(isAttributeCarrierSelected());
         case GNE_ATTR_PARAMETERS:
             return getParametersStr();
+        case GNE_ATTR_PARENT:
+            return getParentDemandElements().front()->getID();
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
@@ -383,7 +409,6 @@ GNETranship::setAttribute(SumoXMLAttr key, const std::string& value, GNEUndoList
         case SUMO_ATTR_DEPARTPOS:
         case SUMO_ATTR_ARRIVALPOS:
         case GNE_ATTR_SELECTED:
-        case GNE_ATTR_PARENT:
         case GNE_ATTR_PARAMETERS:
             undoList->changeAttribute(new GNEChange_Attribute(this, key, value));
             break;
@@ -465,9 +490,6 @@ GNETranship::isValid(SumoXMLAttr key, const std::string& value) {
             if (value.empty()) {
                 return true;
             } else if (canParse<double>(value)) {
-                if (isTemplate()) {
-                    return true;
-                }
                 const double parsedValue = canParse<double>(value);
                 if ((parsedValue < 0) || (parsedValue > getFirstPathLane()->getLaneShape().length())) {
                     return false;
@@ -481,9 +503,6 @@ GNETranship::isValid(SumoXMLAttr key, const std::string& value) {
             if (value.empty()) {
                 return true;
             } else if (canParse<double>(value)) {
-                if (isTemplate()) {
-                    return true;
-                }
                 const double parsedValue = canParse<double>(value);
                 if ((parsedValue < 0) || (parsedValue > getLastPathLane()->getLaneShape().length())) {
                     return false;
@@ -497,17 +516,21 @@ GNETranship::isValid(SumoXMLAttr key, const std::string& value) {
             return canParse<bool>(value);
         case GNE_ATTR_PARAMETERS:
             return Parameterised::areParametersValid(value);
-        case GNE_ATTR_PARENT:
-            if (myNet->getAttributeCarriers()->retrieveDemandElement(SUMO_TAG_CONTAINER, value, false) != nullptr) {
-                return true;
-            } else if (myNet->getAttributeCarriers()->retrieveDemandElement(SUMO_TAG_CONTAINERFLOW, value, false) != nullptr) {
-                return true;
-            } else {
-                return false;
-            }
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
+}
+
+
+void
+GNETranship::enableAttribute(SumoXMLAttr /*key*/, GNEUndoList* /*undoList*/) {
+    //
+}
+
+
+void
+GNETranship::disableAttribute(SumoXMLAttr /*key*/, GNEUndoList* /*undoList*/) {
+    //
 }
 
 
@@ -541,7 +564,7 @@ GNETranship::getHierarchyName() const {
 }
 
 
-const Parameterised::Map&
+const std::map<std::string, std::string>&
 GNETranship::getACParametersMap() const {
     return getParametersMap();
 }
@@ -606,17 +629,15 @@ GNETranship::setAttribute(SumoXMLAttr key, const std::string& value) {
         case GNE_ATTR_PARAMETERS:
             setParametersStr(value);
             break;
-        case GNE_ATTR_PARENT:
-            if (myNet->getAttributeCarriers()->retrieveDemandElement(SUMO_TAG_CONTAINER, value, false) != nullptr) {
-                replaceDemandElementParent(SUMO_TAG_CONTAINER, value, 0);
-            } else if (myNet->getAttributeCarriers()->retrieveDemandElement(SUMO_TAG_CONTAINERFLOW, value, false) != nullptr) {
-                replaceDemandElementParent(SUMO_TAG_CONTAINERFLOW, value, 0);
-            }
-            updateGeometry();
-            break;
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
+}
+
+
+void
+GNETranship::toogleAttribute(SumoXMLAttr /*key*/, const bool /*value*/, const int /*previousParameters*/) {
+    // nothing to toogle
 }
 
 

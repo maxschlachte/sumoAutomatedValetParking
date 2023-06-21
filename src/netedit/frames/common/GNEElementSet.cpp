@@ -45,19 +45,19 @@ FXIMPLEMENT(GNEElementSet, FXGroupBoxModule, GNEElementSetMap, ARRAYNUMBER(GNEEl
 
 GNEElementSet::GNEElementSet(GNESelectorFrame* selectorFrameParent, Supermode supermode,
                              SumoXMLTag defaultTag, SumoXMLAttr defaultAttr, const std::string& defaultValue) :
-    FXGroupBoxModule(selectorFrameParent, "Element Set"),
+    FXGroupBoxModule(selectorFrameParent->getContentFrame(), "Element Set"),
     mySelectorFrameParent(selectorFrameParent),
     myMatchAttribute(nullptr),
     myMatchGenericDataAttribute(nullptr),
     myCurrentSet(Type::INVALID) {
     // Create MatchTagBox for tags and fill it
-    mySetComboBox = new MFXIconComboBox(getCollapsableFrame(), GUIDesignComboBoxNCol, true, this, MID_CHOOSEN_ELEMENTS, GUIDesignComboBox);
+    mySetComboBox = new MFXIconComboBox(getCollapsableFrame(), GUIDesignComboBoxNCol, this, MID_CHOOSEN_ELEMENTS, GUIDesignComboBox);
     // continue depending of supermode
     if (supermode == Supermode::NETWORK) {
         // append elements
         mySetComboBox->appendIconItem("Network", GUIIconSubSys::getIcon(GUIIcon::MODECREATEEDGE));
         mySetComboBox->appendIconItem("Additional", GUIIconSubSys::getIcon(GUIIcon::MODEADDITIONAL));
-        mySetComboBox->appendIconItem("Shape", GUIIconSubSys::getIcon(GUIIcon::MODESHAPE));
+        mySetComboBox->appendIconItem("Shape", GUIIconSubSys::getIcon(GUIIcon::MODEPOLYGON));
         mySetComboBox->appendIconItem("TAZ", GUIIconSubSys::getIcon(GUIIcon::MODETAZ));
         // set default set
         myCurrentSet = Type::NETWORK;

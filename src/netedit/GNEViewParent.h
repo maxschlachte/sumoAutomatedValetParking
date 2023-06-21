@@ -23,7 +23,6 @@
 #pragma once
 #include <config.h>
 
-#include <utils/foxtools/MFXButtonTooltip.h>
 #include <utils/gui/windows/GUIGlChildWindow.h>
 
 
@@ -47,9 +46,8 @@ class GNEAdditionalFrame;
 class GNEConnectorFrame;
 class GNECreateEdgeFrame;
 class GNECrossingFrame;
-class GNEShapeFrame;
+class GNEPolygonFrame;
 class GNEProhibitionFrame;
-class GNEWireFrame;
 class GNETAZFrame;
 class GNETLSEditorFrame;
 // demand frames
@@ -143,14 +141,11 @@ public:
     /// @brief get frame for NETWORK_TAZ
     GNETAZFrame* getTAZFrame() const;
 
-    /// @brief get frame for NETWORK_SHAPE
-    GNEShapeFrame* getShapeFrame() const;
+    /// @brief get frame for NETWORK_POLYGON
+    GNEPolygonFrame* getPolygonFrame() const;
 
     /// @brief get frame for NETWORK_PROHIBITION
     GNEProhibitionFrame* getProhibitionFrame() const;
-
-    /// @brief get frame for NETWORK_WIRE
-    GNEWireFrame* getWireFrame() const;
 
     /// @brief get frame for NETWORK_CREATEEDGE
     GNECreateEdgeFrame* getCreateEdgeFrame() const;
@@ -208,12 +203,6 @@ public:
     /// @brief update toolbar undo/redo buttons (called when user press Ctrl+Z/Y)
     void updateUndoRedoButtons();
 
-    /// @brief get frame area width
-    int getFrameAreaWith() const;
-
-    /// @brief set frame area width
-    void setFrameAreaWith(const int frameAreaWith);
-
     /// @name FOX-callbacks
     /// @{
     /// @brief Called if the user wants to make a snapshot (screenshot)
@@ -234,6 +223,9 @@ public:
     /// @brief Called when user change the splitter between FrameArea and ViewNet
     long onCmdUpdateFrameAreaWidth(FXObject*, FXSelector, void*);
     /// @}
+
+    std::vector<GUIGlID> getObjectIDs(int messageId) const;
+
 
 protected:
     FOX_CONSTRUCTOR(GNEViewParent)
@@ -263,7 +255,7 @@ protected:
         /// @brief frame for inspect elements
         GNEInspectorFrame* inspectorFrame;
 
-        /// @brief frame for delete elements
+        /// @brief frame for delete elemetns
         GNEDeleteFrame* deleteFrame;
 
         /// @brief frame for select elements
@@ -310,14 +302,11 @@ protected:
         /// @brief frame for NETWORK_TAZ
         GNETAZFrame* TAZFrame;
 
-        /// @brief frame for NETWORK_SHAPE
-        GNEShapeFrame* polygonFrame;
+        /// @brief frame for NETWORK_POLYGON
+        GNEPolygonFrame* polygonFrame;
 
         /// @brief frame for NETWORK_PROHIBITION
         GNEProhibitionFrame* prohibitionFrame;
-
-        /// @brief frame for NETWORK_WIRE
-        GNEWireFrame* wireFrame;
 
         /// @brief frame for NETWORK_CREATEDGE
         GNECreateEdgeFrame* createEdgeFrame;
@@ -418,9 +407,6 @@ protected:
         /// @brief pointer to ACChooser dialog used for locate edges
         GNEDialogACChooser* ACChooserEdges;
 
-        /// @brief pointer to ACChooser dialog used for locate walkingareas
-        GNEDialogACChooser* ACChooserWalkingAreas;
-
         /// @brief pointer to ACChooser dialog used for locate vehicles
         GNEDialogACChooser* ACChooserVehicles;
 
@@ -447,9 +433,6 @@ protected:
 
         /// @brief pointer to ACChooser dialog used for locate Prohibitions
         GNEDialogACChooser* ACChooserProhibition;
-
-        /// @brief pointer to ACChooser dialog used for locate Wires
-        GNEDialogACChooser* ACChooserWire;
     };
 
 private:
@@ -463,13 +446,13 @@ private:
     FXHorizontalFrame* myFramesArea;
 
     /// @brief toolbar undo button
-    MFXButtonTooltip* myUndoButton;
+    FXButton* myUndoButton;
 
     /// @brief toolbar redo button
-    MFXButtonTooltip* myRedoButton;
+    FXButton* myRedoButton;
 
     /// @brief compute Path manager button
-    MFXButtonTooltip* myComputePathManagerButton;
+    FXButton* myComputePathManagerButton;
 
     /// @brief Splitter to divide ViewNet und GNEFrames
     FXSplitter* myFramesSplitter;

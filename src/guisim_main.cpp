@@ -83,7 +83,7 @@ main(int argc, char** argv) {
         GUIApplicationWindow* window =
             new GUIApplicationWindow(&application, "*.sumo.cfg,*.sumocfg");
         gSchemeStorage.init(&application);
-        window->dependentBuild(false);
+        window->dependentBuild();
         // Create app
         application.addSignal(SIGINT, window, MID_HOTKEY_CTRL_Q_CLOSE);
         application.create();
@@ -92,7 +92,6 @@ main(int argc, char** argv) {
             window->loadOnStartup();
         }
         // Run
-        window->setFocus();
         ret = application.run();
     } catch (const ProcessError& e) {
         if (std::string(e.what()) != std::string("Process Error") && std::string(e.what()) != std::string("")) {

@@ -88,8 +88,8 @@ and committing the changes after careful inspection
   - modify the version number (Version) and the release date (ReleaseDate)
     [in mkdocs.yml]({{Source}}docs/web/mkdocs.yml) in the **extra:** section at the end
     to update the [download links](../Downloads.md)
-  - add the new version and the release date [to sumo.metainfo.xml]({{Source}}build/package/sumo.metainfo.xml)
-    for correct flatpak info
+- update the eclipse.org/sumo website
+  - modify the version number (Version) [in config.toml](https://github.com/eclipse/sumo.website/blob/master/config.toml) in the **Default Parameters** section at the beginning
 - If it is the first release of the year, create a new Eclipse release at https://projects.eclipse.org/projects/automotive.sumo (after login there should be a "Create Release" button)
   - add an IP Log to the release
   - send an email to the PMC at automotive-pmc@eclipse.org asking for review (include links to the release and the IP log)
@@ -125,14 +125,12 @@ If everything is fine:
 - make a new folder in S:\Releases
 - make new sumo.dlr.de-release
   - copy the folder from S:\Releases to the releases dir `scp -r /media/S/Releases/x.y.z delphi@ts-sim-front-ba.intra.dlr.de:docs/releases`
-- update the eclipse.org/sumo website
-  - modify the version number (Version) [in config.toml](https://github.com/eclipse/sumo.website/blob/main/config.toml) in the **Default Parameters** section at the beginning
 - make new sourceforge-release
   - make a new release within the sumo package (named "version x.y.z")
   - add files to the release
   - change default download attributes
   - update files at the [opensuse build
-    service](https://build.opensuse.org/package/show/science:dlr/sumo)
+    service](https://build.opensuse.org/package/show/home:behrisch/sumo)
 - update the ubuntu ppa (see
 <https://askubuntu.com/questions/642632/how-to-bump-the-version-of-a-package-available-in-another-users-ppa>)
   - this assumes you have the devscripts package as well as all sumo dependencies installed
@@ -141,7 +139,6 @@ If everything is fine:
   - copy the debian dir one level up
   - modify the changelog, using `dch` (enter an email address which has write access to the ppa and a valid gpg key)
   - run `dpkg-buildpackage -S` in the sumo dir and `dput -f ppa:sumo/stable sumo_{{Version}}+dfsg1_source.changes` one level up
-- update the [flatpak](https://github.com/flathub/org.eclipse.sumo) (update version number and commit hash)
 - scenarios (optional)
   - add files to [the scenario folder](https://sourceforge.net/projects/sumo/files/traffic_data/scenarios/)
   - updated README.txt

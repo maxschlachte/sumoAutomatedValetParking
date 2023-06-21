@@ -46,26 +46,18 @@
 // ---------------------------------------------------------------------------
 
 GNEEdgeRelData::GNEEdgeRelData(GNEDataInterval* dataIntervalParent, GNEEdge* fromEdge, GNEEdge* toEdge,
-                               const Parameterised::Map& parameters) :
+                               const std::map<std::string, std::string>& parameters) :
     GNEGenericData(SUMO_TAG_EDGEREL, GLO_EDGERELDATA, dataIntervalParent, parameters,
-{}, {fromEdge, toEdge}, {}, {}, {}, {}) {
+{}, {fromEdge, toEdge}, {}, {}, {}, {}, {}, {}) {
 }
 
 
 GNEEdgeRelData::~GNEEdgeRelData() {}
 
 
-void
-GNEEdgeRelData::setColor(const GUIVisualizationSettings& s) const {
-    // set default color
-    RGBColor col = RGBColor::GREEN;
-    if (isAttributeCarrierSelected()) {
-        col = s.colorSettings.selectedEdgeDataColor;
-    } else if (s.dataColorer.getScheme().getName() == GUIVisualizationSettings::SCHEME_NAME_DATA_ATTRIBUTE_NUMERICAL) {
-        // user defined rainbow
-        double val = getColorValue(s, s.dataColorer.getActive());
-        col = s.dataColorer.getScheme().getColor(val);
-    } else if (myNet->getViewNet()->getEditModes().dataEditMode == DataEditMode::DATA_EDGERELDATA) {
+const RGBColor&
+GNEEdgeRelData::getColor() const {
+    if (myNet->getViewNet()->getEditModes().dataEditMode == DataEditMode::DATA_EDGERELDATA) {
         // get selected data interval and filtered attribute
         const GNEDataInterval* dataInterval = myNet->getViewNet()->getViewParent()->getEdgeRelDataFrame()->getIntervalSelector()->getDataInterval();
         const std::string filteredAttribute = myNet->getViewNet()->getViewParent()->getEdgeRelDataFrame()->getAttributeSelector()->getFilteredAttribute();
@@ -76,37 +68,11 @@ GNEEdgeRelData::setColor(const GUIVisualizationSettings& s) const {
             const double maxValue = dataInterval->getSpecificAttributeColors().at(myTagProperty.getTag()).getMaxValue(filteredAttribute);
             // get value
             const double value = parse<double>(getParameter(filteredAttribute, "0"));
-            col = GNEViewNetHelper::getRainbowScaledColor(minValue, maxValue, value);
+            // return color
+            return GNEViewNetHelper::getRainbowScaledColor(minValue, maxValue, value);
         }
     }
-    GLHelper::setColor(col);
-}
-
-
-double
-GNEEdgeRelData::getColorValue(const GUIVisualizationSettings& s, int activeScheme) const {
-    switch (activeScheme) {
-        case 0:
-            return 0;
-        case 1:
-            return isAttributeCarrierSelected();
-        case 2:
-            return 0; // setfunctional color const GNEAdditional* TAZA = getParentAdditionals().front();
-        case 3:
-            return 0; // setfunctional color const GNEAdditional* TAZA = getParentAdditionals().back();
-        case 4:
-            // by numerical attribute value
-            try {
-                if (knowsParameter(s.relDataAttr)) {
-                    return StringUtils::toDouble(getParameter(s.relDataAttr, "-1"));
-                } else {
-                    return GUIVisualizationSettings::MISSING_DATA;
-                }
-            } catch (NumberFormatException&) {
-                return GUIVisualizationSettings::MISSING_DATA;
-            }
-    }
-    return 0;
+    return RGBColor::GREEN;
 }
 
 
@@ -170,48 +136,49 @@ GNEEdgeRelData::drawPartialGL(const GUIVisualizationSettings& s, const GNELane* 
     if (myNet->getViewNet()->getEditModes().isCurrentSupermodeData()) {
         // get flag for only draw contour
         const bool onlyDrawContour = !isGenericDataVisible();
+        // get lane width
+        const double laneWidth = s.addSize.getExaggeration(s, lane) * (lane->getParentEdge()->getNBEdge()->getLaneWidth(lane->getIndex()) * 0.5);
         // Start drawing adding an gl identificator
         if (!onlyDrawContour) {
             GLHelper::pushName(getGlID());
         }
-        // draw over all edge's lanes
-        for (const auto& laneEdge : lane->getParentEdge()->getLanes()) {
-            // get lane width
-            const double laneWidth = s.addSize.getExaggeration(s, laneEdge) * (laneEdge->getParentEdge()->getNBEdge()->getLaneWidth(laneEdge->getIndex()) * 0.5);
-            // Add a draw matrix
-            GLHelper::pushMatrix();
-            // Start with the drawing of the area translating matrix to origin
-            myNet->getViewNet()->drawTranslateFrontAttributeCarrier(this, GLO_EDGERELDATA, offsetFront);
-            GLHelper::setColor(RGBColor::BLACK);
-            // draw box lines
-            GUIGeometry::drawLaneGeometry(s, myNet->getViewNet()->getPositionInformation(),
-                                          laneEdge->getLaneShape(), laneEdge->getShapeRotations(),
-                                          laneEdge->getShapeLengths(), {}, laneWidth, onlyDrawContour);
-            // translate to top
-            glTranslated(0, 0, 0.01);
-            setColor(s);
-            // draw interne box lines
-            GUIGeometry::drawLaneGeometry(s, myNet->getViewNet()->getPositionInformation(),
-                                          laneEdge->getLaneShape(), laneEdge->getShapeRotations(),
-                                          laneEdge->getShapeLengths(), {}, laneWidth - 0.1, onlyDrawContour);
-            // Pop last matrix
-            GLHelper::popMatrix();
-            // draw lock icon
-            GNEViewNetHelper::LockIcon::drawLockIcon(this, getType(), getPositionInView(), 1);
-            // draw filtered attribute
-            if (getParentEdges().front()->getLanes().front() == laneEdge) {
-                drawFilteredAttribute(s, laneEdge->getLaneShape(),
-                                      myNet->getViewNet()->getViewParent()->getEdgeRelDataFrame()->getAttributeSelector()->getFilteredAttribute(),
-                                      myNet->getViewNet()->getViewParent()->getEdgeRelDataFrame()->getIntervalSelector()->getDataInterval());
-            }
-            // check if shape dotted contour has to be drawn
-            if (myNet->getViewNet()->isAttributeCarrierInspected(this)) {
-                GNEEdge::drawDottedContourEdge(GUIDottedGeometry::DottedContourType::INSPECT, s, laneEdge->getParentEdge(), true, true);
-            }
+        // Add a draw matrix
+        GLHelper::pushMatrix();
+        // Start with the drawing of the area traslating matrix to origin
+        myNet->getViewNet()->drawTranslateFrontAttributeCarrier(this, GLO_EDGERELDATA, offsetFront);
+        // Set orange color
+        GLHelper::setColor(RGBColor::BLACK);
+        // draw box lines
+        GUIGeometry::drawLaneGeometry(s, myNet->getViewNet()->getPositionInformation(), lane->getLaneShape(), lane->getShapeRotations(), lane->getShapeLengths(), {}, laneWidth, onlyDrawContour);
+        // translate to top
+        glTranslated(0, 0, 0.01);
+        // Set color
+        if (isAttributeCarrierSelected()) {
+            GLHelper::setColor(s.colorSettings.selectedEdgeDataColor);
+        } else {
+            GLHelper::setColor(getColor());
         }
+        // draw interne box lines
+        GUIGeometry::drawLaneGeometry(s, myNet->getViewNet()->getPositionInformation(), lane->getLaneShape(), lane->getShapeRotations(), lane->getShapeLengths(), {}, laneWidth - 0.1, onlyDrawContour);
+        // Pop last matrix
+        GLHelper::popMatrix();
         // Pop name
         if (!onlyDrawContour) {
             GLHelper::popName();
+        }
+        // draw lock icon
+        GNEViewNetHelper::LockIcon::drawLockIcon(this, getType(), getPositionInView(), 1);
+        // draw filtered attribute
+        if (getParentEdges().front()->getLanes().front() == lane) {
+            drawFilteredAttribute(s, lane->getLaneShape(), myNet->getViewNet()->getViewParent()->getEdgeRelDataFrame()->getAttributeSelector()->getFilteredAttribute());
+        }
+        // draw dotted contour
+        if (myNet->getViewNet()->isAttributeCarrierInspected(this)) {
+            if (getParentEdges().front() == lane->getParentEdge()) {
+                GNEEdge::drawDottedContourEdge(GUIDottedGeometry::DottedContourType::INSPECT, s, getParentEdges().front(), true, false);
+            } else {
+                GNEEdge::drawDottedContourEdge(GUIDottedGeometry::DottedContourType::INSPECT, s, getParentEdges().back(), false, true);
+            }
         }
     }
 }
@@ -251,7 +218,12 @@ GNEEdgeRelData::drawPartialGL(const GUIVisualizationSettings& s, const GNELane* 
                     GUIGeometry::drawContourGeometry(from->getLane2laneConnections().getLane2laneGeometry(to), laneWidth);
                     // translate to top
                     glTranslated(0, 0, 0.01);
-                    setColor(s);
+                    // Set color
+                    if (isAttributeCarrierSelected()) {
+                        GLHelper::setColor(s.colorSettings.selectedEdgeDataColor);
+                    } else {
+                        GLHelper::setColor(getColor());
+                    }
                     // draw interne box lines
                     GUIGeometry::drawContourGeometry(from->getLane2laneConnections().getLane2laneGeometry(to), laneWidth - 0.1);
                 } else {
@@ -259,7 +231,12 @@ GNEEdgeRelData::drawPartialGL(const GUIVisualizationSettings& s, const GNELane* 
                     GLHelper::drawBoxLines({from->getLaneShape().back(), to->getLaneShape().front()}, laneWidth);
                     // translate to top
                     glTranslated(0, 0, 0.01);
-                    setColor(s);
+                    // Set color
+                    if (isAttributeCarrierSelected()) {
+                        GLHelper::setColor(s.colorSettings.selectedEdgeDataColor);
+                    } else {
+                        GLHelper::setColor(getColor());
+                    }
                     // draw interne line between end of first shape and first position of second shape
                     GLHelper::drawBoxLines({from->getLaneShape().back(), to->getLaneShape().front()}, laneWidth - 0.1);
                 }
@@ -406,7 +383,7 @@ std::string
 GNEEdgeRelData::getAttribute(SumoXMLAttr key) const {
     switch (key) {
         case SUMO_ATTR_ID:
-            return getPartialID() + getParentEdges().front()->getID();
+            return getParentEdges().front()->getID();
         case SUMO_ATTR_FROM:
             return getParentEdges().front()->getID();
         case SUMO_ATTR_TO:
@@ -451,18 +428,27 @@ bool
 GNEEdgeRelData::isValid(SumoXMLAttr key, const std::string& value) {
     switch (key) {
         case SUMO_ATTR_FROM:
-            return SUMOXMLDefinitions::isValidNetID(value) && (myNet->getAttributeCarriers()->retrieveEdge(value, false) != nullptr) &&
-                   (value != getParentEdges().back()->getID());
         case SUMO_ATTR_TO:
-            return SUMOXMLDefinitions::isValidNetID(value) && (myNet->getAttributeCarriers()->retrieveEdge(value, false) != nullptr) &&
-                   (value != getParentEdges().front()->getID());
+            return SUMOXMLDefinitions::isValidNetID(value) && (myNet->getAttributeCarriers()->retrieveEdge(value, false) != nullptr);
         case GNE_ATTR_SELECTED:
             return canParse<bool>(value);
         case GNE_ATTR_PARAMETERS:
-            return Parameterised::areAttributesValid(value, true);
+            return Parameterised::areParametersValid(value);
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
+}
+
+
+void
+GNEEdgeRelData::enableAttribute(SumoXMLAttr /*key*/, GNEUndoList* /*undoList*/) {
+    // Nothing to enable
+}
+
+
+void
+GNEEdgeRelData::disableAttribute(SumoXMLAttr /*key*/, GNEUndoList* /*undoList*/) {
+    // Nothing to disable enable
 }
 
 
@@ -516,8 +502,12 @@ GNEEdgeRelData::setAttribute(SumoXMLAttr key, const std::string& value) {
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
-    // mark interval toolbar for update
-    myNet->getViewNet()->getIntervalBar().markForUpdate();
+}
+
+
+void
+GNEEdgeRelData::toogleAttribute(SumoXMLAttr /*key*/, const bool /*value*/, const int /*previousParameters*/) {
+    throw InvalidArgument("Nothing to enable");
 }
 
 /****************************************************************************/

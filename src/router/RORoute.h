@@ -166,10 +166,6 @@ public:
      */
     void recheckForLoops(const ConstROEdgeVector& mandatory);
 
-
-    /// @brief check whether the route is valid for the given vehicle
-    bool isValid(const ROVehicle& veh, bool ignoreErrors) const;
-
     OutputDevice&
     writeXMLDefinition(OutputDevice& dev, const ROVehicle* const veh,
                        const bool withCosts, const bool withProb,

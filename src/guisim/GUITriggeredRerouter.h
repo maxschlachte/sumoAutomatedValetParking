@@ -53,13 +53,17 @@ public:
      * @param[in] id The id of the rerouter
      * @param[in] edges The edges the rerouter is placed at
      * @param[in] prob The probability to reroute vehicles
+     * @param[in] aXMLFilename The file to read further definitions from
      * @param[in] off Whether the rerouter is off (not working) initially
      * @param[in] prio The priority to reroute vehicles (utl)
      */
-    GUITriggeredRerouter(const std::string& id, const MSEdgeVector& edges, double prob,
+    GUITriggeredRerouter(const std::string& id,
+                         const MSEdgeVector& edges, double prob,
                          // (utl): add prio parameter
                          double prio,
-                         bool off, SUMOTime timeThreshold, const std::string& vTypes,
+                         const std::string& aXMLFilename, bool off,
+                         SUMOTime timeThreshold,
+                         const std::string& vTypes,
                          SUMORTree& rtree);
 
 
@@ -98,7 +102,7 @@ public:
     GUIParameterTableWindow* getParameterWindow(GUIMainWindow& app,
             GUISUMOAbstractView& parent);
 
-    /// @brief return exaggeration associated with this GLObject
+    /// @brief return exaggeration asociated with this GLObject
     double getExaggeration(const GUIVisualizationSettings& s) const;
 
     /** @brief Returns the boundary to which the view shall be centered in order to show the object
@@ -159,7 +163,7 @@ public:
         GUIParameterTableWindow* getParameterWindow(GUIMainWindow& app,
                 GUISUMOAbstractView& parent);
 
-        /// @brief return exaggeration associated with this GLObject
+        /// @brief return exaggeration asociated with this GLObject
         double getExaggeration(const GUIVisualizationSettings& s) const;
 
         /** @brief Returns the boundary to which the view shall be centered in order to show the object

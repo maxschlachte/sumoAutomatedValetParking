@@ -22,6 +22,7 @@
 #include <netedit/GNEViewNet.h>
 #include <netedit/changes/GNEChange_Attribute.h>
 #include <utils/gui/div/GLHelper.h>
+#include <utils/gui/images/GUITextureSubSys.h>
 #include <utils/gui/globjects/GLIncludes.h>
 
 #include "GNEVaporizer.h"
@@ -33,8 +34,9 @@
 
 GNEVaporizer::GNEVaporizer(GNENet* net) :
     GNEAdditional("", net, GLO_VAPORIZER, SUMO_TAG_VAPORIZER, "",
-{}, {}, {}, {}, {}, {}),
-myBegin(0),
+{}, {}, {}, {}, {}, {}, {}, {},
+std::map<std::string, std::string>()),
+    myBegin(0),
 myEnd(0) {
     // reset default values
     resetDefaultValues();
@@ -42,10 +44,10 @@ myEnd(0) {
 
 
 GNEVaporizer::GNEVaporizer(GNENet* net, GNEEdge* edge, SUMOTime from, SUMOTime end, const std::string& name,
-                           const Parameterised::Map& parameters) :
+                           const std::map<std::string, std::string>& parameters) :
     GNEAdditional(edge->getID(), net, GLO_VAPORIZER, SUMO_TAG_VAPORIZER, name,
-{}, {edge}, {}, {}, {}, {}),
-Parameterised(parameters),
+{}, {edge}, {}, {}, {}, {}, {}, {},
+parameters),
 myBegin(from),
 myEnd(end) {
     // update centering boundary without updating grid
@@ -194,7 +196,7 @@ GNEVaporizer::getAttribute(SumoXMLAttr key) const {
     switch (key) {
         case SUMO_ATTR_ID:
         case SUMO_ATTR_EDGE:
-            return getMicrosimID();
+            return getID();
         case SUMO_ATTR_BEGIN:
             return time2string(myBegin);
         case SUMO_ATTR_END:
@@ -221,12 +223,6 @@ GNEVaporizer::getAttributeDouble(SumoXMLAttr key) const {
         default:
             throw InvalidArgument(getTagStr() + " doesn't have a double attribute of type '" + toString(key) + "'");
     }
-}
-
-
-const Parameterised::Map&
-GNEVaporizer::getACParametersMap() const {
-    return getParametersMap();
 }
 
 
@@ -278,10 +274,16 @@ GNEVaporizer::isValid(SumoXMLAttr key, const std::string& value) {
         case GNE_ATTR_SELECTED:
             return canParse<bool>(value);
         case GNE_ATTR_PARAMETERS:
-            return areParametersValid(value);
+            return Parameterised::areParametersValid(value);
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
+}
+
+
+bool
+GNEVaporizer::isAttributeEnabled(SumoXMLAttr /* key */) const {
+    return true;
 }
 
 

@@ -47,21 +47,6 @@ class NLDetectorBuilder;
  */
 class MSActuatedTrafficLightLogic : public MSSimpleTrafficLightLogic {
 public:
-
-    typedef Parameterised::Map ConditionMap;
-    typedef std::vector<std::tuple<std::string, std::string, std::string> > AssignmentMap;
-
-    struct Function {
-        Function(const std::string& _id = "", int _nArgs = -1):
-            id(_id), nArgs(_nArgs) {}
-        std::string id;
-        int nArgs;
-        AssignmentMap assignments;
-    };
-
-    typedef std::map<std::string, Function> FunctionMap;
-
-
     /** @brief Constructor
      * @param[in] tlcontrol The tls control responsible for this tls
      * @param[in] id This tls' id
@@ -76,18 +61,16 @@ public:
                                 const SUMOTime offset,
                                 const MSSimpleTrafficLightLogic::Phases& phases,
                                 int step, SUMOTime delay,
-                                const Parameterised::Map& parameter,
+                                const std::map<std::string, std::string>& parameter,
                                 const std::string& basePath,
-                                const ConditionMap& conditions = ConditionMap(),
-                                const AssignmentMap& assignments = AssignmentMap(),
-                                const FunctionMap& functions = FunctionMap());
+                                const std::map<std::string, std::string>& conditions = std::map<std::string, std::string>());
 
 
     /** @brief Initialises the tls with information about incoming lanes
      * @param[in] nb The detector builder
      * @exception ProcessError If something fails on initialisation
      */
-    void init(NLDetectorBuilder& nb) override;
+    void init(NLDetectorBuilder& nb);
 
 
     /// @brief Destructor
@@ -102,13 +85,8 @@ public:
      * @return The time of the next switch
      * @see MSTrafficLightLogic::trySwitch
      */
-    SUMOTime trySwitch() override;
+    SUMOTime trySwitch();
     /// @}
-
-    SUMOTime getMinDur(int step = -1) const override;
-    SUMOTime getMaxDur(int step = -1) const override;
-    SUMOTime getEarliestEnd(int step = -1) const override;
-    SUMOTime getLatestEnd(int step = -1) const override;
 
     /// @name Changing phases and phase durations
     /// @{
@@ -121,11 +99,11 @@ public:
      * @see MSTrafficLightLogic::changeStepAndDuration
      */
     void changeStepAndDuration(MSTLLogicControl& tlcontrol, SUMOTime simStep,
-                               int step, SUMOTime stepDuration) override;
+                               int step, SUMOTime stepDuration);
 
     /// @brief called when switching programs
-    void activateProgram() override;
-    void deactivateProgram() override;
+    void activateProgram();
+    void deactivateProgram();
 
     bool showDetectors() const {
         return myShowDetectors;
@@ -133,46 +111,29 @@ public:
 
     void setShowDetectors(bool show);
 
-    /// @brief try to get the value of the given parameter (including prefixed parameters)
-    const std::string getParameter(const std::string& key, const std::string defaultValue = "") const override;
-
     /**@brief Sets a parameter and updates internal constants */
-    void setParameter(const std::string& key, const std::string& value) override;
+    void setParameter(const std::string& key, const std::string& value);
 
     /// @brief retrieve all detectors used by this program
-    std::map<std::string, double> getDetectorStates() const override;
+    std::map<std::string, double> getDetectorStates() const;
 
     /// @brief return all named conditions defined for this traffic light
-    std::map<std::string, double> getConditions() const override;
-
-    void loadState(MSTLLogicControl& tlcontrol, SUMOTime t, int step, SUMOTime spentDuration) override;
+    std::map<std::string, double> getConditions() const;
 
 protected:
     /// @brief initialize custom switching rules
-    void initAttributeOverride();
     void initSwitchingRules();
 
     struct InductLoopInfo {
-        InductLoopInfo(MSInductLoop* _loop, const MSLane* _lane, int numPhases, double _maxGap, double _jamThreshold):
+        InductLoopInfo(MSInductLoop* _loop, int numPhases, double _maxGap):
             loop(_loop),
-            lane(_lane),
             servedPhase(numPhases, false),
-            maxGap(_maxGap),
-            jamThreshold(_jamThreshold)
+            maxGap(_maxGap)
         {}
-
-
-        bool isJammed() const {
-            return jamThreshold > 0 && loop->getOccupancyTime() >= jamThreshold;
-        }
-
         MSInductLoop* loop;
-        const MSLane* lane;
         SUMOTime lastGreenTime = 0;
         std::vector<bool> servedPhase;
         double maxGap;
-        double jamThreshold;
-
     };
 
     /// @brief Definition of a map from phases to induct loops controlling them
@@ -214,12 +175,6 @@ protected:
     /// @brief evaluate atomic expression
     double evalAtomicExpression(const std::string& expr) const;
 
-    /// @brief evaluate function expression
-    double evalCustomFunction(const std::string& fun, const std::string& arg) const;
-
-    /// @brief execute assignemnts of the logic or a custom function
-    void executeAssignments(const AssignmentMap& assignments, ConditionMap& conditions, const ConditionMap& forbidden = ConditionMap()) const;
-
     int getDetectorPriority(const InductLoopInfo& loopInfo) const;
 
     /// @brief count the number of active detectors for the given step
@@ -254,21 +209,15 @@ protected:
         }
     }
 
+
 protected:
     /// @brief A map from phase to induction loops to be used for gap control
     InductLoopMap myInductLoopsForPhase;
 
     std::vector<InductLoopInfo> myInductLoops;
 
-    /// @brief extra loops for output/tracking
-    std::vector<const MSInductLoop*> myExtraLoops;
-    std::vector<const MSE2Collector*> myExtraE2;
-
     /// The maximum gap to check in seconds
     double myMaxGap;
-
-    /// The minimum continuous occupancy time to mark a detector as jammed
-    double myJamThreshold;
 
     /// The passing time used in seconds
     double myPassingTime;
@@ -303,19 +252,7 @@ protected:
     std::vector<SUMOTime> myLinkMinGreenTimes;
 
     /// @brief The custom switching conditions
-    ConditionMap myConditions;
-
-    /// @brief The condition assignments
-    AssignmentMap myAssignments;
-
-    /// @brief The loaded functions
-    FunctionMap myFunctions;
-
-    /// @brief The function call stack;
-    mutable std::vector<std::map<std::string, double> > myStack;
-
-    /// @brief the conditions which shall be listed in GUITLLogicPhasesTrackerWindow
-    std::set<std::string> myListedConditions;
+    std::map<std::string, std::string> myConditions;
 
     /// @brief whether the next switch time was requested via TraCI
     bool myTraCISwitch;

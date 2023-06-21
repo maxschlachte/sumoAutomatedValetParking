@@ -31,9 +31,6 @@
 class OptionsCont;
 class PCPolyContainer;
 class PCTypeMap;
-#ifdef HAVE_GDAL
-class OGRLineString;
-#endif
 
 
 // ===========================================================================
@@ -62,24 +59,20 @@ public:
      * @param[in] tm The type map to use for setting values of loaded polys/pois
      * @exception ProcessError if something fails
      */
-    static void loadIfSet(OptionsCont& oc, PCPolyContainer& toFill, PCTypeMap& tm);
+    static void loadIfSet(OptionsCont& oc, PCPolyContainer& toFill,
+                          PCTypeMap& tm);
 
 
-private:
-#ifdef HAVE_GDAL
-    static const PositionVector toShape(OGRLineString* geom, const std::string& tid);
-#endif
-
+protected:
     /** @brief Parses pois/polys stored within the given file
      * @param[in] oc The options container to get further options from
      * @param[in] toFill The poly/pois container to add loaded polys/pois to
      * @param[in] tm The type map to use for setting values of loaded polys/pois
      * @exception ProcessError if something fails
      */
-    static void load(const std::string& file, OptionsCont& oc, PCPolyContainer& toFill, PCTypeMap& tm);
+    static void load(const std::string& file, OptionsCont& oc, PCPolyContainer& toFill,
+                     PCTypeMap& tm);
 
-private:
-    static bool myWarnMissingProjection;
 
 private:
     /// @brief Invalidated copy constructor.

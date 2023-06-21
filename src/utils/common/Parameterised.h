@@ -41,19 +41,16 @@ class OutputDevice;
 class Parameterised {
 
 public:
-    /// @brief parameters map
-    typedef std::map<std::string, std::string> Map;
-
-    /// @brief Default constructor
+    /// @brief Default constructor (for Strings)
     Parameterised();
 
     /**@brief Constructor with parameters (for Strings)
      * @param[in] mapArg Pre-given parameter
      */
-    Parameterised(const Parameterised::Map& mapArg);
+    Parameterised(const std::map<std::string, std::string>& mapArg);
 
     /// @brief Destructor
-    virtual ~Parameterised();
+    ~Parameterised();
 
     /**@brief Sets a parameter
      * @param[in] key The parameter's name
@@ -69,7 +66,7 @@ public:
     /**@brief Adds or updates all given parameters from the map
      * @param[in] mapArg The keys/values to insert
      */
-    void updateParameters(const Parameterised::Map& mapArg);
+    void updateParameters(const std::map<std::string, std::string>& mapArg);
 
     /**@brief Returns whether the parameter is known
      * @param[in] key The key to ask for
@@ -102,7 +99,7 @@ public:
     void clearParameter();
 
     /// @brief Returns the inner key/value map
-    const Parameterised::Map& getParametersMap() const;
+    const std::map<std::string, std::string>& getParametersMap() const;
 
     /// @brief Returns the inner key/value map in string format "key1=value1|key2=value2|...|keyN=valueN"
     std::string getParametersStr(const std::string kvsep = "=", const std::string sep = "|") const;
@@ -111,7 +108,7 @@ public:
     void setParameters(const Parameterised& params);
 
     /// @brief set the inner key/value map in map<string, string> format
-    void setParametersMap(const Parameterised::Map& paramsMap);
+    void setParametersMap(const std::map<std::string, std::string>& paramsMap);
 
     /**@brief set the inner key/value map in string format "key1=value1|key2=value2|...|keyN=valueN"
      * @param[in] paramsString A serialized key-value map
@@ -126,13 +123,10 @@ public:
     /// @brief check if given string can be parsed to a parameters map "key1=value1|key2=value2|...|keyN=valueN"
     static bool areParametersValid(const std::string& value, bool report = false, const std::string kvsep = "=", const std::string sep = "|");
 
-    /// @brief check if given string can be parsed to an attributes map "key1=value1|key2=value2|...|keyN=valueN" (used in generic datas)
-    static bool areAttributesValid(const std::string& value, bool report = false, const std::string kvsep = "=", const std::string sep = "|");
-
 private:
     /// @brief check if given string can be parsed to a parameter of type "key=value"
     static bool isParameterValid(const std::string& value, const std::string& kvsep, const std::string& sep);
 
     /// @brief The key->value map
-    Parameterised::Map myMap;
+    std::map<std::string, std::string> myMap;
 };

@@ -46,9 +46,9 @@ def readFCD(traceFile, net, geo):
             trace = []
             last = v.id
         if geo:
-            trace.append(net.convertLonLat2XY(float(v.x), float(v.y)))
+            trace.append(net.convertLonLat2XY(v.x, v.y))
         else:
-            trace.append((float(v.x), float(v.y)))
+            trace.append((v.x, v.y))
     if trace:
         yield last, trace
 
@@ -83,7 +83,7 @@ if __name__ == "__main__":
                          help="generate polygon output for the mapped edges", metavar="FILE")
     optParser.add_option("--geo", action="store_true",
                          default=False, help="read trace with geo-coordinates")
-    optParser.add_option("--fill-gaps", default=0., type=float,
+    optParser.add_option("--fill-gaps", default=0, type=int,
                          help="repair disconnected routes bridging gaps of up to x meters")
     optParser.add_option("-g", "--gap-penalty", default=-1, type="float",
                          help="penalty to add for disconnected routes " +
@@ -134,8 +134,7 @@ if __name__ == "__main__":
                 sumolib.xml.writeHeader(polyOut, root='additional')
                 colorgen = sumolib.miscutils.Colorgen(('random', 1, 1))
             # determine file type by reading the first 10000 bytes
-            with open(t) as peek:
-                head = peek.read(10000)
+            head = open(t).read(10000)
             if "<poi" in head:
                 traces = readPOI(t, net)
             elif "<fcd" in head:

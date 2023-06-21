@@ -109,7 +109,7 @@ public:
 
         /// @name FOX-callbacks
         /// @{
-        /// @brief called when user change type of selection operation
+        /// @brief called when user change type of selction operation
         long onCmdSelectModificationMode(FXObject*, FXSelector, void*);
 
         /// @}
@@ -197,9 +197,6 @@ public:
         /// @brief destructor
         ~SelectionOperation();
 
-        /// @brief get reduce button
-        FXButton* getReduceButton() const;
-
         /// @name FOX-callbacks
         /// @{
 
@@ -211,7 +208,7 @@ public:
 
         /** @brief Called when the user presses the Save-button
          * @note Opens a file dialog and forces the selection container to save the list
-           of selected objects when a file was chosen. If the saving failed, a message window is shown.
+           of selected objects when a file was chosen. If the saveing failed, a message window is shown.
          */
         long onCmdSave(FXObject*, FXSelector, void*);
 
@@ -228,11 +225,6 @@ public:
          * @note invert the selection and repaints itself
          */
         long onCmdInvert(FXObject*, FXSelector, void*);
-
-        /**@brief Called when the user presses the Reduce-button
-         * @note Reduce network
-         */
-        long onCmdReduce(FXObject*, FXSelector, void*);
 
         /// @}
 
@@ -304,7 +296,6 @@ public:
             EDGE,
             LANE,
             ADDITIONAL,
-            WIRE,
             SHAPE,
             DEMAND,
             DATA,
@@ -339,7 +330,6 @@ public:
             std::make_pair(Selection::EDGE, "edge"),
             std::make_pair(Selection::LANE, "lane"),
             std::make_pair(Selection::ADDITIONAL, "additionalElements"),
-            std::make_pair(Selection::WIRE, "wireElements"),
             std::make_pair(Selection::SHAPE, "shapeElements"),
             std::make_pair(Selection::DEMAND, "demandElements"),
             std::make_pair(Selection::DATA, "dataElements")
@@ -418,7 +408,7 @@ public:
     /// @brief get modification mode modul
     ModificationMode* getModificationModeModule() const;
 
-    /// @brief get modul for selection information
+    /// @brief getmodul for selection information
     SelectionInformation* getSelectionInformation() const;
 
 private:

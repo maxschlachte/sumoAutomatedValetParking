@@ -61,8 +61,7 @@ public:
      */
     SUMOVehicle* buildVehicle(SUMOVehicleParameter* defs,
                               const MSRoute* route, MSVehicleType* type,
-                              const bool ignoreStopErrors, const bool fromRouteFile = true,
-                              bool addRouteStops = true) override;
+                              const bool ignoreStopErrors, const bool fromRouteFile = true);
     /// @}
 
     /** @brief Tries to insert the vehicle into the internal vehicle container
@@ -73,7 +72,7 @@ public:
      * @param[in] v The vehicle
      * @return Whether the vehicle could be inserted (no other vehicle with the same id was inserted before)
      */
-    bool addVehicle(const std::string& id, SUMOVehicle* v) override;
+    bool addVehicle(const std::string& id, SUMOVehicle* v);
 
     /** @brief Deletes the vehicle
      *
@@ -82,7 +81,7 @@ public:
      * @param[in] v The vehicle to delete
      * @param[discard] Whether the vehicle is discard during loading (scale < 1)
      */
-    void deleteVehicle(SUMOVehicle* v, bool discard = false) override;
+    void deleteVehicle(SUMOVehicle* v, bool discard = false);
 
     /** @brief Returns the list of all known vehicles by gl-id
      * @param[fill] into The list to fill with vehicle ids
@@ -91,12 +90,12 @@ public:
     void insertVehicleIDs(std::vector<GUIGlID>& into);
 
     /// @brief get current absolute and relative mean vehicle speed in the network
-    virtual std::pair<double, double> getVehicleMeanSpeeds() const override;
+    virtual std::pair<double, double> getVehicleMeanSpeeds() const;
 
     /** @brief Returns the number of halting vehicles
      * @return The number of halting vehicles
      */
-    virtual int getHaltingVehicleNo() const override;
+    virtual int getHaltingVehicleNo() const;
 
     /// @brief lock access to vehicle removal/additions for thread synchronization
     void secureVehicles();

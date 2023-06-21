@@ -17,8 +17,6 @@
 ///
 // A lane area vehicles can halt at (GNE version)
 /****************************************************************************/
-#include <config.h>
-
 #include <foreign/fontstash/fontstash.h>
 #include <netedit/GNENet.h>
 #include <netedit/GNEUndoList.h>
@@ -26,6 +24,7 @@
 #include <netedit/changes/GNEChange_Attribute.h>
 #include <utils/gui/div/GLHelper.h>
 #include <utils/options/OptionsCont.h>
+#include <utils/gui/globjects/GLIncludes.h>
 #include <utils/vehicle/SUMORouteHandler.h>
 
 #include "GNEContainerStop.h"
@@ -35,7 +34,7 @@
 // ===========================================================================
 
 GNEContainerStop::GNEContainerStop(GNENet* net) :
-    GNEStoppingPlace("", net, GLO_CONTAINER_STOP, SUMO_TAG_CONTAINER_STOP, nullptr, 0, 0, "", false, Parameterised::Map()),
+    GNEStoppingPlace("", net, GLO_CONTAINER_STOP, SUMO_TAG_CONTAINER_STOP, nullptr, 0, 0, "", false, std::map<std::string, std::string>()),
     myContainerCapacity(0),
     myParkingLength(0),
     myColor(RGBColor::BLACK) {
@@ -46,7 +45,7 @@ GNEContainerStop::GNEContainerStop(GNENet* net) :
 
 GNEContainerStop::GNEContainerStop(const std::string& id, GNELane* lane, GNENet* net, const double startPos, const double endPos,
                                    const std::string& name, const std::vector<std::string>& lines, int containerCapacity, double parkingLength, const RGBColor& color,
-                                   bool friendlyPosition, const Parameterised::Map& parameters) :
+                                   bool friendlyPosition, const std::map<std::string, std::string>& parameters) :
     GNEStoppingPlace(id, net, GLO_CONTAINER_STOP, SUMO_TAG_CONTAINER_STOP, lane, startPos, endPos, name, friendlyPosition, parameters),
     myLines(lines),
     myContainerCapacity(containerCapacity),
@@ -130,7 +129,7 @@ GNEContainerStop::drawGL(const GUIVisualizationSettings& s) const {
             } else if (drawUsingSelectColor()) {
                 baseColor = s.colorSettings.selectedAdditionalColor;
                 signColor = baseColor.changedBrightness(-32);
-            } else if (myColor != RGBColor::INVISIBLE) {
+            } else if (myColor.isValid()) {
                 baseColor = myColor;
                 signColor = s.colorSettings.containerStopColorSign;
             } else {
@@ -197,7 +196,7 @@ std::string
 GNEContainerStop::getAttribute(SumoXMLAttr key) const {
     switch (key) {
         case SUMO_ATTR_ID:
-            return getMicrosimID();
+            return getID();
         case SUMO_ATTR_LANE:
             return getParentLanes().front()->getID();
         case SUMO_ATTR_STARTPOS:
@@ -223,7 +222,7 @@ GNEContainerStop::getAttribute(SumoXMLAttr key) const {
         case SUMO_ATTR_PARKING_LENGTH:
             return toString(myParkingLength);
         case SUMO_ATTR_COLOR:
-            if (myColor == RGBColor::INVISIBLE) {
+            if (!myColor.isValid()) {
                 return "";
             } else {
                 return toString(myColor);
@@ -310,7 +309,7 @@ GNEContainerStop::isValid(SumoXMLAttr key, const std::string& value) {
         case GNE_ATTR_SELECTED:
             return canParse<bool>(value);
         case GNE_ATTR_PARAMETERS:
-            return areParametersValid(value);
+            return Parameterised::areParametersValid(value);
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
@@ -367,7 +366,7 @@ GNEContainerStop::setAttribute(SumoXMLAttr key, const std::string& value) {
             break;
         case SUMO_ATTR_COLOR:
             if (value.empty()) {
-                myColor = RGBColor::INVISIBLE;
+                myColor.setValid(false);
             } else {
                 myColor = GNEAttributeCarrier::parse<RGBColor>(value);
             }

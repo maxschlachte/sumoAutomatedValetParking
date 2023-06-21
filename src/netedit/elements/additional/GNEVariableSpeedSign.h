@@ -34,7 +34,7 @@ class GNEVariableSpeedSignStep;
  * @class GNEVariableSpeedSign
  * allows the simulation of variable speed signs
  */
-class GNEVariableSpeedSign : public GNEAdditional, public Parameterised {
+class GNEVariableSpeedSign : public GNEAdditional {
 
 public:
     /// @brief default Constructor
@@ -49,12 +49,12 @@ public:
      * @param[in] vTypes list of vehicle types to be affected
      */
     GNEVariableSpeedSign(const std::string& id, GNENet* net, const Position& pos, const std::string& name,
-                         const std::vector<std::string>& vTypes, const Parameterised::Map& parameters);
+                         const std::vector<std::string>& vTypes, const std::map<std::string, std::string>& parameters);
 
     /// @brief Destructor
     ~GNEVariableSpeedSign();
 
-    /**@brief write additional element into a xml file
+    /**@brief writte additional element into a xml file
      * @param[in] device device in which write parameters of additional element
      */
     void writeAdditional(OutputDevice& device) const;
@@ -110,9 +110,6 @@ public:
      */
     double getAttributeDouble(SumoXMLAttr key) const;
 
-    /// @brief get parameters map
-    const Parameterised::Map& getACParametersMap() const;
-
     /* @brief method for setting the attribute and letting the object perform additional changes
      * @param[in] key The attribute key
      * @param[in] value The new value
@@ -122,10 +119,15 @@ public:
 
     /* @brief method for checking if the key and their correspond attribute are valids
      * @param[in] key The attribute key
-     * @param[in] value The value associated to key key
+     * @param[in] value The value asociated to key key
      * @return true if the value is valid, false in other case
      */
     bool isValid(SumoXMLAttr key, const std::string& value);
+
+    /* @brief method for check if the value for certain attribute is set
+     * @param[in] key The attribute key
+     */
+    bool isAttributeEnabled(SumoXMLAttr key) const;
 
     /// @brief get PopPup ID (Used in AC Hierarchy)
     std::string getPopUpID() const;

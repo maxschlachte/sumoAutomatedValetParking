@@ -58,7 +58,7 @@ FXIMPLEMENT(GNETypeFrame::TypeEditor,     FXGroupBoxModule,     typeEditorMap,  
 // ---------------------------------------------------------------------------
 
 GNETypeFrame::TypeSelector::TypeSelector(GNETypeFrame* typeFrameParent) :
-    FXGroupBoxModule(typeFrameParent, "Current Type"),
+    FXGroupBoxModule(typeFrameParent->myContentFrame, "Current Type"),
     myTypeFrameParent(typeFrameParent),
     myCurrentType(nullptr) {
     // Create FXComboBox
@@ -177,8 +177,6 @@ GNETypeFrame::TypeSelector::onCmdSelectItem(FXObject*, FXSelector, void*) {
             myTypeFrameParent->myTypeAttributesEditor->showAttributeEditorModule(false, true);
             // Write Warning in console if we're in testing mode
             WRITE_DEBUG(("Selected item '" + myTypeMatchBox->getText() + "' in TypeSelector").text());
-            // update viewNet
-            myTypeFrameParent->getViewNet()->updateViewNet();
             return 1;
         }
     }
@@ -191,8 +189,6 @@ GNETypeFrame::TypeSelector::onCmdSelectItem(FXObject*, FXSelector, void*) {
     myTypeMatchBox->setTextColor(FXRGB(255, 0, 0));
     // Write Warning in console if we're in testing mode
     WRITE_DEBUG("Selected invalid item in TypeSelector");
-    // update viewNet
-    myTypeFrameParent->getViewNet()->updateViewNet();
     return 1;
 }
 
@@ -201,7 +197,7 @@ GNETypeFrame::TypeSelector::onCmdSelectItem(FXObject*, FXSelector, void*) {
 // ---------------------------------------------------------------------------
 
 GNETypeFrame::TypeEditor::TypeEditor(GNETypeFrame* typeFrameParent) :
-    FXGroupBoxModule(typeFrameParent, "Type Editor"),
+    FXGroupBoxModule(typeFrameParent->myContentFrame, "Type Editor"),
     myTypeFrameParent(typeFrameParent) {
     // Create new vehicle type
     myCreateTypeButton = new FXButton(getCollapsableFrame(), "Create Type", GUIIconSubSys::getIcon(GUIIcon::VTYPE), this, MID_GNE_CREATE, GUIDesignButton);

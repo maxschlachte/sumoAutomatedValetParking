@@ -56,13 +56,26 @@
 #include <gui/GUIApplicationWindow.h>
 #include <utils/gui/windows/GUIDialog_ViewSettings.h>
 #include <utils/gui/settings/GUICompleteSchemeStorage.h>
-#include <utils/foxtools/MFXButtonTooltip.h>
 #include <utils/foxtools/MFXImageHelper.h>
 #include <utils/gui/globjects/GUIGlObjectStorage.h>
 #include <foreign/rtree/SUMORTree.h>
 #include <utils/gui/div/GLHelper.h>
 #include <utils/gui/div/GUIGlobalSelection.h>
 #include <utils/gui/globjects/GLIncludes.h>
+
+/* -------------------------------------------------------------------------
+ * GUIViewTraffic - FOX callback mapping
+ * ----------------------------------------------------------------------- */
+FXDEFMAP(GUIViewTraffic) GUIViewTrafficMap[] = {
+    FXMAPFUNC(SEL_COMMAND, MID_CLOSE_LANE, GUIViewTraffic::onCmdCloseLane),
+    FXMAPFUNC(SEL_COMMAND, MID_CLOSE_EDGE, GUIViewTraffic::onCmdCloseEdge),
+    FXMAPFUNC(SEL_COMMAND, MID_ADD_REROUTER, GUIViewTraffic::onCmdAddRerouter),
+    FXMAPFUNC(SEL_COMMAND, MID_REACHABILITY, GUIViewTraffic::onCmdShowReachability),
+};
+
+
+FXIMPLEMENT_ABSTRACT(GUIViewTraffic, GUISUMOAbstractView, GUIViewTrafficMap, ARRAYNUMBER(GUIViewTrafficMap))
+
 
 // ===========================================================================
 // member method definitions
@@ -107,50 +120,50 @@ GUIViewTraffic::buildViewToolBars(GUIGlChildWindow* v) {
         v->getColoringSchemesCombo()->setNumVisible(MAX2(5, (int)names.size() + 1));
     }
     // for junctions
-    new MFXButtonTooltip(v->getLocatorPopup(),
-                         "\tLocate Junctions\tLocate a junction within the network.",
-                         GUIIconSubSys::getIcon(GUIIcon::LOCATEJUNCTION), v, MID_LOCATEJUNCTION,
-                         ICON_ABOVE_TEXT | FRAME_THICK | FRAME_RAISED);
+    new FXButton(v->getLocatorPopup(),
+                 "\tLocate Junctions\tLocate a junction within the network.",
+                 GUIIconSubSys::getIcon(GUIIcon::LOCATEJUNCTION), v, MID_LOCATEJUNCTION,
+                 ICON_ABOVE_TEXT | FRAME_THICK | FRAME_RAISED);
     // for edges
-    new MFXButtonTooltip(v->getLocatorPopup(),
-                         "\tLocate Edges\tLocate an edge within the network.",
-                         GUIIconSubSys::getIcon(GUIIcon::LOCATEEDGE), v, MID_LOCATEEDGE,
-                         ICON_ABOVE_TEXT | FRAME_THICK | FRAME_RAISED);
+    new FXButton(v->getLocatorPopup(),
+                 "\tLocate Edges\tLocate an edge within the network.",
+                 GUIIconSubSys::getIcon(GUIIcon::LOCATEEDGE), v, MID_LOCATEEDGE,
+                 ICON_ABOVE_TEXT | FRAME_THICK | FRAME_RAISED);
     // for vehicles
-    new MFXButtonTooltip(v->getLocatorPopup(),
-                         "\tLocate Vehicles\tLocate a vehicle within the network.",
-                         GUIIconSubSys::getIcon(GUIIcon::LOCATEVEHICLE), v, MID_LOCATEVEHICLE,
-                         ICON_ABOVE_TEXT | FRAME_THICK | FRAME_RAISED);
+    new FXButton(v->getLocatorPopup(),
+                 "\tLocate Vehicles\tLocate a vehicle within the network.",
+                 GUIIconSubSys::getIcon(GUIIcon::LOCATEVEHICLE), v, MID_LOCATEVEHICLE,
+                 ICON_ABOVE_TEXT | FRAME_THICK | FRAME_RAISED);
     // for persons
-    new MFXButtonTooltip(v->getLocatorPopup(),
-                         "\tLocate Persons\tLocate a person within the network.",
-                         GUIIconSubSys::getIcon(GUIIcon::LOCATEPERSON), v, MID_LOCATEPERSON,
-                         ICON_ABOVE_TEXT | FRAME_THICK | FRAME_RAISED);
+    new FXButton(v->getLocatorPopup(),
+                 "\tLocate Persons\tLocate a person within the network.",
+                 GUIIconSubSys::getIcon(GUIIcon::LOCATEPERSON), v, MID_LOCATEPERSON,
+                 ICON_ABOVE_TEXT | FRAME_THICK | FRAME_RAISED);
     // for containers
-    new MFXButtonTooltip(v->getLocatorPopup(),
-                         "\tLocate Container\tLocate a container within the network.",
-                         GUIIconSubSys::getIcon(GUIIcon::LOCATECONTAINER), v, MID_LOCATECONTAINER,
-                         ICON_ABOVE_TEXT | FRAME_THICK | FRAME_RAISED);
+    new FXButton(v->getLocatorPopup(),
+                 "\tLocate Container\tLocate a container within the network.",
+                 GUIIconSubSys::getIcon(GUIIcon::LOCATECONTAINER), v, MID_LOCATECONTAINER,
+                 ICON_ABOVE_TEXT | FRAME_THICK | FRAME_RAISED);
     // for tls
-    new MFXButtonTooltip(v->getLocatorPopup(),
-                         "\tLocate TLS\tLocate a tls within the network.",
-                         GUIIconSubSys::getIcon(GUIIcon::LOCATETLS), v, MID_LOCATETLS,
-                         ICON_ABOVE_TEXT | FRAME_THICK | FRAME_RAISED);
+    new FXButton(v->getLocatorPopup(),
+                 "\tLocate TLS\tLocate a tls within the network.",
+                 GUIIconSubSys::getIcon(GUIIcon::LOCATETLS), v, MID_LOCATETLS,
+                 ICON_ABOVE_TEXT | FRAME_THICK | FRAME_RAISED);
     // for additional stuff
-    new MFXButtonTooltip(v->getLocatorPopup(),
-                         "\tLocate Additional\tLocate an additional structure within the network.",
-                         GUIIconSubSys::getIcon(GUIIcon::LOCATEADD), v, MID_LOCATEADD,
-                         ICON_ABOVE_TEXT | FRAME_THICK | FRAME_RAISED);
+    new FXButton(v->getLocatorPopup(),
+                 "\tLocate Additional\tLocate an additional structure within the network.",
+                 GUIIconSubSys::getIcon(GUIIcon::LOCATEADD), v, MID_LOCATEADD,
+                 ICON_ABOVE_TEXT | FRAME_THICK | FRAME_RAISED);
     // for pois
-    new MFXButtonTooltip(v->getLocatorPopup(),
-                         "\tLocate PoI\tLocate a PoI within the network.",
-                         GUIIconSubSys::getIcon(GUIIcon::LOCATEPOI), v, MID_LOCATEPOI,
-                         ICON_ABOVE_TEXT | FRAME_THICK | FRAME_RAISED);
+    new FXButton(v->getLocatorPopup(),
+                 "\tLocate PoI\tLocate a PoI within the network.",
+                 GUIIconSubSys::getIcon(GUIIcon::LOCATEPOI), v, MID_LOCATEPOI,
+                 ICON_ABOVE_TEXT | FRAME_THICK | FRAME_RAISED);
     // for polygons
-    new MFXButtonTooltip(v->getLocatorPopup(),
-                         "\tLocate Polygon\tLocate a Polygon within the network.",
-                         GUIIconSubSys::getIcon(GUIIcon::LOCATEPOLY), v, MID_LOCATEPOLY,
-                         ICON_ABOVE_TEXT | FRAME_THICK | FRAME_RAISED);
+    new FXButton(v->getLocatorPopup(),
+                 "\tLocate Polygon\tLocate a Polygon within the network.",
+                 GUIIconSubSys::getIcon(GUIIcon::LOCATEPOLY), v, MID_LOCATEPOLY,
+                 ICON_ABOVE_TEXT | FRAME_THICK | FRAME_RAISED);
 }
 
 
@@ -240,11 +253,7 @@ GUIViewTraffic::buildColorRainbow(const GUIVisualizationSettings& s, GUIColorSch
     if (minValue != std::numeric_limits<double>::infinity()) {
         scheme.clear();
         // add new thresholds
-        if (scheme.getName() == GUIVisualizationSettings::SCHEME_NAME_EDGEDATA_NUMERICAL
-                || scheme.getName() == GUIVisualizationSettings::SCHEME_NAME_EDGE_PARAM_NUMERICAL
-                || scheme.getName() == GUIVisualizationSettings::SCHEME_NAME_LANE_PARAM_NUMERICAL
-                || scheme.getName() == GUIVisualizationSettings::SCHEME_NAME_DATA_ATTRIBUTE_NUMERICAL
-                || scheme.getName() == GUIVisualizationSettings::SCHEME_NAME_PARAM_NUMERICAL)  {
+        if (scheme.getName() == GUIVisualizationSettings::SCHEME_NAME_EDGEDATA_NUMERICAL) {
             scheme.addColor(RGBColor(204, 204, 204), std::numeric_limits<double>::max(), "missing data");
         }
         if (hide) {
@@ -335,7 +344,6 @@ GUIViewTraffic::doPaintGL(int mode, const Boundary& bound) {
 
     // draw decals (if not in grabbing mode)
     drawDecals();
-    myVisualizationSettings->scale = myVisualizationSettings->drawForPositionSelection ? myVisualizationSettings->scale : m2p(SUMO_const_laneWidth);
     if (myVisualizationSettings->showGrid) {
         paintGLGrid();
     }
@@ -345,6 +353,7 @@ GUIViewTraffic::doPaintGL(int mode, const Boundary& bound) {
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     const float minB[2] = { (float)bound.xmin(), (float)bound.ymin() };
     const float maxB[2] = { (float)bound.xmax(), (float)bound.ymax() };
+    myVisualizationSettings->scale = myVisualizationSettings->drawForPositionSelection ? myVisualizationSettings->scale : m2p(SUMO_const_laneWidth);
     glEnable(GL_POLYGON_OFFSET_FILL);
     glEnable(GL_POLYGON_OFFSET_LINE);
     int hits2 = myGrid->Search(minB, maxB, *myVisualizationSettings);
@@ -373,26 +382,6 @@ GUIViewTraffic::doPaintGL(int mode, const Boundary& bound) {
 
 
 void
-GUIViewTraffic::updatePositionInformation() const {
-    Position pos = getPositionInformation();
-    // set cartesian position
-    myApp->getCartesianLabel()->setText(("x:" + toString(pos.x()) + ", y:" + toString(pos.y())).c_str());
-    // set geo position
-    GeoConvHelper::getFinal().cartesian2geo(pos);
-    if (GeoConvHelper::getFinal().usingGeoProjection()) {
-        myApp->getGeoLabel()->setText(("lat:" + toString(pos.y(), gPrecisionGeo) + ", lon:" + toString(pos.x(), gPrecisionGeo)).c_str());
-    } else {
-        myApp->getGeoLabel()->setText(("x:" + toString(pos.x()) + ", y:" + toString(pos.y()) + " (No projection defined)").c_str());
-    }
-    // if enabled, set test position
-    if (myApp->getTestLabel()) {
-        // adjust cursor position (24,25) to show exactly the same position as in function netedit.leftClick(match, X, Y)
-        myApp->getTestLabel()->setText(("Test: x:" + toString(getWindowCursorPosition().x() - 24.0) + " y:" + toString(getWindowCursorPosition().y() - 25.0)).c_str());
-    }
-}
-
-
-void
 GUIViewTraffic::startTrack(int id) {
     myTrackedID = id;
 }
@@ -414,9 +403,9 @@ void
 GUIViewTraffic::onGamingClick(Position pos) {
     if (myTLSGame) {
         MSTLLogicControl& tlsControl = MSNet::getInstance()->getTLSControl();
-        MSTrafficLightLogic* minTll = nullptr;
+        const MSTrafficLightLogic* minTll = nullptr;
         double minDist = std::numeric_limits<double>::infinity();
-        for (MSTrafficLightLogic* const tll : tlsControl.getAllLogics()) {
+        for (const MSTrafficLightLogic* const tll : tlsControl.getAllLogics()) {
             if (tlsControl.isActive(tll) && tll->getProgramID() != "off") {
                 // get the links
                 const MSTrafficLightLogic::LaneVector& lanes = tll->getLanesAt(0);
@@ -430,9 +419,22 @@ GUIViewTraffic::onGamingClick(Position pos) {
             }
         }
         if (minTll != nullptr) {
-            int next = (minTll->getCurrentPhaseIndex() + 1) % minTll->getPhaseNumber();
-            minTll->changeStepAndDuration(tlsControl, MSNet::getInstance()->getCurrentTimeStep(), next, -1);
-            update();
+            const MSTLLogicControl::TLSLogicVariants& vars = tlsControl.get(minTll->getID());
+            const std::vector<MSTrafficLightLogic*> logics = vars.getAllLogics();
+            if (logics.size() > 1) {
+                MSSimpleTrafficLightLogic* l = (MSSimpleTrafficLightLogic*) logics[0];
+                for (int i = 0; i < (int)logics.size() - 1; ++i) {
+                    if (minTll->getProgramID() == logics[i]->getProgramID()) {
+                        l = (MSSimpleTrafficLightLogic*) logics[i + 1];
+                        tlsControl.switchTo(minTll->getID(), l->getProgramID());
+                    }
+                }
+                if (l == logics[0]) {
+                    tlsControl.switchTo(minTll->getID(), l->getProgramID());
+                }
+                l->changeStepAndDuration(tlsControl, MSNet::getInstance()->getCurrentTimeStep(), 0, l->getPhase(0).duration);
+                update();
+            }
         }
     } else {
         // DRT game
@@ -524,6 +526,94 @@ GUIViewTraffic::getLaneUnderCursor() {
         makeNonCurrent();
     }
     return nullptr;
+}
+
+long
+GUIViewTraffic::onCmdCloseLane(FXObject*, FXSelector, void*) {
+    GUILane* lane = getLaneUnderCursor();
+    if (lane != nullptr) {
+        lane->closeTraffic();
+        GUIGlObjectStorage::gIDStorage.unblockObject(lane->getGlID());
+        update();
+    }
+    return 1;
+}
+
+
+long
+GUIViewTraffic::onCmdCloseEdge(FXObject*, FXSelector, void*) {
+    GUILane* lane = getLaneUnderCursor();
+    if (lane != nullptr) {
+        dynamic_cast<GUIEdge*>(&lane->getEdge())->closeTraffic(lane);
+        GUIGlObjectStorage::gIDStorage.unblockObject(lane->getGlID());
+        update();
+    }
+    return 1;
+}
+
+
+long
+GUIViewTraffic::onCmdAddRerouter(FXObject*, FXSelector, void*) {
+    GUILane* lane = getLaneUnderCursor();
+    if (lane != nullptr) {
+        dynamic_cast<GUIEdge*>(&lane->getEdge())->addRerouter();
+        GUIGlObjectStorage::gIDStorage.unblockObject(lane->getGlID());
+        update();
+    }
+    return 1;
+}
+
+
+long
+GUIViewTraffic::onCmdShowReachability(FXObject* menu, FXSelector, void*) {
+    GUILane* lane = getLaneUnderCursor();
+    if (lane != nullptr) {
+        // reset
+        const double UNREACHABLE = -1;
+        gSelected.clear();
+        for (const MSEdge* const e : MSEdge::getAllEdges()) {
+            for (MSLane* const l : e->getLanes()) {
+                GUILane* gLane = dynamic_cast<GUILane*>(l);
+                gLane->setReachability(UNREACHABLE);
+            }
+        }
+        // prepare
+        FXMenuCommand* mc = dynamic_cast<FXMenuCommand*>(menu);
+        const SUMOVehicleClass svc = SumoVehicleClassStrings.get(mc->getText().text());
+        const double defaultMaxSpeed = SUMOVTypeParameter::VClassDefaultValues(svc).maxSpeed;
+        // find reachable
+        std::map<MSEdge*, double> reachableEdges;
+        reachableEdges[&lane->getEdge()] = 0;
+        MSEdgeVector check;
+        check.push_back(&lane->getEdge());
+        while (check.size() > 0) {
+            MSEdge* e = check.front();
+            check.erase(check.begin());
+            double traveltime = reachableEdges[e];
+            for (MSLane* const l : e->getLanes()) {
+                if (l->allowsVehicleClass(svc)) {
+                    GUILane* gLane = dynamic_cast<GUILane*>(l);
+                    gSelected.select(gLane->getGlID());
+                    gLane->setReachability(traveltime);
+                }
+            }
+            traveltime += e->getLength() / MIN2(e->getSpeedLimit(), defaultMaxSpeed);
+            for (MSEdge* const nextEdge : e->getSuccessors(svc)) {
+                if (reachableEdges.count(nextEdge) == 0 ||
+                        // revisit edge via faster path
+                        reachableEdges[nextEdge] > traveltime) {
+                    reachableEdges[nextEdge] = traveltime;
+                    check.push_back(nextEdge);
+                }
+            }
+        }
+        // switch to 'color by selection' unless coloring 'by reachability'
+        if (myVisualizationSettings->laneColorer.getActive() != 36) {
+            myVisualizationSettings->laneColorer.setActive(1);
+        }
+        update();
+    }
+    return 1;
 }
 
 

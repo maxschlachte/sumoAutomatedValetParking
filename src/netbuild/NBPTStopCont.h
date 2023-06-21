@@ -36,10 +36,9 @@ public:
 
     /** @brief Inserts a node into the map
     * @param[in] stop The pt stop to insert
-    * @param[in] floating whether the stop is not referenced by a way or relation
     * @return Whether the pt stop could be added
     */
-    bool insert(NBPTStop* ptStop, bool floating = false);
+    bool insert(NBPTStop* ptStop);
 
     /// @brief Retrieve a previously inserted pt stop
     NBPTStop* get(std::string id) const;
@@ -81,8 +80,6 @@ public:
 
     void localizePTStops(NBEdgeCont& cont);
 
-    void assignEdgeForFloatingStops(NBEdgeCont& cont, double maxRadius);
-
     void findAccessEdgesForRailStops(NBEdgeCont& cont, double maxRadius, int maxCount, double accessFactor);
 
     void postprocess(std::set<std::string>& usedStops);
@@ -107,8 +104,6 @@ private:
 
     /// @brief The map of edge ids to stops
     std::map<std::string, std::vector<NBPTStop*> > myPTStopLookup;
-
-    std::vector<NBPTStop*> myFloatingStops;
 
 
     void assignPTStopToEdgeOfClosestPlatform(NBPTStop* pStop, NBEdgeCont& cont);

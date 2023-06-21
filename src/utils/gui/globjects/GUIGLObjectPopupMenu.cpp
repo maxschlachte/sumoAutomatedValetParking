@@ -23,13 +23,10 @@
 
 #include <iostream>
 #include <cassert>
-#include <utils/common/StringTokenizer.h>
-#include <utils/common/StringUtils.h>
 #include <utils/geom/GeoConvHelper.h>
 #include <utils/gui/windows/GUISUMOAbstractView.h>
 #include <utils/gui/globjects/GUIGlObject.h>
 #include <utils/gui/windows/GUIAppEnum.h>
-#include <utils/gui/windows/GUIMainWindow.h>
 #include <utils/gui/div/GUIParameterTableWindow.h>
 #include <utils/gui/div/GUIGlobalSelection.h>
 #include <utils/gui/div/GUIUserIO.h>
@@ -146,13 +143,12 @@ GUIGLObjectPopupMenu::onCmdCopyCursorGeoPosition(FXObject*, FXSelector, void*) {
 
 
 long
-GUIGLObjectPopupMenu::onCmdShowCursorGeoPositionOnline(FXObject* item, FXSelector, void*) {
-    FXMenuCommand* const mc = dynamic_cast<FXMenuCommand*>(item);
+GUIGLObjectPopupMenu::onCmdShowCursorGeoPositionOnline(FXObject*, FXSelector, void*) {
     Position pos = myNetworkPosition;
     GeoConvHelper::getFinal().cartesian2geo(pos);
-    std::string url = myApplication->getOnlineMaps().find(mc->getText().rafter(' ').text())->second;
-    url = StringUtils::replace(StringUtils::replace(url, "%lat", toString(pos.y(), gPrecisionGeo)), "%lon", toString(pos.x(), gPrecisionGeo));
-    FXLinkLabel::fxexecute(url.c_str());
+    std::string paramsString = toString(pos.y(), gPrecisionGeo) + ";" + toString(pos.x(), gPrecisionGeo);
+    std::string geohackUrl = "https://geohack.toolforge.org/geohack.php?params=" + paramsString;
+    FXLinkLabel::fxexecute(geohackUrl.c_str());
     return 1;
 }
 

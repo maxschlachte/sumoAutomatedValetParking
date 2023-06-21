@@ -21,6 +21,7 @@
 
 #include <netedit/GNENet.h>
 #include <netedit/GNEViewNet.h>
+#include <netedit/elements/demand/GNERouteHandler.h>
 
 #include "GNEPersonPlanFrame.h"
 
@@ -38,19 +39,19 @@ GNEPersonPlanFrame::GNEPersonPlanFrame(FXHorizontalFrame* horizontalFrameParent,
     myRouteHandler("", viewNet->getNet(), true) {
 
     // create person types selector modul
-    myPersonSelector = new DemandElementSelector(this, {GNETagProperties::TagType::PERSON});
+    myPersonSelector = new GNEFrameModules::DemandElementSelector(this, {GNETagProperties::TagType::PERSON});
 
     // Create tag selector for person plan
-    myPersonPlanTagSelector = new GNETagSelector(this, GNETagProperties::TagType::PERSONPLAN, GNE_TAG_PERSONTRIP_EDGE);
+    myPersonPlanTagSelector = new GNEFrameModules::TagSelector(this, GNETagProperties::TagType::PERSONPLAN, GNE_TAG_PERSONTRIP_EDGE);
 
     // Create person parameters
-    myPersonPlanAttributes = new GNEAttributesCreator(this);
+    myPersonPlanAttributes = new GNEFrameAttributeModules::AttributesCreator(this);
 
     // create myPathCreator Module
-    myPathCreator = new GNEPathCreator(this);
+    myPathCreator = new GNEFrameModules::PathCreator(this);
 
-    // Create GNEElementTree modul
-    myPersonHierarchy = new GNEElementTree(this);
+    // Create HierarchicalElementTree modul
+    myPersonHierarchy = new GNEFrameModules::HierarchicalElementTree(this);
 }
 
 
@@ -69,26 +70,10 @@ GNEPersonPlanFrame::show() {
         // refresh tag selector
         myPersonPlanTagSelector->refreshTagSelector();
         // set first person as demand element (this will call demandElementSelected() function)
-        if (myViewNet->getFrontAttributeCarrier() && myViewNet->getFrontAttributeCarrier()->getTagProperty().isPerson()) {
-            GNEDemandElement* personFound = nullptr;
-            // search person
-            for (const auto& person : persons) {
-                if (myViewNet->getFrontAttributeCarrier()->getID() == person->getID()) {
-                    personFound = person;
-                }
-            }
-            // search personFlow
-            for (const auto& personFlow : personFlows) {
-                if (myViewNet->getFrontAttributeCarrier()->getID() == personFlow->getID()) {
-                    personFound = personFlow;
-                }
-            }
-            // check personFound
-            if (personFound) {
-                myPersonSelector->setDemandElement(personFound);
-            }
+        if (persons.size() > 0) {
+            myPersonSelector->setDemandElement(*persons.begin());
         } else {
-            myPersonSelector->setDemandElement(nullptr);
+            myPersonSelector->setDemandElement(*personFlows.begin());
         }
     } else {
         // hide all moduls except helpCreation
@@ -116,22 +101,10 @@ GNEPersonPlanFrame::hide() {
 
 bool
 GNEPersonPlanFrame::addPersonPlanElement(const GNEViewNetHelper::ObjectsUnderCursor& objectsUnderCursor, const GNEViewNetHelper::MouseButtonKeyPressed& mouseButtonKeyPressed) {
-    // check if we have to select a new person
+    // first check if person selected is valid
     if (myPersonSelector->getCurrentDemandElement() == nullptr) {
-        if (objectsUnderCursor.getDemandElementFront() && objectsUnderCursor.getDemandElementFront()->getTagProperty().isPerson()) {
-            // continue depending of number of demand elements under cursor
-            if (objectsUnderCursor.getClickedDemandElements().size() > 1) {
-                // Filter persons
-                myPersonSelector->setDemandElements(objectsUnderCursor.getClickedDemandElements());
-            } else {
-                // select new person
-                myPersonSelector->setDemandElement(objectsUnderCursor.getDemandElementFront());
-            }
-            return true;
-        } else {
-            myViewNet->setStatusBarText("Current selected person isn't valid.");
-            return false;
-        }
+        myViewNet->setStatusBarText("Current selected person isn't valid.");
+        return false;
     }
     // finally check that person plan selected is valid
     if (myPersonPlanTagSelector->getCurrentTemplateAC() == nullptr) {
@@ -148,7 +121,7 @@ GNEPersonPlanFrame::addPersonPlanElement(const GNEViewNetHelper::ObjectsUnderCur
     // continue depending of tag
     if ((personPlanTag == GNE_TAG_WALK_ROUTE) && objectsUnderCursor.getDemandElementFront() && (objectsUnderCursor.getDemandElementFront()->getTagProperty().getTag() == SUMO_TAG_ROUTE)) {
         if (myPathCreator->addRoute(objectsUnderCursor.getDemandElementFront(), mouseButtonKeyPressed.shiftKeyPressed(), mouseButtonKeyPressed.controlKeyPressed())) {
-            createPath(false);
+            createPath();
             myPathCreator->removeRoute();
             return true;
         } else {
@@ -164,21 +137,9 @@ GNEPersonPlanFrame::addPersonPlanElement(const GNEViewNetHelper::ObjectsUnderCur
 }
 
 
-void
-GNEPersonPlanFrame::resetSelectedPerson() {
-    myPersonSelector->setDemandElement(nullptr);
-}
-
-
-GNEPathCreator*
+GNEFrameModules::PathCreator*
 GNEPersonPlanFrame::getPathCreator() const {
     return myPathCreator;
-}
-
-
-GNEElementTree*
-GNEPersonPlanFrame::getPersonHierarchy() const {
-    return myPersonHierarchy;
 }
 
 // ===========================================================================
@@ -253,7 +214,7 @@ GNEPersonPlanFrame::demandElementSelected() {
 
 
 void
-GNEPersonPlanFrame::createPath(const bool /*useLastRoute*/) {
+GNEPersonPlanFrame::createPath() {
     // first check that all attributes are valid
     if (!myPersonPlanAttributes->areValuesValid()) {
         myViewNet->setStatusBarText("Invalid " + myPersonPlanTagSelector->getCurrentTemplateAC()->getTagProperty().getTagStr() + " parameters.");
@@ -263,7 +224,7 @@ GNEPersonPlanFrame::createPath(const bool /*useLastRoute*/) {
                     myPersonPlanTagSelector->getCurrentTemplateAC()->getTagProperty().getTag(),
                     myPersonSelector->getCurrentDemandElement(),
                     myPersonPlanAttributes, myPathCreator, false)) {
-            // refresh GNEElementTree
+            // refresh HierarchicalElementTree
             myPersonHierarchy->refreshHierarchicalElementTree();
             // abort path creation
             myPathCreator->abortPathCreation();

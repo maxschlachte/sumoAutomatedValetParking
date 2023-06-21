@@ -4,7 +4,7 @@ title: Rail signals
 
 Rail signals are
 [node](../Networks/PlainXML.md#node_descriptions)
-types for controlling rail traffic.
+types for controllig rail traffic.
 
 # Loading a rail signal
 

@@ -52,7 +52,7 @@ public:
     /// @brief destructor
     ~GNECalibratorFlow();
 
-    /**@brief write additional element into a xml file
+    /**@brief writte additional element into a xml file
      * @param[in] device device in which write parameters of additional element
      */
     void writeAdditional(OutputDevice& device) const;
@@ -105,9 +105,6 @@ public:
      */
     double getAttributeDouble(SumoXMLAttr key) const;
 
-    /// @brief get parameters map
-    const Parameterised::Map& getACParametersMap() const;
-
     /* @brief method for setting the attribute and letting the object perform additional changes
      * @param[in] key The attribute key
      * @param[in] value The new value
@@ -145,8 +142,8 @@ private:
     /// @brief commit move shape
     void commitMoveShape(const GNEMoveResult& moveResult, GNEUndoList* undoList);
 
-    /// @brief toggle attribute
-    void toggleAttribute(SumoXMLAttr key, const bool value);
+    /// @brief toogle attribute
+    void toogleAttribute(SumoXMLAttr key, const bool value, const int previousParameters);
 
     /// @brief Invalidated copy constructor.
     GNECalibratorFlow(const GNECalibratorFlow&) = delete;

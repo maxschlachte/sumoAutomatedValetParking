@@ -64,7 +64,7 @@ public:
     ~GUIEdge();
 
     /// Has to be called after all edges were built and all connections were set
-    virtual void closeBuilding() override;
+    virtual void closeBuilding();
 
     /* @brief Returns the gl-ids of all known edges
      * @param[in] includeInternal Whether to include ids of internal edges
@@ -100,7 +100,8 @@ public:
      * @return The built popup-menu
      * @see GUIGlObject::getPopUpMenu
      */
-    virtual GUIGLObjectPopupMenu* getPopUpMenu(GUIMainWindow& app, GUISUMOAbstractView& parent) override;
+    virtual GUIGLObjectPopupMenu* getPopUpMenu(GUIMainWindow& app,
+            GUISUMOAbstractView& parent);
 
 
     /** @brief Returns an own parameter window
@@ -110,7 +111,8 @@ public:
      * @return The built parameter window
      * @see GUIGlObject::getParameterWindow
      */
-    virtual GUIParameterTableWindow* getParameterWindow(GUIMainWindow& app, GUISUMOAbstractView& parent) override;
+    virtual GUIParameterTableWindow* getParameterWindow(GUIMainWindow& app,
+            GUISUMOAbstractView& parent);
 
     /** @brief Returns an own type parameter window
      *
@@ -118,36 +120,48 @@ public:
      * @param[in] parent The parent window needed to build the parameter window
      * @return The built parameter window
      */
-    GUIParameterTableWindow* getTypeParameterWindow(GUIMainWindow& app, GUISUMOAbstractView& parent) override;
+    GUIParameterTableWindow* getTypeParameterWindow(GUIMainWindow& app, GUISUMOAbstractView& parent);
 
-    /// @brief return exaggeration associated with this GLObject
-    double getExaggeration(const GUIVisualizationSettings& s) const override;
+    /// @brief return exaggeration asociated with this GLObject
+    double getExaggeration(const GUIVisualizationSettings& s) const;
 
     /** @brief Returns the boundary to which the view shall be centered in order to show the object
      *
      * @return The boundary the object is within
      * @see GUIGlObject::getCenteringBoundary
      */
-    Boundary getCenteringBoundary() const override;
+    Boundary getCenteringBoundary() const;
 
     /// @brief Returns the street name
-    const std::string getOptionalName() const override;
+    const std::string getOptionalName() const;
 
     /** @brief Draws the object
      * @param[in] s The settings for the current view (may influence drawing)
      * @see GUIGlObject::drawGL
      */
-    void drawGL(const GUIVisualizationSettings& s) const override;
+    void drawGL(const GUIVisualizationSettings& s) const;
     //@}
 
-    void addTransportable(MSTransportable* t) const override {
+
+    void addPerson(MSTransportable* p) const {
         FXMutexLock locker(myLock);
-        MSEdge::addTransportable(t);
+        MSEdge::addPerson(p);
     }
 
-    void removeTransportable(MSTransportable* t) const override {
+    void removePerson(MSTransportable* p) const {
         FXMutexLock locker(myLock);
-        MSEdge::removeTransportable(t);
+        MSEdge::removePerson(p);
+    }
+
+
+    void addContainer(MSTransportable* c) const {
+        FXMutexLock locker(myLock);
+        MSEdge::addContainer(c);
+    }
+
+    void removeContainer(MSTransportable* c) const {
+        FXMutexLock locker(myLock);
+        MSEdge::removeContainer(c);
     }
 
     double getAllowedSpeed() const;
@@ -164,7 +178,7 @@ public:
     bool setMultiColor(const GUIColorer& c) const;
 
     /// @brief gets the color value according to the current scheme index
-    double getColorValue(const GUIVisualizationSettings& s, int activeScheme) const override;
+    double getColorValue(const GUIVisualizationSettings& s, int activeScheme) const;
 
     /// @brief gets the scaling value according to the current scheme index
     double getScaleValue(int activeScheme) const;
@@ -175,12 +189,12 @@ public:
     void drawMesoVehicles(const GUIVisualizationSettings& s) const;
 
     /// @brief grant exclusive access to the mesoscopic state
-    void lock() const override {
+    void lock() const {
         myLock.lock();
     }
 
     /// @brief release exclusive access to the mesoscopic state
-    void unlock() const override {
+    void unlock() const {
         myLock.unlock();
     }
 
@@ -204,7 +218,7 @@ public:
     }
 
     /// @brief whether this lane is selected in the GUI
-    bool isSelected() const override;
+    bool isSelected() const;
 
     /// The color of the segments (cached)
     mutable std::vector<RGBColor> mySegmentColors;

@@ -36,7 +36,7 @@
 
 GNEWalk::GNEWalk(SumoXMLTag tag, GNENet* net) :
     GNEDemandElement("", net, GLO_WALK, tag, GNEPathManager::PathElement::Options::DEMAND_ELEMENT,
-{}, {}, {}, {}, {}, {}),
+{}, {}, {}, {}, {}, {}, {}, {}),
 myArrivalPosition(0) {
     // reset default values
     resetDefaultValues();
@@ -45,28 +45,28 @@ myArrivalPosition(0) {
 
 GNEWalk::GNEWalk(GNENet* net, GNEDemandElement* personParent, GNEEdge* fromEdge, GNEEdge* toEdge, double arrivalPosition) :
     GNEDemandElement(personParent, net, GLO_WALK, GNE_TAG_WALK_EDGE, GNEPathManager::PathElement::Options::DEMAND_ELEMENT,
-{}, {fromEdge, toEdge}, {}, {}, {personParent}, {}),
+{}, {fromEdge, toEdge}, {}, {}, {}, {}, {personParent}, {}),
 myArrivalPosition(arrivalPosition) {
 }
 
 
 GNEWalk::GNEWalk(GNENet* net, GNEDemandElement* personParent, GNEEdge* fromEdge, GNEAdditional* toBusStop, double arrivalPosition) :
     GNEDemandElement(personParent, net, GLO_WALK, GNE_TAG_WALK_BUSSTOP, GNEPathManager::PathElement::Options::DEMAND_ELEMENT,
-{}, {fromEdge}, {}, {toBusStop}, {personParent}, {}),
+{}, {fromEdge}, {}, {toBusStop}, {}, {}, {personParent}, {}),
 myArrivalPosition(arrivalPosition) {
 }
 
 
 GNEWalk::GNEWalk(GNENet* net, GNEDemandElement* personParent, std::vector<GNEEdge*> edges, double arrivalPosition) :
     GNEDemandElement(personParent, net, GLO_WALK, GNE_TAG_WALK_EDGES, GNEPathManager::PathElement::Options::DEMAND_ELEMENT,
-{}, {edges}, {}, {}, {personParent}, {}),
+{}, {edges}, {}, {}, {}, {}, {personParent}, {}),
 myArrivalPosition(arrivalPosition) {
 }
 
 
 GNEWalk::GNEWalk(GNENet* net, GNEDemandElement* personParent, GNEDemandElement* route, double arrivalPosition) :
     GNEDemandElement(personParent, net, GLO_WALK, GNE_TAG_WALK_ROUTE, GNEPathManager::PathElement::Options::DEMAND_ELEMENT,
-{}, {}, {}, {}, {personParent, route}, {}),
+{}, {}, {}, {}, {}, {}, {personParent, route}, {}),
 myArrivalPosition(arrivalPosition) {
 }
 
@@ -74,7 +74,7 @@ myArrivalPosition(arrivalPosition) {
 GNEWalk::GNEWalk(GNENet* net, GNEDemandElement* personParent, GNEJunction* fromJunction, GNEJunction* toJunction, double arrivalPosition) :
     GNEDemandElement(personParent, net, GLO_WALK, GNE_TAG_WALK_JUNCTIONS, GNEPathManager::PathElement::Options::DEMAND_ELEMENT, {
     fromJunction, toJunction
-}, {}, {}, {}, {personParent}, {}),
+}, {}, {}, {}, {}, {}, {personParent}, {}),
 myArrivalPosition(arrivalPosition) {
 }
 
@@ -113,7 +113,7 @@ GNEWalk::getPopUpMenu(GUIMainWindow& app, GUISUMOAbstractView& parent) {
     buildPopupHeader(ret, app);
     // build menu command for center button and copy cursor position to clipboard
     buildCenterPopupEntry(ret);
-    buildPositionCopyEntry(ret, app);
+    buildPositionCopyEntry(ret, false);
     // buld menu commands for names
     GUIDesigns::buildFXMenuCommand(ret, "Copy " + getTagStr() + " name to clipboard", nullptr, ret, MID_COPY_NAME);
     GUIDesigns::buildFXMenuCommand(ret, "Copy " + getTagStr() + " typed name to clipboard", nullptr, ret, MID_COPY_TYPED_NAME);
@@ -156,7 +156,7 @@ GNEWalk::writeDemandElement(OutputDevice& device) const {
             device.writeAttr(SUMO_ATTR_TOJUNCTION, getParentJunctions().back()->getID());
         }
     }
-    // avoid write arrival positions in walk to busStop
+    // avoid writte arrival positions in walk to busStop
     if (!((myTagProperty.getTag() == GNE_TAG_WALK_BUSSTOP) && (myArrivalPosition == 0))) {
         // only write arrivalPos if is different of -1
         if (myArrivalPosition != -1) {
@@ -348,7 +348,6 @@ GNEWalk::getAttribute(SumoXMLAttr key) const {
     switch (key) {
         // Common person plan attributes
         case SUMO_ATTR_ID:
-        case GNE_ATTR_PARENT:
             return getParentDemandElements().front()->getID();
         case SUMO_ATTR_FROM:
             if (myTagProperty.getTag() == GNE_TAG_WALK_ROUTE) {
@@ -383,6 +382,8 @@ GNEWalk::getAttribute(SumoXMLAttr key) const {
             return toString(isAttributeCarrierSelected());
         case GNE_ATTR_PARAMETERS:
             return getParametersStr();
+        case GNE_ATTR_PARENT:
+            return getParentDemandElements().front()->getID();
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
@@ -443,7 +444,6 @@ GNEWalk::setAttribute(SumoXMLAttr key, const std::string& value, GNEUndoList* un
         case SUMO_ATTR_FROMJUNCTION:
         case SUMO_ATTR_ARRIVALPOS:
         case GNE_ATTR_SELECTED:
-        case GNE_ATTR_PARENT:
         case GNE_ATTR_PARAMETERS:
             undoList->changeAttribute(new GNEChange_Attribute(this, key, value));
             break;
@@ -552,9 +552,6 @@ GNEWalk::isValid(SumoXMLAttr key, const std::string& value) {
             if (value.empty()) {
                 return true;
             } else if (canParse<double>(value)) {
-                if (isTemplate()) {
-                    return true;
-                }
                 const double parsedValue = canParse<double>(value);
                 if ((parsedValue < 0) || (parsedValue > getLastPathLane()->getLaneShape().length())) {
                     return false;
@@ -568,17 +565,21 @@ GNEWalk::isValid(SumoXMLAttr key, const std::string& value) {
             return canParse<bool>(value);
         case GNE_ATTR_PARAMETERS:
             return Parameterised::areParametersValid(value);
-        case GNE_ATTR_PARENT:
-            if (myNet->getAttributeCarriers()->retrieveDemandElement(SUMO_TAG_PERSON, value, false) != nullptr) {
-                return true;
-            } else if (myNet->getAttributeCarriers()->retrieveDemandElement(SUMO_TAG_PERSONFLOW, value, false) != nullptr) {
-                return true;
-            } else {
-                return false;
-            }
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
+}
+
+
+void
+GNEWalk::enableAttribute(SumoXMLAttr /*key*/, GNEUndoList* /*undoList*/) {
+    //
+}
+
+
+void
+GNEWalk::disableAttribute(SumoXMLAttr /*key*/, GNEUndoList* /*undoList*/) {
+    //
 }
 
 
@@ -618,7 +619,7 @@ GNEWalk::getHierarchyName() const {
 }
 
 
-const Parameterised::Map&
+const std::map<std::string, std::string>&
 GNEWalk::getACParametersMap() const {
     return getParametersMap();
 }
@@ -689,17 +690,15 @@ GNEWalk::setAttribute(SumoXMLAttr key, const std::string& value) {
         case GNE_ATTR_PARAMETERS:
             setParametersStr(value);
             break;
-        case GNE_ATTR_PARENT:
-            if (myNet->getAttributeCarriers()->retrieveDemandElement(SUMO_TAG_PERSON, value, false) != nullptr) {
-                replaceDemandElementParent(SUMO_TAG_PERSON, value, 0);
-            } else if (myNet->getAttributeCarriers()->retrieveDemandElement(SUMO_TAG_PERSONFLOW, value, false) != nullptr) {
-                replaceDemandElementParent(SUMO_TAG_PERSONFLOW, value, 0);
-            }
-            updateGeometry();
-            break;
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
+}
+
+
+void
+GNEWalk::toogleAttribute(SumoXMLAttr /*key*/, const bool /*value*/, const int /*previousParameters*/) {
+    // nothing to toogle
 }
 
 

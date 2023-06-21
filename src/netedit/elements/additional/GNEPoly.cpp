@@ -18,17 +18,17 @@
 // A class for visualizing and editing POIS in netedit (adapted from
 // GUIPolygon and NLHandler)
 /****************************************************************************/
-#include <config.h>
-
 #include <string>
 #include <utils/gui/globjects/GUIGLObjectPopupMenu.h>
 #include <utils/gui/div/GLHelper.h>
+#include <utils/gui/images/GUITexturesHelper.h>
 #include <netedit/GNENet.h>
 #include <netedit/GNEUndoList.h>
 #include <netedit/GNEViewNet.h>
 #include <netedit/GNEViewParent.h>
 #include <netedit/changes/GNEChange_Attribute.h>
 #include <netedit/frames/common/GNEMoveFrame.h>
+#include <utils/gui/globjects/GUIPolygon.h>
 #include <utils/gui/div/GUIParameterTableWindow.h>
 #include <utils/gui/div/GUIDesigns.h>
 
@@ -40,9 +40,8 @@
 // ===========================================================================
 
 GNEPoly::GNEPoly(GNENet* net) :
-    TesselatedPolygon("", "", RGBColor::BLACK, {}, false, false, 0, 0, 0, "", false, "", Parameterised::Map()),
-                  GNEAdditional("", net, GLO_POLYGON, SUMO_TAG_POLY, "",
-                                {}, {}, {}, {}, {}, {}),
+    SUMOPolygon("", "", RGBColor::BLACK, {}, false, false, 0, 0, 0, "", false, "", std::map<std::string, std::string>()),
+            GNEShape("", net, GLO_POLYGON, SUMO_TAG_POLY, {}, {}, {}, {}, {}, {}, {}, {}),
 mySimplifiedShape(false) {
     // reset default values
     resetDefaultValues();
@@ -51,28 +50,21 @@ mySimplifiedShape(false) {
 
 GNEPoly::GNEPoly(GNENet* net, const std::string& id, const std::string& type, const PositionVector& shape, bool geo, bool fill, double lineWidth,
                  const RGBColor& color, double layer, double angle, const std::string& imgFile, bool relativePath, const std::string& name,
-                 const Parameterised::Map& parameters) :
-    TesselatedPolygon(id, type, color, shape, geo, fill, lineWidth, layer, angle, imgFile, relativePath, name, parameters),
-    GNEAdditional(id, net, GLO_POLYGON, SUMO_TAG_POLY, "",
-{}, {}, {}, {}, {}, {}),
+                 const std::map<std::string, std::string>& parameters) :
+    SUMOPolygon(id, type, color, shape, geo, fill, lineWidth, layer, angle, imgFile, relativePath, name, parameters),
+    GNEShape(id, net, GLO_POLYGON, SUMO_TAG_POLY, {}, {}, {}, {}, {}, {}, {}, {}),
 mySimplifiedShape(false) {
+    // update centering boundary without updating grid
+    updateCenteringBoundary(false);
     // check if imgFile is valid
     if (!imgFile.empty() && GUITexturesHelper::getTextureID(imgFile) == -1) {
         setShapeImgFile("");
     }
     // set GEO shape
     myGeoShape = myShape;
-    if (geo) {
-        for (int i = 0; i < (int) myGeoShape.size(); i++) {
-            GeoConvHelper::getFinal().x2cartesian_const(myShape[i]);
-        }
-    } else {
-        for (int i = 0; i < (int) myGeoShape.size(); i++) {
-            GeoConvHelper::getFinal().cartesian2geo(myGeoShape[i]);
-        }
+    for (int i = 0; i < (int) myGeoShape.size(); i++) {
+        GeoConvHelper::getFinal().cartesian2geo(myGeoShape[i]);
     }
-    // update centering boundary without updating grid
-    updateCenteringBoundary(false);
     // update geometry
     updateGeometry();
 }
@@ -125,16 +117,21 @@ GNEPoly::generateChildID(SumoXMLTag /*childTag*/) {
 
 
 void
+GNEPoly::setParameter(const std::string& key, const std::string& value) {
+    Parameterised::setParameter(key, value);
+}
+
+
+void
 GNEPoly::updateGeometry() {
     // just update geometry
     myPolygonGeometry.updateGeometry(myShape);
-    myTesselation.clear();
 }
 
 
 Position
 GNEPoly::getPositionInView() const {
-    return myAdditionalBoundary.getCenter();
+    return myBoundary.getCenter();
 }
 
 
@@ -151,9 +148,9 @@ GNEPoly::updateCenteringBoundary(const bool updateGrid) {
         myNet->removeGLObjectFromGrid(this);
     }
     // use shape as boundary
-    myAdditionalBoundary = myShape.getBoxBoundary();
+    myBoundary = myShape.getBoxBoundary();
     // grow boundary
-    myAdditionalBoundary.grow(10);
+    myBoundary.grow(10);
     // add object into net
     if (updateGrid) {
         myNet->addGLObjectIntoGrid(this);
@@ -162,13 +159,7 @@ GNEPoly::updateCenteringBoundary(const bool updateGrid) {
 
 
 void
-GNEPoly::splitEdgeGeometry(const double /*splitPosition*/, const GNENetworkElement* /*originalElement*/, const GNENetworkElement* /*newElement*/, GNEUndoList* /*undoList*/) {
-    // nothing to split
-}
-
-
-void
-GNEPoly::writeAdditional(OutputDevice& device) const {
+GNEPoly::writeShape(OutputDevice& device) {
     writeXML(device, myGEO);
 }
 
@@ -229,11 +220,22 @@ GNEPoly::getPopUpMenu(GUIMainWindow& app, GUISUMOAbstractView& parent) {
 }
 
 
+GUIParameterTableWindow*
+GNEPoly::getParameterWindow(GUIMainWindow& app, GUISUMOAbstractView& /*parent*/) {
+    GUIParameterTableWindow* ret = new GUIParameterTableWindow(app, *this);
+    // add items
+    ret->mkItem("type", false, getShapeType());
+    ret->mkItem("layer", false, toString(getShapeLayer()));
+    ret->closeBuilding(this);
+    return ret;
+}
+
+
 void
 GNEPoly::drawGL(const GUIVisualizationSettings& s) const {
     // check if boundary has to be drawn
     if (s.drawBoundaries) {
-        GLHelper::drawBoundary(myAdditionalBoundary);
+        GLHelper::drawBoundary(myBoundary);
     }
     // first check if poly can be drawn
     if (myNet->getViewNet()->getDemandViewOptions().showShapes() &&
@@ -273,7 +275,7 @@ GNEPoly::drawGL(const GUIVisualizationSettings& s) const {
                 }
             } else {
                 // draw inner polygon
-                GUIPolygon::drawInnerPolygon(s, this, this, myPolygonGeometry.getShape(), 0, getFill(), drawUsingSelectColor());
+                GUIPolygon::drawInnerPolygon(s, this, this, myPolygonGeometry.getShape(), getFill(), 0, drawUsingSelectColor());
             }
         } else {
             // push matrix
@@ -396,7 +398,6 @@ GNEPoly::deleteGeometryPoint(const Position& pos, bool allowUndo) {
             // add object into grid again
             myNet->addGLObjectIntoGrid(this);
         }
-        myTesselation.clear();
     } else {
         WRITE_WARNING("Number of remaining points insufficient")
     }
@@ -565,22 +566,10 @@ GNEPoly::getAttribute(SumoXMLAttr key) const {
         case GNE_ATTR_SELECTED:
             return toString(isAttributeCarrierSelected());
         case GNE_ATTR_PARAMETERS:
-            return SUMOPolygon::getParametersStr();
+            return getParametersStr();
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
-}
-
-
-double
-GNEPoly::getAttributeDouble(SumoXMLAttr key) const {
-    throw InvalidArgument(getTagStr() + " attribute '" + toString(key) + "' not allowed");
-}
-
-
-const Parameterised::Map&
-GNEPoly::getACParametersMap() const {
-    return SUMOPolygon::getParametersMap();
 }
 
 
@@ -619,8 +608,8 @@ GNEPoly::isValid(SumoXMLAttr key, const std::string& value) {
     switch (key) {
         case SUMO_ATTR_ID:
             return SUMOXMLDefinitions::isValidAdditionalID(value) &&
-                   (myNet->getAttributeCarriers()->retrieveAdditional(SUMO_TAG_TAZ, value, false) == nullptr) &&
-                   (myNet->getAttributeCarriers()->retrieveAdditional(SUMO_TAG_POLY, value, false) == nullptr);
+                   (myNet->getAttributeCarriers()->retrieveTAZElement(SUMO_TAG_TAZ, value, false) == nullptr) &&
+                   (myNet->getAttributeCarriers()->retrieveShape(SUMO_TAG_POLY, value, false) == nullptr);
         case SUMO_ATTR_SHAPE:
         case SUMO_ATTR_GEOSHAPE:
             // empty shapes AREN'T allowed
@@ -676,12 +665,11 @@ GNEPoly::isValid(SumoXMLAttr key, const std::string& value) {
         case GNE_ATTR_SELECTED:
             return canParse<bool>(value);
         case GNE_ATTR_PARAMETERS:
-            return areParametersValid(value);
+            return Parameterised::areParametersValid(value);
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
 }
-
 
 bool
 GNEPoly::isAttributeEnabled(SumoXMLAttr /* key */) const {
@@ -694,15 +682,9 @@ GNEPoly::isAttributeEnabled(SumoXMLAttr /* key */) const {
 }
 
 
-std::string
-GNEPoly::getPopUpID() const {
-    return getTagStr() + ": " + getID();
-}
-
-
-std::string
-GNEPoly::getHierarchyName() const {
-    return getTagStr();
+const std::map<std::string, std::string>&
+GNEPoly::getACParametersMap() const {
+    return getParametersMap();
 }
 
 // ===========================================================================
@@ -812,7 +794,7 @@ GNEPoly::setAttribute(SumoXMLAttr key, const std::string& value) {
             }
             break;
         case GNE_ATTR_PARAMETERS:
-            SUMOPolygon::setParametersStr(value);
+            setParametersStr(value);
             break;
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");

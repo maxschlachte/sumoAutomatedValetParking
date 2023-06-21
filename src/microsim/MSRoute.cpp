@@ -49,9 +49,7 @@ FXMutex MSRoute::myDictMutex(true);
 MSRoute::MSRoute(const std::string& id,
                  const ConstMSEdgeVector& edges,
                  const bool isPermanent, const RGBColor* const c,
-                 const std::vector<SUMOVehicleParameter::Stop>& stops,
-                 SUMOTime replacedTime,
-                 int replacedIndex) :
+                 const std::vector<SUMOVehicleParameter::Stop>& stops) :
     Named(id), myEdges(edges), myAmPermanent(isPermanent),
     myReferenceCounter(isPermanent ? 1 : 0),
     myColor(c),
@@ -59,10 +57,7 @@ MSRoute::MSRoute(const std::string& id,
     myCosts(-1),
     mySavings(0),
     myReroute(false),
-    myStops(stops),
-    myReplacedTime(replacedTime),
-    myReplacedIndex(replacedIndex)
-{}
+    myStops(stops) {}
 
 
 MSRoute::~MSRoute() {
@@ -264,18 +259,9 @@ MSRoute::dict_saveState(OutputDevice& out) {
     FXMutexLock f(myDictMutex);
 #endif
     for (RouteDict::iterator it = myDict.begin(); it != myDict.end(); ++it) {
-        const MSRoute* r = (*it).second;
-        out.openTag(SUMO_TAG_ROUTE);
-        out.writeAttr(SUMO_ATTR_ID, r->getID());
-        out.writeAttr(SUMO_ATTR_STATE, r->myAmPermanent);
-        out.writeAttr(SUMO_ATTR_EDGES, r->myEdges);
-        if (r->myColor != nullptr) {
-            out.writeAttr(SUMO_ATTR_COLOR, *r->myColor);
-        }
-        for (auto stop : r->getStops()) {
-            stop.write(out);
-        }
-        out.closeTag();
+        out.openTag(SUMO_TAG_ROUTE).writeAttr(SUMO_ATTR_ID, (*it).second->getID());
+        out.writeAttr(SUMO_ATTR_STATE, (*it).second->myAmPermanent);
+        out.writeAttr(SUMO_ATTR_EDGES, (*it).second->myEdges).closeTag();
     }
     for (const auto& item : myDistDict) {
         if (item.second.first->getVals().size() > 0) {
@@ -381,8 +367,7 @@ MSRoute::getDistanceBetween(double fromPos, double toPos,
         } else {
             distance += (*it)->getLength();
             if (includeInternal && (it + 1) != end()) {
-                // XXX the length may be wrong if there are parallel internal edges for different vClasses
-                distance += (*it)->getInternalFollowingLengthTo(*(it + 1), SVC_IGNORING);
+                distance += (*it)->getInternalFollowingLengthTo(*(it + 1));
             }
         }
         isFirstIteration = false;

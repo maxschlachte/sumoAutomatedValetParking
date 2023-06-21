@@ -22,7 +22,6 @@
 #include <config.h>
 #include <utility>
 
-#include <utils/common/StdDefs.h>
 #include "GeomHelper.h"
 #include "Boundary.h"
 #include "PositionVector.h"
@@ -298,7 +297,6 @@ Boundary::partialWithin(const AbstractPoly& poly, double offset) const {
 
 Boundary&
 Boundary::grow(double by) {
-
     myXmax += by;
     myYmax += by;
     myXmin -= by;
@@ -367,16 +365,10 @@ Boundary::operator!=(const Boundary& b) const {
 
 void
 Boundary::set(double xmin, double ymin, double xmax, double ymax) {
-    /*
-        Takes care of the following extraneous cases w.r.t the input parameters:
-            - xmin > xmax
-            - ymin > ymax
-    */
-
-    myXmin = MIN2(xmin, xmax);
-    myYmin = MIN2(ymin, ymax);
-    myXmax = MAX2(xmin, xmax);
-    myYmax = MAX2(ymin, ymax);
+    myXmin = xmin;
+    myYmin = ymin;
+    myXmax = xmax;
+    myYmax = ymax;
 }
 
 

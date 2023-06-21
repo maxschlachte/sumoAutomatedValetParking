@@ -45,10 +45,9 @@ GUIMEVehicleControl::~GUIMEVehicleControl() {
 SUMOVehicle*
 GUIMEVehicleControl::buildVehicle(SUMOVehicleParameter* defs,
                                   const MSRoute* route, MSVehicleType* type,
-                                  const bool ignoreStopErrors, const bool fromRouteFile,
-                                  bool addRouteStops) {
+                                  const bool ignoreStopErrors, const bool fromRouteFile) {
     MSBaseVehicle* built = new GUIMEVehicle(defs, route, type, type->computeChosenSpeedDeviation(fromRouteFile ? MSRouteHandler::getParsingRNG() : nullptr));
-    initVehicle(built, ignoreStopErrors, addRouteStops);
+    initVehicle(built, ignoreStopErrors);
     return built;
 }
 

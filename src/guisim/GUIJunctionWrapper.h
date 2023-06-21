@@ -27,7 +27,6 @@
 #include <utils/geom/PositionVector.h>
 #include <utils/gui/globjects/GUIGLObjectPopupMenu.h>
 #include <utils/gui/globjects/GUIGlObject.h>
-#include <utils/gui/globjects/GUIPolygon.h>
 
 
 // ===========================================================================
@@ -92,7 +91,7 @@ public:
     GUIParameterTableWindow* getParameterWindow(
         GUIMainWindow& app, GUISUMOAbstractView& parent);
 
-    /// @brief return exaggeration associated with this GLObject
+    /// @brief return exaggeration asociated with this GLObject
     double getExaggeration(const GUIVisualizationSettings& s) const;
 
     /** @brief Returns the boundary to which the view shall be centered in order to show the object
@@ -146,10 +145,6 @@ private:
 private:
     /// @brief A reference to the represented junction
     MSJunction& myJunction;
-
-    /// @brief An object that stores the shape and its tesselation
-    mutable TesselatedPolygon myTesselation;
-    mutable double myExaggeration;
 
     /// @brief The maximum size (in either x-, or y-dimension) for determining whether to draw or not
     double myMaxSize;

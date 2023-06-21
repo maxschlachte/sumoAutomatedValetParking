@@ -124,6 +124,11 @@ public:
      */
     void generateOutput(OutputDevice* tripinfoOut) const;
 
+    /** @brief Checkers whether a parking area is coming up for a given vehicle before the end edge
+     *
+     * @param[in] tObject The checked vehicle.
+     * @return True if there is no parking area stop before the end edge
+     */
     bool noParkingStopsBeforeEndEdge(SUMOTrafficObject& tObject) const;
 
 private:

@@ -32,7 +32,8 @@
 
 GNERerouterSymbol::GNERerouterSymbol(GNEAdditional* rerouterParent, GNEEdge* edge) :
     GNEAdditional(rerouterParent->getNet(), GLO_REROUTER, GNE_TAG_REROUTER_SYMBOL, "",
-{}, {edge}, {}, {rerouterParent}, {}, {}) {
+{}, {edge}, {}, {rerouterParent}, {}, {}, {}, {},
+std::map<std::string, std::string>()) {
     // update centering boundary without updating grid
     updateCenteringBoundary(false);
 }
@@ -196,7 +197,6 @@ GNERerouterSymbol::drawGL(const GUIVisualizationSettings& s) const {
 std::string
 GNERerouterSymbol::getAttribute(SumoXMLAttr key) const {
     switch (key) {
-        case SUMO_ATTR_ID:
         case SUMO_ATTR_EDGE:
             return getParentEdges().front()->getID();
         default:
@@ -211,12 +211,6 @@ GNERerouterSymbol::getAttributeDouble(SumoXMLAttr /*key*/) const {
 }
 
 
-const Parameterised::Map&
-GNERerouterSymbol::getACParametersMap() const {
-    return PARAMETERS_EMPTY;
-}
-
-
 void
 GNERerouterSymbol::setAttribute(SumoXMLAttr /*key*/, const std::string& /*value*/, GNEUndoList* /*undoList*/) {
     throw InvalidArgument("Symbols cannot be edited");
@@ -226,6 +220,12 @@ GNERerouterSymbol::setAttribute(SumoXMLAttr /*key*/, const std::string& /*value*
 bool
 GNERerouterSymbol::isValid(SumoXMLAttr /*key*/, const std::string& /*value*/) {
     throw InvalidArgument("Symbols cannot be edited");
+}
+
+
+bool
+GNERerouterSymbol::isAttributeEnabled(SumoXMLAttr /*key*/) const {
+    return true;
 }
 
 

@@ -31,11 +31,11 @@
 class MSSOTLRequestPolicy: public MSSOTLPolicy {
 
 public:
-    MSSOTLRequestPolicy(const Parameterised::Map& parameters);
+    MSSOTLRequestPolicy(const std::map<std::string, std::string>& parameters);
     MSSOTLRequestPolicy(MSSOTLPolicyDesirability* desirabilityAlgorithm);
 
     MSSOTLRequestPolicy(MSSOTLPolicyDesirability* desirabilityAlgorithm,
-                        const Parameterised::Map& parameters);
+                        const std::map<std::string, std::string>& parameters);
 
     bool canRelease(SUMOTime elapsed, bool thresholdPassed,  bool pushButtonPressed,
                     const MSPhaseDefinition* stage, int vehicleCount);

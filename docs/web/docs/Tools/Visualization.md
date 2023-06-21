@@ -57,7 +57,7 @@ Further examples are shown below...
 
 ### Inductionloop Speed over Time
 
-Input is [inductionloop-output](../Simulation/Output/Induction_Loops_Detectors_(E1).md) with 30s aggregation from 2 detectors (`<e1Detector id="e1Detector_-109_0_0" lane="-109_0" pos="54.06" period="30.00" file="data.xml"/>`
+Input is [inductionloop-output](../Simulation/Output/Induction_Loops_Detectors_(E1).md) with 30s aggregation from 2 detectors (`<e1Detector id="e1Detector_-109_0_0" lane="-109_0" pos="54.06" freq="30.00" file="data.xml"/>`
 
 Call: `python tools/visualization/plotXMLAttributes.py data.xml -x begin -y speed -s`
 
@@ -73,14 +73,13 @@ Call: `python tools/visualization/plotXMLAttributes.py stopinfos.xml -i busStop 
 
 ### Fundamental Diagram from edgeData
 
-Input is [edgeData-output](../Simulation/Output/Lane-_or_Edge-based_Traffic_Measures.md) with 1-minute aggregation (`<edgeData id="example" file="data.xml" period="60"/>`)
+Input is [edgeData-output](../Simulation/Output/Lane-_or_Edge-based_Traffic_Measures.md) with 1-minute aggregation (`<edgeData id="example" file="data.xml" freq="60"/>`)
 
 Call: `python tools/visualization/plotXMLAttributes.py data.xml -i id -x density -y left -s  --scatterplot --yfactor 60 --ylabel vehs/hour`
 
-Each color gives encodes a different edge-id. Option **--factor 60** is used to convert from vehicles per 60s (edgeData-period 60) to vehicles per hour.
+Each color gives encodes a different edge-id
 
 ![plotAttrs_fundamental.png](../images/plotAttrs_fundamental.png "plotAttrs_fundamental.png")
-
 
 
 ## plot_trajectories.py
@@ -98,14 +97,13 @@ The option **-t (--trajectory-type)** supports different attributes that can be 
 ### Available Attributes
 
 - **t**: Time in s
-- **d**: Distance driven (starts with 0 at the first fcd datapoint for each vehicle). Distance is computed based on speed using Euler-integration. Set option **--ballistic** for [ballistic integration](../Simulation/Basic_Definition.md#defining_the_integration_method).
+- **d**: Distance driven (starts with 0 at the first fcd datapoint for each vehicle). Distance is computed based on speed using Euler-integration. Set optin **--ballistic** for [ballistic integration](../Simulation/Basic_Definition.md#defining_the_integration_method).
 - **a**: Acceleration
 - **s**: Speed (m/s)
 - **i**: Vehicle angle (navigational degrees)
 - **x**: X-Position in m
 - **y**: Y-Position in m
 - **k**: [Kilometrage](../Simulation/Railways.md#kilometrage_mileage_chainage) (requires **--fcd-output.distance**)
-- **g**: gap to leader (requires **--fcd-output.max-leader-distance**)
 
 ### Examples Trajectory Types
 
@@ -149,7 +147,7 @@ noise](../Simulation/Output/Lane-_or_Edge-based_Noise_Measures.md).
 <tr class="odd">
 <td><figure>
 <img src="../images/Plot_net_dump.png" title="plot_net_dump.png" width="500" alt="" /></figure></td>
-<td><p><code>python plot_net_dump.py -v -n bs.net.xml \</code><br />
+<td><p><code>python plot_dump_net.py -v -n bs.net.xml \</code><br />
 <code> --xticks 7000,14001,2000,16 --yticks 9000,16001,1000,16 \</code><br />
 <code> --measures entered,entered --xlabel [m] --ylabel [m] \</code><br />
 <code> --default-width 1 -i base-jr.xml,base-jr.xml \</code><br />
@@ -158,13 +156,13 @@ noise](../Simulation/Output/Lane-_or_Edge-based_Noise_Measures.md).
 <code> --min-color-value -1000 --max-color-value 1000 \</code><br />
 <code> --max-width-value 1000 --min-width-value -1000  \</code><br />
 <code> --max-width 3 --min-width .5 \</code><br />
-<code> --colormap "#0:#0000c0,.25:#404080,.5:#808080,.75:#804040,1:#c00000"</code></p>
+<code> --colormap #0:#0000c0,.25:#404080,.5:#808080,.75:#804040,1:#c00000</code></p>
 <p>It shows the shift in traffic in the city of Brunswick, Tuesday-Thursday week type after establishing an environmental zone.</p></td>
 </tr>
 <tr class="even">
 <td><figure>
 <img src="../images/Plot_net_dump2.png" title="plot_net_dump2.png" width="500" alt="" /></figure></td>
-<td><p><code>python plot_net_dump.py -v -n bs.net.xml \</code><br />
+<td><p><code>python plot_dump_net.py -v -n bs.net.xml \</code><br />
 <code> --xticks 7000,14001,2000,16 --yticks 9000,16001,1000,16 \</code><br />
 <code> --measures NOx_normed,NOx_normed --xlabel [m] --ylabel [m] \</code><br />
 <code> --default-width 1 -i HBEFA_base-jr.xml,HBEFA_base-jr.xml \</code><br />
@@ -172,7 +170,7 @@ noise](../Simulation/Output/Lane-_or_Edge-based_Noise_Measures.md).
 <code> --default-width .5 --default-color #606060 \</code><br />
 <code> --min-color-value -.1 --max-color-value .1 \</code><br />
 <code> --max-width-value .1  --max-width 3 --min-width .5 \</code><br />
-<code> --colormap "#0:#00c000,.25:#408040,.5:#808080,.75:#804040,1:#c00000"</code></p>
+<code> --colormap #0:#00c000,.25:#408040,.5:#808080,.75:#804040,1:#c00000</code></p>
 <p>Showing the according changes in NOx emissions.</p></td>
 </tr>
 </tbody>
@@ -189,7 +187,6 @@ noise](../Simulation/Output/Lane-_or_Edge-based_Noise_Measures.md).
 **Options**
 
 Here the most important options are listed. Use **--help** to see all options.
-
 | Option                                               | Description                                         |
 |------------------------------------------------------|-----------------------------------------------------|
 | **-n** {{DT_FILE}}<br>**--net** {{DT_FILE}}                            | Defines the network to read                         |

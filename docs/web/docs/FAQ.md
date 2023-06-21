@@ -200,8 +200,6 @@ always use the latest version of SUMO.
 - whenever possible copy text rather than screenshots of text
 - When sending screenshots of sumo-gui or netedit, please include the whole screen so the application version and simulation time are visible.
 - Attach scenario files including .sumocfg as a zip archive
-  - make sure that your scenario is not random (avoid option **--random**)
-  - if your setup involves TraCI and your (python) runner program is slightly complicated or has further dependencies, attach a [TraCI-traceFile](TraCI/Interfacing_TraCI_from_Python.md#generating_a_log_of_all_traci_commands) instead of your whole traci script.
 - describe what you are trying to accomplish
 - describe how what you see differs from your expectations
 - Phrase your question using familiar terms (not everyone is an expert
@@ -220,10 +218,9 @@ according to the above suggestions.
 - if you put your question into an issue an the issue was closed, put your follow-up questions into the closed issue rather than open an new issue
 - Be polite
 - Good Example questions:
-  - How can I get data *X* out of SUMO?
-  - How can I influence aspect *Y* of a simulation?
-  - My simulation aborted with error "`<ERROR MESSAGE GOES HERE>`". What does that mean?
-  - My simulation does *Z* though I expected it to do *X*. How do I fix that?
+  - How can I get data X out of SUMO?
+  - How can I influence aspect Y of a simulation?
+  - My simulation does Z though I do not expect it to. How do I fix that?
 
 ### I asked a question on the mailing list and did not get an answer within X days. Why?
 
@@ -250,15 +247,6 @@ according to the above suggestions.
   our spare time.
 
 ## TraCI
-
-### My [TraCI](TraCI.md)-program is to slow. What can I do?
-
-  TraCI communicates over sockets and this communication is slow. You can often reduce the number of TraCI commands via the following strategies.
-  
-  - store results that do not change (i.e. vehicle length) rather than retrieving them again repeatedly
-  - use [subscriptions](TraCI/Object_Variable_Subscription.md) or [context subscriptions](TraCI/Object_Context_Subscription.md) to reduce the number of 'get' commmands for things that you need in every step
-
-   Even larger gains can be hand by switching to [libsumo](Libsumo.md). This can be done with a single line of code and completely eliminates the slow socket communication. 
 
 ### My [TraCI](TraCI.md)-program is not working as intended. Can you help me debug it?
 
@@ -287,7 +275,17 @@ of error can be safely handled by the script with *try/except*
 figure out what went wrong in a simulation run or why the simulation
 aborted.
 - If SUMO crashes (just stops instead of quitting with an error
-message) [you can run sumo in a debugger while executing your script](TraCI/Interfacing_TraCI_from_Python.md#debugging_a_traci_session_on_linux) and send the stracktrace to the developers.
+message) here is how to debug it:
+  - in the options to *traci.start()* add *\['--save-configuration',
+    'debug.sumocfg'\]*
+  - run your script (sumo will not start and the script will try to
+    connect repeatedly)
+  - run the debug version of sumo with the saved configuration in a
+    debugger while the script is still trying to connect
+
+```
+gdb --args sumoD -c debug.sumocfg
+```
 
 ### Error: tcpip::Storage::readIsSafe: want to read 8 bytes from Storage, but only 4 remaining
 
@@ -395,7 +393,7 @@ and simply type `git pull`.
 ### How to get an older version of SUMO?
 
   see
-  [Alternative download and older releases](Downloads.md#older_releases_and_alternative_download).
+  [Alternative download and older releases](Downloads.md#sumo_-_alternative_download_and_older_releases).
   On Linux, older versions [must be built from source](Installing/Linux_Build.md).
 
 ### How to check out revision 5499 (or any other outdated sumo)?
@@ -630,16 +628,10 @@ use the Linux version or download the [nightly-extra version](https://sumo.dlr.d
 
 ## netedit
 
-### How can I edit lane attributes?
+### How can I obtain netedit?
 
-see [inspecting lanes](Netedit/editModesCommon.md#inspecting_lanes)
-  
-### How can I edit connection attributes?
-
-see [inspecting connections](Netedit/editModesCommon.md#inspecting_connections)
-
-!!! note
-    Connection mode is only used for adding and removing connections but not for editing connection attributes     
+  [netedit](Netedit/index.md) is available as part of the regular
+  distribution since version 0.25.0.
 
 ## Traffic Demand Generation
 
@@ -793,7 +785,7 @@ registered
   build your network. Editing networks by hand is very complicated and
   error-prone.
 
-### How do I change the duration of traffic light cycles and phases?
+### How do I change the duration of cycles and phases?
 
   use [netedit](Netedit/index.md#traffic_lights)
 
@@ -826,7 +818,6 @@ registered
   almost on second 1 (0.99...). If time steps of 0.1 seconds are used,
   the same vehicle is inserted into the network at the end of the time
   step between 0 and 0.1, this means almost on 0.1 (0.099...).
-  See also [VehicleInsertion](Simulation/VehicleInsertion.md)
 
 ### How to save a simulation state and proceed later and/or differently
 
@@ -881,16 +872,6 @@ to use the [recommended import options](Networks/Import/OpenStreetMap.md#recomme
 The best course of action typically is to observe the simulation using
 [sumo-gui](sumo-gui.md) and figure out where the first jam
 develops.
-
-### Two vehicles want to change lanes in opposite directions and are blocking each other. How to prevent this?
-
-Drivers are highly conscious of strategic lane choice requirements and try to change onto the needed lane well in advance.
-There are several reasons why a counter-lane-change-deadlock can happen:
-
-- Vehicles are unable to enter the desired lane because the connection layout at preceeding junctions prevents it. This can be fixed by closely examining the connections ahead of the deadlock.
-- Vehicles are inserted on the wrong lane close to an intersection where they need to change lanes. To fix this, set the vehicle attribute `departLane="best"`
-- Vehicle streams must perform at weaving maneuver where they are forced to change lanes with limited space to do so. This often occurs at motorway ramps that compbine an on-ramp with an off-ramp with little distance in between. The danger of deadlocks can be removed by adding an additional network connection [as explained here](Simulation/Motorways.md#combined_on-off-ramps). Similar deadlocks may also occur at multi-lane roundabouts and the same solution of adding an extra connection (from the inside lane to the outside) applies.
-
 
 ### Why do the vehicles perform unexpected lane-changing maneuvers?
 
@@ -991,26 +972,6 @@ Some examples on an average desktop PC:
 In a city simulation of one day running with 80k UPS where a vehicle spends on average 30 minutes driving, 3.8 million vehicles can be simulated in 24h wall-clock time. However, the simulation would run slower than real-time whenever there are more than 80k Vehicles in the network at the same time because rush hours and low-traffic times would average out.
 
 Calculated as ` 24 * 3600 * 80000 / 1800 = 3840000 `
-
-### How to perform repeated simulations with different results
-
-By default, the same configuration will result in the same behavior even though many parts of the simulation are [randomized](Simulation/Randomness.md).
-To change this, either option **--seed** or option **--random** must be used.
-In order to collect distinct output from multiple runs, it is advisable to set option **--output-prefix**.
-Running a simulation 3 times with differen results could be done in a batch file like this:
-
-```
-sumo -c run.sumocfg --seed 1 --output-prefix 1.
-sumo -c run.sumocfg --seed 2 --output-prefix 2.
-sumo -c run.sumocfg --seed 3 --output-prefix 3.
-```
-
-The tool [runSeeds.py](Tools/Misc.md#runseedspy) can be used to automate this. 
-
-The tool [attributeStats.py](Tools/Output.md#attributestatspy) can be used to generated statistics for multiple runs:
-i.e. if *run.sumocfg* contains the option `<statistic-output value="stats.xml">/`, the command 
-`tools/output/attributeStats.py -e vehicleTripStatistics -a timeLoss *.stats.xml` 
-will generate timeLoss statistics for all runs
 
 ## Visualization
 

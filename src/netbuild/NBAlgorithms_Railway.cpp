@@ -1114,7 +1114,7 @@ NBRailwayTopologyAnalyzer::extendDirectionPriority(NBNetBuilder& nb, bool fromUn
     // x-3 : edge is part of bidirectional track, both directions are indirect extensions of x-1 edges
     // x-4 : edge is reverse direction of an x-1 edge
 
-    std::set<NBEdge*, ComparatorIdLess> bidi;
+    EdgeSet bidi;
     EdgeSet uni;
     for (NBEdge* edge : nb.getEdgeCont().getAllEdges()) {
         if (isRailway(edge->getPermissions())) {
@@ -1192,19 +1192,16 @@ NBRailwayTopologyAnalyzer::extendDirectionPriority(NBNetBuilder& nb, bool fromUn
                 bidiPrio = 1;
             }
         }
-        if (bidiEdge == nullptr) {
-            WRITE_WARNINGF("Edge '%' was loaded with undefined priority (%) but has unambiguous main direction (no bidi edge)", edge->getID(), edge->getPriority());
-        }
         if (edge->getPriority() >= 0) {
             bidiPrio = 0;
         }
-        if (bidiEdge != nullptr && bidiEdge->getPriority() >= 0) {
+        if (bidiEdge->getPriority() >= 0) {
             prio = 0;
         }
         if (edge->getPriority() < 0) {
             edge->setPriority(prio);
         }
-        if (bidiEdge != nullptr && bidiEdge->getPriority() < 0) {
+        if (bidiEdge->getPriority() < 0) {
             bidiEdge->setPriority(bidiPrio);
         }
     }

@@ -53,12 +53,12 @@ public:
      */
     GNEParkingArea(const std::string& id, GNELane* lane, GNENet* net, const double startPos, const double endPos, const std::string& departPos,
                    const std::string& name, bool friendlyPosition, int roadSideCapacity, bool onRoad, double width, const double length,
-                   double angle, const Parameterised::Map& parameters);
+                   double angle, const std::map<std::string, std::string>& parameters);
 
     /// @brief Destructor
     ~GNEParkingArea();
 
-    /**@brief write additional element into a xml file
+    /**@brief writte additional element into a xml file
      * @param[in] device device in which write parameters of additional element
      */
     void writeAdditional(OutputDevice& device) const;
@@ -101,7 +101,7 @@ public:
 
     /* @brief method for checking if the key and their correspond attribute are valids
      * @param[in] key The attribute key
-     * @param[in] value The value associated to key key
+     * @param[in] value The value asociated to key key
      * @return true if the value is valid, false in other case
      */
     bool isValid(SumoXMLAttr key, const std::string& value);
@@ -130,6 +130,9 @@ protected:
 
         /// @brief The length
         const double length;
+
+        /// @brief Invalidated assignment operator.
+        GNELotSpaceDefinition& operator=(const GNELotSpaceDefinition&) = delete;
     };
 
     /// @brief departPos

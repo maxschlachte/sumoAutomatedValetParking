@@ -33,8 +33,9 @@
 
 GNERerouterInterval::GNERerouterInterval(GNENet* net) :
     GNEAdditional("", net, GLO_REROUTER_INTERVAL, SUMO_TAG_INTERVAL, "",
-{}, {}, {}, {}, {}, {}),
-myBegin(0),
+{}, {}, {}, {}, {}, {}, {}, {},
+std::map<std::string, std::string>()),
+    myBegin(0),
 myEnd(0) {
     // reset default values
     resetDefaultValues();
@@ -43,7 +44,8 @@ myEnd(0) {
 
 GNERerouterInterval::GNERerouterInterval(GNERerouterDialog* rerouterDialog) :
     GNEAdditional(rerouterDialog->getEditedAdditional()->getNet(), GLO_REROUTER_INTERVAL, SUMO_TAG_INTERVAL, "",
-{}, {}, {}, {rerouterDialog->getEditedAdditional()}, {}, {}),
+{}, {}, {}, {rerouterDialog->getEditedAdditional()}, {}, {}, {}, {},
+std::map<std::string, std::string>()),
 myBegin(0),
 myEnd(0) {
     // reset default values
@@ -55,7 +57,8 @@ myEnd(0) {
 
 GNERerouterInterval::GNERerouterInterval(GNEAdditional* rerouterParent, SUMOTime begin, SUMOTime end) :
     GNEAdditional(rerouterParent->getNet(), GLO_REROUTER, SUMO_TAG_INTERVAL, "",
-{}, {}, {}, {rerouterParent}, {}, {}),
+{}, {}, {}, {rerouterParent}, {}, {}, {}, {},
+std::map<std::string, std::string>()),
 myBegin(begin),
 myEnd(end) {
     // update boundary of rerouter parent
@@ -181,12 +184,6 @@ GNERerouterInterval::getAttributeDouble(SumoXMLAttr key) const {
 }
 
 
-const Parameterised::Map&
-GNERerouterInterval::getACParametersMap() const {
-    return PARAMETERS_EMPTY;
-}
-
-
 void
 GNERerouterInterval::setAttribute(SumoXMLAttr key, const std::string& value, GNEUndoList* undoList) {
     if (value == getAttribute(key)) {
@@ -216,6 +213,12 @@ GNERerouterInterval::isValid(SumoXMLAttr key, const std::string& value) {
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
+}
+
+
+bool
+GNERerouterInterval::isAttributeEnabled(SumoXMLAttr /* key */) const {
+    return true;
 }
 
 

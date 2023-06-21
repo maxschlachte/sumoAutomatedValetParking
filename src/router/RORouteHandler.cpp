@@ -110,11 +110,11 @@ RORouteHandler::parseFromViaTo(SumoXMLTag tag, const SUMOSAXAttributes& attrs, b
             myActiveRoute.push_back(fromTaz);
         }
     } else if (attrs.hasAttribute(SUMO_ATTR_FROMXY)) {
-        parseGeoEdges(attrs.get<PositionVector>(SUMO_ATTR_FROMXY, myVehicleParameter->id.c_str(), ok), false, myActiveRoute, rid, true, ok);
+        parseGeoEdges(attrs.get<PositionVector>(SUMO_ATTR_FROMXY, myVehicleParameter->id.c_str(), ok, true), false, myActiveRoute, rid, true, ok);
     } else if (attrs.hasAttribute(SUMO_ATTR_FROMLONLAT)) {
-        parseGeoEdges(attrs.get<PositionVector>(SUMO_ATTR_FROMLONLAT, myVehicleParameter->id.c_str(), ok), true, myActiveRoute, rid, true, ok);
+        parseGeoEdges(attrs.get<PositionVector>(SUMO_ATTR_FROMLONLAT, myVehicleParameter->id.c_str(), ok, true), true, myActiveRoute, rid, true, ok);
     } else {
-        parseEdges(attrs.getOpt<std::string>(SUMO_ATTR_FROM, myVehicleParameter->id.c_str(), ok), myActiveRoute, rid, ok);
+        parseEdges(attrs.getOpt<std::string>(SUMO_ATTR_FROM, myVehicleParameter->id.c_str(), ok, "", true), myActiveRoute, rid, ok);
     }
     if (!attrs.hasAttribute(SUMO_ATTR_VIA) && !attrs.hasAttribute(SUMO_ATTR_VIALONLAT) && !attrs.hasAttribute(SUMO_ATTR_VIAXY)) {
         myInsertStopEdgesAt = (int)myActiveRoute.size();
@@ -123,11 +123,11 @@ RORouteHandler::parseFromViaTo(SumoXMLTag tag, const SUMOSAXAttributes& attrs, b
     // via-attributes
     ConstROEdgeVector viaEdges;
     if (attrs.hasAttribute(SUMO_ATTR_VIAXY)) {
-        parseGeoEdges(attrs.get<PositionVector>(SUMO_ATTR_VIAXY, myVehicleParameter->id.c_str(), ok), false, viaEdges, rid, false, ok);
+        parseGeoEdges(attrs.get<PositionVector>(SUMO_ATTR_VIAXY, myVehicleParameter->id.c_str(), ok, true), false, viaEdges, rid, false, ok);
     } else if (attrs.hasAttribute(SUMO_ATTR_VIALONLAT)) {
-        parseGeoEdges(attrs.get<PositionVector>(SUMO_ATTR_VIALONLAT, myVehicleParameter->id.c_str(), ok), true, viaEdges, rid, false, ok);
+        parseGeoEdges(attrs.get<PositionVector>(SUMO_ATTR_VIALONLAT, myVehicleParameter->id.c_str(), ok, true), true, viaEdges, rid, false, ok);
     } else if (attrs.hasAttribute(SUMO_ATTR_VIAJUNCTIONS)) {
-        for (std::string junctionID : attrs.get<std::vector<std::string> >(SUMO_ATTR_VIAJUNCTIONS, myVehicleParameter->id.c_str(), ok)) {
+        for (std::string junctionID : attrs.getStringVector(SUMO_ATTR_VIAJUNCTIONS)) {
             const ROEdge* viaSink = myNet.getEdge(junctionID + "-sink");
             if (viaSink == nullptr) {
                 myErrorOutput->inform("Junction-taz '" + junctionID + "' not found." + JUNCTION_TAZ_MISSING_HELP);
@@ -178,9 +178,9 @@ RORouteHandler::parseFromViaTo(SumoXMLTag tag, const SUMOSAXAttributes& attrs, b
 void
 RORouteHandler::myStartElement(int element,
                                const SUMOSAXAttributes& attrs) {
-    if (myActivePlan != nullptr && myActivePlan->empty() && myVehicleParameter->departProcedure == DepartDefinition::TRIGGERED && element != SUMO_TAG_RIDE) {
+    if (myActivePlan != nullptr && myActivePlan->empty() && myVehicleParameter->departProcedure == DEPART_TRIGGERED && element != SUMO_TAG_RIDE) {
         throw ProcessError("Triggered departure for person '" + myVehicleParameter->id + "' requires starting with a ride.");
-    } else if (myActiveContainerPlan != nullptr && myActiveContainerPlanSize == 0 && myVehicleParameter->departProcedure == DepartDefinition::TRIGGERED && element != SUMO_TAG_TRANSPORT) {
+    } else if (myActiveContainerPlan != nullptr && myActiveContainerPlanSize == 0 && myVehicleParameter->departProcedure == DEPART_TRIGGERED && element != SUMO_TAG_TRANSPORT) {
         throw ProcessError("Triggered departure for container '" + myVehicleParameter->id + "' requires starting with a transport.");
     }
     SUMORouteHandler::myStartElement(element, attrs);
@@ -505,7 +505,7 @@ void
 RORouteHandler::closeVehicle() {
     checkLastDepart();
     // get the vehicle id
-    if (myVehicleParameter->departProcedure == DepartDefinition::GIVEN && myVehicleParameter->depart < myBegin) {
+    if (myVehicleParameter->departProcedure == DEPART_GIVEN && myVehicleParameter->depart < myBegin) {
         return;
     }
     // get vehicle type
@@ -608,31 +608,9 @@ RORouteHandler::closePersonFlow() {
             }
         } else {
             SUMOTime depart = myVehicleParameter->depart;
-            // uniform sampling of departures from range is equivalent to poisson flow (encoded by negative offset)
-            if (OptionsCont::getOptions().getBool("randomize-flows") && myVehicleParameter->repetitionOffset >= 0) {
-                std::vector<SUMOTime> departures;
-                const SUMOTime range = myVehicleParameter->repetitionNumber * myVehicleParameter->repetitionOffset;
-                for (int j = 0; j < myVehicleParameter->repetitionNumber; ++j) {
-                    departures.push_back(depart + RandHelper::rand(range));
-                }
-                std::sort(departures.begin(), departures.end());
-                std::reverse(departures.begin(), departures.end());
-                for (; i < myVehicleParameter->repetitionNumber; i++) {
-                    addFlowPerson(type, departures[i], baseID, i);
-                    depart += myVehicleParameter->repetitionOffset;
-                }
-            } else {
-                const bool triggered = myVehicleParameter->departProcedure == DepartDefinition::TRIGGERED;
-                if (myVehicleParameter->repetitionOffset < 0) {
-                    // poisson: randomize first depart
-                    myVehicleParameter->incrementFlow(1);
-                }
-                for (; i < myVehicleParameter->repetitionNumber && (triggered || depart + myVehicleParameter->repetitionTotalOffset <= myVehicleParameter->repetitionEnd); i++) {
-                    addFlowPerson(type, depart + myVehicleParameter->repetitionTotalOffset, baseID, i);
-                    if (myVehicleParameter->departProcedure != DepartDefinition::TRIGGERED) {
-                        myVehicleParameter->incrementFlow(1);
-                    }
-                }
+            for (; i < myVehicleParameter->repetitionNumber; i++) {
+                addFlowPerson(type, depart, baseID, i);
+                depart += myVehicleParameter->repetitionOffset;
             }
         }
     }
@@ -705,8 +683,8 @@ RORouteHandler::closeFlow() {
     // let's check whether vehicles had to depart before the simulation starts
     myVehicleParameter->repetitionsDone = 0;
     const SUMOTime offsetToBegin = myBegin - myVehicleParameter->depart;
-    while (myVehicleParameter->repetitionTotalOffset < offsetToBegin) {
-        myVehicleParameter->incrementFlow(1);
+    while (myVehicleParameter->repetitionsDone * myVehicleParameter->repetitionOffset < offsetToBegin) {
+        myVehicleParameter->repetitionsDone++;
         if (myVehicleParameter->repetitionsDone == myVehicleParameter->repetitionNumber) {
             delete myVehicleParameter;
             myVehicleParameter = nullptr;
@@ -950,7 +928,7 @@ RORouteHandler::addRide(const SUMOSAXAttributes& attrs) {
     const std::string desc = attrs.get<std::string>(SUMO_ATTR_LINES, pid.c_str(), ok);
     const std::string group = attrs.getOpt<std::string>(SUMO_ATTR_GROUP, pid.c_str(), ok, "");
 
-    if (plan.empty() && myVehicleParameter->departProcedure == DepartDefinition::TRIGGERED) {
+    if (plan.empty() && myVehicleParameter->departProcedure == DEPART_TRIGGERED) {
         StringTokenizer st(desc);
         if (st.size() != 1) {
             throw ProcessError("Triggered departure for person '" + pid + "' requires a unique lines value.");
@@ -971,7 +949,7 @@ RORouteHandler::addRide(const SUMOSAXAttributes& attrs) {
 
 void
 RORouteHandler::addTransport(const SUMOSAXAttributes& attrs) {
-    if (myActiveContainerPlan != nullptr && myActiveContainerPlanSize == 0 && myVehicleParameter->departProcedure == DepartDefinition::TRIGGERED) {
+    if (myActiveContainerPlan != nullptr && myActiveContainerPlanSize == 0 && myVehicleParameter->departProcedure == DEPART_TRIGGERED) {
         bool ok = true;
         const std::string pid = myVehicleParameter->id;
         const std::string desc = attrs.get<std::string>(SUMO_ATTR_LINES, pid.c_str(), ok);

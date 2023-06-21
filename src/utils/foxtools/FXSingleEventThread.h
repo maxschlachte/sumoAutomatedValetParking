@@ -31,18 +31,26 @@
 class MFXInterThreadEventClient;
 
 class FXSingleEventThread : public FXObject, public FXThread {
-    /// @brief FOX declaration
     FXDECLARE(FXSingleEventThread)
+
+private:
+    FXEX::FXThreadEventHandle event;
+
+private:
+    FXSingleEventThread(const FXSingleEventThread&);
+    FXSingleEventThread& operator=(const FXSingleEventThread&);
 
 public:
     enum {
         ID_THREAD_EVENT
     };
 
-    /// @brief constructor
-    FXSingleEventThread(FXApp* a, MFXInterThreadEventClient* client);
+public:
+    long onThreadSignal(FXObject*, FXSelector, void*);
+    long onThreadEvent(FXObject*, FXSelector, void*);
 
-    virtual ~FXSingleEventThread();
+public:
+    FXSingleEventThread(FXApp* a, MFXInterThreadEventClient* client);
 
     void signal();
 
@@ -52,31 +60,16 @@ public:
         return 0;
     }
 
+    virtual ~FXSingleEventThread();
+
     static void sleep(long ms);
 
-    long onThreadSignal(FXObject*, FXSelector, void*);
-
-    long onThreadEvent(FXObject*, FXSelector, void*);
+private:
+    FXApp* myApp;
+    MFXInterThreadEventClient* myClient;
 
 protected:
-    /// @brief FOX need this
     FXSingleEventThread() { }
-
-    /// @brief pointer to APP
-    FXApp* myApp = nullptr;
-
-    /// @brief thread client
-    MFXInterThreadEventClient* myClient = nullptr;
-
-private:
-    /// @brief event
-    FXEX::FXThreadEventHandle event;
-
-    /// @brief invalidate copy constructor
-    FXSingleEventThread(const FXSingleEventThread&) = delete;
-
-    /// @brief invalidate assignment constructor
-    FXSingleEventThread& operator=(const FXSingleEventThread&) = delete;
 };
 
 

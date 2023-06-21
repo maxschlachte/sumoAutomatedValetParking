@@ -45,10 +45,9 @@
 // ===========================================================================
 MSInstantInductLoop::MSInstantInductLoop(const std::string& id,
         OutputDevice& od, MSLane* const lane, double positionInMeters,
-        const std::string& vTypes,
-        const std::string& nextEdges) :
+        const std::string& vTypes) :
     MSMoveReminder(id, lane),
-    MSDetectorFileOutput(id, vTypes, nextEdges),
+    MSDetectorFileOutput(id, vTypes),
     myOutputDevice(od),
     myPosition(positionInMeters), myLastExitTime(-1) {
     assert(myPosition >= 0 && myPosition <= myLane->getLength());

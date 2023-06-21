@@ -50,6 +50,8 @@ public:
      * @param[in] edgeParents vector of edge parents
      * @param[in] laneParents vector of lane parents
      * @param[in] additionalParents vector of additional parents
+     * @param[in] shapeParents vector of shape parents
+     * @param[in] TAZElementParents vector of TAZElement parents
      * @param[in] demandElementParents vector of demand element parents
      * @param[in] genericDataParents vector of generic data parents
      */
@@ -58,6 +60,8 @@ public:
                       const std::vector<GNEEdge*>& edgeParents,
                       const std::vector<GNELane*>& laneParents,
                       const std::vector<GNEAdditional*>& additionalParents,
+                      const std::vector<GNEShape*>& shapeParents,
+                      const std::vector<GNETAZElement*>& TAZElementParents,
                       const std::vector<GNEDemandElement*>& demandElementParents,
                       const std::vector<GNEGenericData*>& genericDataParents);
 
@@ -69,6 +73,9 @@ public:
     */
     virtual GNEMoveOperation* getMoveOperation() = 0;
 
+    /// @brief get ID
+    const std::string& getID() const;
+
     /// @brief get GUIGlObject associated with this AttributeCarrier
     GUIGlObject* getGUIGlObject();
 
@@ -77,12 +84,6 @@ public:
 
     /// @brief check if shape is being edited
     bool isShapeEdited() const;
-
-    /// @brief check if current network element is valid to be written into XML (by default true, can be reimplemented in children)
-    virtual bool isNetworkElementValid() const;
-
-    /// @brief return a string with the current network element problem (by default empty, can be reimplemented in children)
-    virtual std::string getNetworkElementProblem() const;
 
     /// @name Functions related with geometry of element
     /// @{
@@ -114,7 +115,7 @@ public:
      */
     virtual GUIGLObjectPopupMenu* getPopUpMenu(GUIMainWindow& app, GUISUMOAbstractView& parent) = 0;
 
-    /// @brief return exaggeration associated with this GLObject
+    /// @brief return exaggeration asociated with this GLObject
     virtual double getExaggeration(const GUIVisualizationSettings& s) const = 0;
 
     /// @brief Returns the boundary to which the view shall be centered in order to show the object
@@ -147,10 +148,29 @@ public:
 
     /* @brief method for checking if the key and their conrrespond attribute are valids
      * @param[in] key The attribute key
-     * @param[in] value The value associated to key key
+     * @param[in] value The value asociated to key key
      * @return true if the value is valid, false in other case
      */
     virtual bool isValid(SumoXMLAttr key, const std::string& value) = 0;
+
+    /* @brief method for enable attribute
+     * @param[in] key The attribute key
+     * @param[in] undoList The undoList on which to register changes
+     * @note certain attributes can be only enabled, and can produce the disabling of other attributes
+     */
+    void enableAttribute(SumoXMLAttr key, GNEUndoList* undoList);
+
+    /* @brief method for disable attribute
+     * @param[in] key The attribute key
+     * @param[in] undoList The undoList on which to register changes
+     * @note certain attributes can be only enabled, and can produce the disabling of other attributes
+     */
+    void disableAttribute(SumoXMLAttr key, GNEUndoList* undoList);
+
+    /* @brief method for check if the value for certain attribute is set
+     * @param[in] key The attribute key
+     */
+    virtual bool isAttributeEnabled(SumoXMLAttr key) const = 0;
 
     /// @brief get PopPup ID (Used in AC Hierarchy)
     std::string getPopUpID() const;
@@ -160,7 +180,7 @@ public:
     /// @}
 
     /// @brief get parameters map
-    virtual const Parameterised::Map& getACParametersMap() const = 0;
+    virtual const std::map<std::string, std::string>& getACParametersMap() const = 0;
 
 protected:
     /// @brief object boundary
@@ -172,6 +192,9 @@ protected:
 private:
     /// @brief set attribute after validation
     virtual void setAttribute(SumoXMLAttr key, const std::string& value) = 0;
+
+    /// @brief method for enable or disable the attribute and nothing else (used in GNEChange_EnableAttribute)
+    void toogleAttribute(SumoXMLAttr key, const bool value, const int previousParameters);
 
     /// @brief Invalidated copy constructor.
     GNENetworkElement(const GNENetworkElement&) = delete;

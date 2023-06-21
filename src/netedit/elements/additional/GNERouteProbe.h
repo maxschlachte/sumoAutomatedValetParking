@@ -29,7 +29,7 @@
  * @class GNERouteProbe
  * @brief Representation of a RouteProbe in netedit
  */
-class GNERouteProbe : public GNEAdditional, public Parameterised {
+class GNERouteProbe : public GNEAdditional {
 
 public:
     /// @brief Constructor
@@ -39,19 +39,19 @@ public:
      * @param[in] id The storage of gl-ids to get the one for this lane representation from
      * @param[in] net pointer to GNENet of this additional element belongs
      * @param[in] edge edge in which this routeProbe is placed
-     * @param[in] period The period in which to report the distribution
+     * @param[in] frequency The frequency in which to report the distribution
      * @oaran[in] name Route Probe Name
      * @param[in] filename The file for generated output
      * @param[in] begin The time at which to start generating output
      * @param[in] parameters generic parameters
      */
-    GNERouteProbe(const std::string& id, GNENet* net, GNEEdge* edge, const SUMOTime period, const std::string& name,
-                  const std::string& filename, SUMOTime begin, const Parameterised::Map& parameters);
+    GNERouteProbe(const std::string& id, GNENet* net, GNEEdge* edge, const SUMOTime frequency, const std::string& name,
+                  const std::string& filename, SUMOTime begin, const std::map<std::string, std::string>& parameters);
 
     /// @brief Destructor
     ~GNERouteProbe();
 
-    /**@brief write additional element into a xml file
+    /**@brief writte additional element into a xml file
      * @param[in] device device in which write parameters of additional element
      */
     void writeAdditional(OutputDevice& device) const;
@@ -103,9 +103,6 @@ public:
      */
     double getAttributeDouble(SumoXMLAttr key) const;
 
-    /// @brief get parameters map
-    const Parameterised::Map& getACParametersMap() const;
-
     /* @brief method for setting the attribute and letting the object perform additional changes
      * @param[in] key The attribute key
      * @param[in] value The new value
@@ -115,10 +112,15 @@ public:
 
     /* @brief method for checking if the key and their correspond attribute are valids
      * @param[in] key The attribute key
-     * @param[in] value The value associated to key key
+     * @param[in] value The value asociated to key key
      * @return true if the value is valid, false in other case
      */
     bool isValid(SumoXMLAttr key, const std::string& value);
+
+    /* @brief method for check if the value for certain attribute is set
+     * @param[in] key The attribute key
+     */
+    bool isAttributeEnabled(SumoXMLAttr key) const;
 
     /// @brief get PopPup ID (Used in AC Hierarchy)
     std::string getPopUpID() const;
@@ -128,8 +130,8 @@ public:
     /// @}
 
 protected:
-    /// @brief RouteProbe period
-    SUMOTime myPeriod;
+    /// @brief Frequency of RouteProbe
+    SUMOTime myFrequency;
 
     /// @brief filename of RouteProbe
     std::string myFilename;

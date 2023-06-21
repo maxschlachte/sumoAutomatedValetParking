@@ -74,13 +74,6 @@ class LaneDomain(Domain):
         """
         return self._getUniversal(tc.VAR_MAXSPEED, laneID)
 
-    def getFriction(self, laneID):
-        """getFriction(string) -> double
-
-        Returns the friction on the lane.
-        """
-        return self._getUniversal(tc.VAR_FRICTION, laneID)
-
     def getWidth(self, laneID):
         """getWidth(string) -> double
 
@@ -151,48 +144,42 @@ class LaneDomain(Domain):
     def getCO2Emission(self, laneID):
         """getCO2Emission(string) -> double
 
-        Returns the CO2 emission in mg/s for the last time step on the given lane.
-        Multiply by the step length to get the value for one step.
+        Returns the CO2 emission in mg for the last time step on the given lane.
         """
         return self._getUniversal(tc.VAR_CO2EMISSION, laneID)
 
     def getCOEmission(self, laneID):
         """getCOEmission(string) -> double
 
-        Returns the CO emission in mg/s for the last time step on the given lane.
-        Multiply by the step length to get the value for one step.
+        Returns the CO emission in mg for the last time step on the given lane.
         """
         return self._getUniversal(tc.VAR_COEMISSION, laneID)
 
     def getHCEmission(self, laneID):
         """getHCEmission(string) -> double
 
-        Returns the HC emission in mg/s for the last time step on the given lane.
-        Multiply by the step length to get the value for one step.
+        Returns the HC emission in mg for the last time step on the given lane.
         """
         return self._getUniversal(tc.VAR_HCEMISSION, laneID)
 
     def getPMxEmission(self, laneID):
         """getPMxEmission(string) -> double
 
-        Returns the particular matter emission in mg/s for the last time step on the given lane.
-        Multiply by the step length to get the value for one step.
+        Returns the particular matter emission in mg for the last time step on the given lane.
         """
         return self._getUniversal(tc.VAR_PMXEMISSION, laneID)
 
     def getNOxEmission(self, laneID):
         """getNOxEmission(string) -> double
 
-        Returns the NOx emission in mg/s for the last time step on the given lane.
-        Multiply by the step length to get the value for one step.
+        Returns the NOx emission in mg for the last time step on the given lane.
         """
         return self._getUniversal(tc.VAR_NOXEMISSION, laneID)
 
     def getFuelConsumption(self, laneID):
         """getFuelConsumption(string) -> double
 
-        Returns the fuel consumption in mg/s for the last time step on the given lane.
-        Multiply by the step length to get the value for one step.
+        Returns the fuel consumption in ml for the last time step on the given lane.
         """
         return self._getUniversal(tc.VAR_FUELCONSUMPTION, laneID)
 
@@ -206,8 +193,7 @@ class LaneDomain(Domain):
     def getElectricityConsumption(self, laneID):
         """getElectricityConsumption(string) -> double
 
-        Returns the electricity consumption in Wh/s for the last time step.
-        Multiply by the step length to get the value for one step.
+        Returns the electricity consumption in ml for the last time step.
         """
         return self._getUniversal(tc.VAR_ELECTRICITYCONSUMPTION, laneID)
 
@@ -310,13 +296,6 @@ class LaneDomain(Domain):
         Sets a new maximum allowed speed on the lane in m/s.
         """
         self._setCmd(tc.VAR_MAXSPEED, laneID, "d", speed)
-
-    def setFriction(self, laneID, friction):
-        """setFriction(string, double) -> None
-
-        Sets the friction of the lane.
-        """
-        self._setCmd(tc.VAR_FRICTION, laneID, "d", friction)
 
     def setLength(self, laneID, length):
         """setLength(string, double) -> None

@@ -123,14 +123,11 @@ def main(options, platform="x64"):
     prefix = os.path.join(options.remoteDir, env["FILEPREFIX"])
     makeLog = prefix + "Release.log"
     makeAllLog = prefix + "Debug.log"
-    testLog = prefix + "Test.log"
-    testDebugLog = prefix + "DebugTest.log"
     statusLog = prefix + "status.log"
-    log_handler = status.set_rotating_log(makeLog)
 
     status.killall(("", "D"), BINARIES)
     toClean = []
-    for ext in ("*.exe", "*.ilk", "*.pdb", "*.py", "*.pyd", "*.dll", "*.lib", "*.exp", "*.jar", "*.manifest", "*.fmu"):
+    for ext in ("*.exe", "*.ilk", "*.pdb", "*.py", "*.pyd", "*.dll", "*.lib", "*.exp", "*.jar", "*.manifest"):
         toClean += glob.glob(os.path.join(SUMO_HOME, "bin", ext))
     toClean += glob.glob(os.path.join(SUMO_HOME, "tools", "lib*", "*lib*"))
     toClean += glob.glob(os.path.join(SUMO_HOME, "share", "*", "*"))
@@ -146,6 +143,8 @@ def main(options, platform="x64"):
         if os.path.basename(d) in ('examples', 'javadoc', 'man', 'pydoc', 'tutorial', 'userdoc'):
             shutil.rmtree(d, ignore_errors=True)
 
+    # we need to use io.open here due to http://bugs.python.org/issue16273
+    log_handler = status.set_rotating_log(makeLog)
     status.printLog("Running %s build using python %s." % (options.msvc_version, sys.version))
     gitrev = repositoryUpdate(options)
     generator = "Visual Studio " + ("12 2013" if options.msvc_version == "msvc12" else "16 2019")
@@ -211,17 +210,17 @@ def main(options, platform="x64"):
         except IOError as ziperr:
             status.printLog("Warning: Could not zip to %s (%s)!" % (debugZip, ziperr))
 
-    log_handler = status.set_rotating_log(testLog, debug_handler)
+    log_handler = status.set_rotating_log(makeLog, debug_handler)
     status.printLog("Running tests.")
     runTests(options, env, gitrev)
     with open(statusLog, 'w') as log:
-        status.printStatus(makeLog, makeAllLog, env["SMTP_SERVER"], log, testLog=testLog)
+        status.printStatus(makeLog, makeAllLog, env["SMTP_SERVER"], log)
     if not options.x64only:
-        debug_handler = status.set_rotating_log(testDebugLog, log_handler)
+        debug_handler = status.set_rotating_log(makeAllLog, log_handler)
         status.printLog("Running debug tests.")
         runTests(options, env, gitrev, "D")
         with open(prefix + "Dstatus.log", 'w') as log:
-            status.printStatus(makeAllLog, testDebugLog, env["SMTP_SERVER"], log, testLog=testDebugLog)
+            status.printStatus(makeAllLog, makeAllLog, env["SMTP_SERVER"], log)
 
 
 if __name__ == "__main__":

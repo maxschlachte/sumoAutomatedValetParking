@@ -32,7 +32,8 @@
 
 GNEVariableSpeedSignSymbol::GNEVariableSpeedSignSymbol(GNEAdditional* VSSParent, GNELane* lane) :
     GNEAdditional(VSSParent->getNet(), GLO_VSS, GNE_TAG_VSS_SYMBOL, "",
-{}, {}, {lane}, {VSSParent}, {}, {}) {
+{}, {}, {lane}, {VSSParent}, {}, {}, {}, {},
+std::map<std::string, std::string>()) {
     // update centering boundary without updating grid
     updateCenteringBoundary(false);
 }
@@ -162,7 +163,6 @@ GNEVariableSpeedSignSymbol::drawGL(const GUIVisualizationSettings& s) const {
 std::string
 GNEVariableSpeedSignSymbol::getAttribute(SumoXMLAttr key) const {
     switch (key) {
-        case SUMO_ATTR_ID:
         case SUMO_ATTR_LANE:
             return getParentLanes().front()->getID();
         default:
@@ -177,12 +177,6 @@ GNEVariableSpeedSignSymbol::getAttributeDouble(SumoXMLAttr /*key*/) const {
 }
 
 
-const Parameterised::Map&
-GNEVariableSpeedSignSymbol::getACParametersMap() const {
-    return PARAMETERS_EMPTY;
-}
-
-
 void
 GNEVariableSpeedSignSymbol::setAttribute(SumoXMLAttr /*key*/, const std::string& /*value*/, GNEUndoList* /*undoList*/) {
     throw InvalidArgument("Symbols cannot be edited");
@@ -192,6 +186,12 @@ GNEVariableSpeedSignSymbol::setAttribute(SumoXMLAttr /*key*/, const std::string&
 bool
 GNEVariableSpeedSignSymbol::isValid(SumoXMLAttr /*key*/, const std::string& /*value*/) {
     throw InvalidArgument("Symbols cannot be edited");
+}
+
+
+bool
+GNEVariableSpeedSignSymbol::isAttributeEnabled(SumoXMLAttr /*key*/) const {
+    return true;
 }
 
 

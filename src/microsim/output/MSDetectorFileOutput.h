@@ -30,6 +30,7 @@
 #include <utils/common/Named.h>
 #include <utils/common/Parameterised.h>
 #include <utils/common/SUMOTime.h>
+#include <utils/common/FileHelpers.h>
 #include <microsim/MSNet.h>
 
 
@@ -40,7 +41,6 @@ class OutputDevice;
 class GUIDetectorWrapper;
 class SUMOTrafficObject;
 class MSTransportable;
-class MSEdge;
 
 
 // ===========================================================================
@@ -62,7 +62,11 @@ enum DetectorUsage {
 class MSDetectorFileOutput : public Named, public Parameterised {
 public:
     /// @brief Constructor
-    MSDetectorFileOutput(const std::string& id, const std::string& vTypes, const std::string& nextEdges = "", const int detectPersons = false);
+    MSDetectorFileOutput(const std::string& id, const std::string& vTypes, const int detectPersons = false);
+
+    /// @brief Constructor
+    MSDetectorFileOutput(const std::string& id, const std::set<std::string>& vTypes, const int detectPersons = false);
+
 
     /// @brief (virtual) destructor
     virtual ~MSDetectorFileOutput() { }
@@ -148,14 +152,11 @@ public:
     }
 
     /** @brief Remove all vehicles before quick-loading state */
-    virtual void clearState(SUMOTime /*step*/) {};
+    virtual void clearState() {};
 
 protected:
     /// @brief The vehicle types to look for (empty means all)
     std::set<std::string> myVehicleTypes;
-
-    /// @brief The upcoming edges to filter by (empty means no filtering)
-    std::vector<const MSEdge*> myNextEdges;
 
     /// @brief Whether pedestrians shall be detected instead of vehicles
     const int myDetectPersons;

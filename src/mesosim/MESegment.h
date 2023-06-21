@@ -125,6 +125,10 @@ private:
 
         /// @brief The block time
         SUMOTime myBlockTime = -1;
+
+    private:
+        /// @brief Invalidated assignment operator.
+        Queue& operator=(const Queue&) = delete;
     };
 
 public:
@@ -494,7 +498,7 @@ private:
 
     /// @brief convert net time gap (leader back to follower front) to gross time gap (leader front to follower front)
     inline SUMOTime tauWithVehLength(SUMOTime tau, double lengthWithGap, double vehicleTau) const {
-        return (SUMOTime)((double)tau * vehicleTau + lengthWithGap * myTau_length);
+        return (SUMOTime)(tau * vehicleTau + lengthWithGap * myTau_length);
     }
 
     SUMOTime getTauJJ(double nextQueueSize, double nextQueueCapacity, double nextJamThreshold) const;

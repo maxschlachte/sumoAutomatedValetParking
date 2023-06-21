@@ -41,7 +41,6 @@
 // ===========================================================================
 #ifdef _MSC_VER
 #pragma warning(push)
-/* Disable warning about using "this" in the constructor */
 #pragma warning(disable: 4355)
 #endif
 GUIMEVehicle::GUIMEVehicle(SUMOVehicleParameter* pars, const MSRoute* route,
@@ -171,17 +170,17 @@ GUIMEVehicle::getColorValue(const GUIVisualizationSettings& /* s */, int activeS
         case 13:
             return getSegment()->getEdge().getVehicleMaxSpeed(this);
         case 14:
-            return 0; // invalid getEmissions<PollutantsInterface::CO2>();
+            return 0; // invalid getCO2Emissions();
         case 15:
-            return 0; // invalid getEmissions<PollutantsInterface::CO>();
+            return 0; // invalid getCOEmissions();
         case 16:
-            return 0; // invalid getEmissions<PollutantsInterface::PM_X>();
+            return 0; // invalid getPMxEmissions();
         case 17:
-            return 0; // invalid getEmissions<PollutantsInterface::NO_X>();
+            return 0; // invalid  getNOxEmissions();
         case 18:
-            return 0; // invalid getEmissions<PollutantsInterface::HC>();
+            return 0; // invalid getHCEmissions();
         case 19:
-            return 0; // invalid getEmissions<PollutantsInterface::FUEL>();
+            return 0; // invalid getFuelConsumption();
         case 20:
             return 0; // invalid getHarmonoise_NoiseEmissions();
         case 21: // reroute number

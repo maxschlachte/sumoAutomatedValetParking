@@ -56,9 +56,6 @@ public:
     /// @brief update position and rotation
     void updateSinglePosGeometry(const Position& position, const double rotation);
 
-    /// @brief move current shape to side
-    void moveGeometryToSide(const double amount);
-
     /// @brief scale geometry
     void scaleGeometry(const double scale);
 
@@ -90,7 +87,7 @@ public:
 
     /// @brief draw lane geometry (use their own function due colors)
     static void drawLaneGeometry(const GUIVisualizationSettings& s, const Position& mousePos, const PositionVector& shape, const std::vector<double>& rotations,
-                                 const std::vector<double>& lengths, const std::vector<RGBColor>& colors, double width, const bool onlyContour = false, const double offset = 0);
+                                 const std::vector<double>& lengths, const std::vector<RGBColor>& colors, double width, const bool onlyContour = false);
 
     /// @brief draw geometry
     static void drawGeometry(const GUIVisualizationSettings& s, const Position& mousePos, const GUIGeometry& geometry, const double width, double offset = 0);

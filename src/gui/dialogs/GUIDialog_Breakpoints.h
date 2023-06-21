@@ -65,9 +65,6 @@ public:
     /// @brief Called when the user presses the Clear-button
     long onCmdClear(FXObject*, FXSelector, void*);
 
-    /// @brief Called when the user clicks a time link in the message window
-    long onCmdUpdateBreakpoints(FXObject*, FXSelector, void*);
-
     /// @brief Called when the user presses the Close-button
     long onCmdClose(FXObject*, FXSelector, void*);
 
@@ -77,13 +74,12 @@ public:
 
     virtual void layout();
 
-    /// @brief Rebuilds the entire list
-    void rebuildList();
-
 protected:
     FOX_CONSTRUCTOR(GUIDialog_Breakpoints)
 
 private:
+    /// @brief Rebuilds the entire list
+    void rebuildList();
 
     /** @brief Builds a text representation of the items in the list
      * @return Breakpoints encoded as a string

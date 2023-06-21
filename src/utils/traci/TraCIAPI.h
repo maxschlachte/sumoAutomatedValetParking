@@ -137,7 +137,6 @@ public:
         libsumo::TraCIPosition getPos3D(int var, const std::string& id, tcpip::Storage* add = 0) const;
         std::string getString(int var, const std::string& id, tcpip::Storage* add = 0) const;
         std::vector<std::string> getStringVector(int var, const std::string& id, tcpip::Storage* add = 0) const;
-        std::vector<double> getDoubleVector(int var, const std::string& id, tcpip::Storage* add = 0) const;
         libsumo::TraCIColor getCol(int var, const std::string& id, tcpip::Storage* add = 0) const;
         libsumo::TraCIStage getTraCIStage(int var, const std::string& id, tcpip::Storage* add = 0) const;
 
@@ -317,10 +316,6 @@ public:
         double getLastStepMeanSpeed(const std::string& detID) const;
         std::vector<std::string> getLastStepVehicleIDs(const std::string& detID) const;
         int getLastStepHaltingNumber(const std::string& detID) const;
-        std::vector<std::string> getEntryLanes(const std::string& detID) const;
-        std::vector<std::string> getExitLanes(const std::string& detID) const;
-        std::vector<double> getEntryPositions(const std::string& detID) const;
-        std::vector<double> getExitPositions(const std::string& detID) const;
     };
 
 
@@ -678,8 +673,7 @@ public:
         void slowDown(const std::string& vehicleID, double speed, double duration) const;
         void openGap(const std::string& vehicleID, double newTau, double duration, double changeRate, double maxDecel) const;
         void setSpeed(const std::string& vehicleID, double speed) const;
-        void setAcceleration(const std::string& vehicleID, double accel, double duration) const;
-        void setPreviousSpeed(const std::string& vehicleID, double prevSpeed, double prevAcceleration = std::numeric_limits<int>::min()) const;
+        void setPreviousSpeed(const std::string& vehicleID, double prevspeed) const;
         void setLaneChangeMode(const std::string& vehicleID, int mode) const;
         void setSpeedMode(const std::string& vehicleID, int mode) const;
         void setStop(const std::string vehicleID, const std::string edgeID, const double endPos = 1.,

@@ -147,59 +147,38 @@ struct GNEApplicationWindowHelper {
         void buildFileMenuCommands(FXMenuPane* fileMenu, FXMenuPane* fileMenuTLS, FXMenuPane* fileMenuEdgeTypes, FXMenuPane* fileMenuAdditionals,
                                    FXMenuPane* fileMenuDemandElements, FXMenuPane* fileMenuDataElements);
 
-        /// @brief FXMenuCascade for TLS
-        FXMenuCascade* TLSMenuCascade = nullptr;
-
-        /// @brief FXMenuCascade for edgeTypes
-        FXMenuCascade* edgeTypesMenuCascade = nullptr;
-
-        /// @brief FXMenuCascade for additional
-        FXMenuCascade* additionalMenuCascade = nullptr;
-
-        /// @brief FXMenuCascade for demand
-        FXMenuCascade* demandMenuCascade = nullptr;
-
-        /// @brief FXMenuCascade for data
-        FXMenuCascade* dataMenuCascade = nullptr;
-
-        /// @brief FXMenuCommand for reload TLS Programs
-        FXMenuCommand* reloadTLSPrograms = nullptr;
-
         /// @brief FXMenuCommand for enable or disable save additionals
-        FXMenuCommand* saveTLSPrograms = nullptr;
-
-        /// @brief FXMenuCommand for reload Edge Types
-        FXMenuCommand* reloadEdgeTypes = nullptr;
-
-        /// @brief FXMenuCommand for enable or disable save edgeTypes
-        FXMenuCommand* saveEdgeTypes = nullptr;
-
-        /// @brief FXMenuCommand for enable or disable save additionals
-        FXMenuCommand* saveAdditionals = nullptr;
+        FXMenuCommand* saveAdditionals;
 
         /// @brief FXMenuCommand for enable or disable save additionals As
-        FXMenuCommand* saveAdditionalsAs = nullptr;
+        FXMenuCommand* saveAdditionalsAs;
 
         /// @brief FXMenuCommand for reload additionals
-        FXMenuCommand* reloadAdditionals = nullptr;
+        FXMenuCommand* reloadAdditionals;
+
+        /// @brief FXMenuCommand for enable or disable save additionals
+        FXMenuCommand* saveTLSPrograms;
+
+        /// @brief FXMenuCommand for enable or disable save edgeTypes
+        FXMenuCommand* saveEdgeTypes;
 
         /// @brief FXMenuCommand for enable or disable save demand elements
-        FXMenuCommand* saveDemandElements = nullptr;
+        FXMenuCommand* saveDemandElements;
 
         /// @brief FXMenuCommand for enable or disable save demand elements as
-        FXMenuCommand* saveDemandElementsAs = nullptr;
+        FXMenuCommand* saveDemandElementsAs;
 
         /// @brief FXMenuCommand for reload demand elements
-        FXMenuCommand* reloadDemandElements = nullptr;
+        FXMenuCommand* reloadDemandElements;
 
         /// @brief FXMenuCommand for enable or disable save data elements
-        FXMenuCommand* saveDataElements = nullptr;
+        FXMenuCommand* saveDataElements;
 
         /// @brief FXMenuCommand for enable or disable save data elements as
-        FXMenuCommand* saveDataElementsAs = nullptr;
+        FXMenuCommand* saveDataElementsAs;
 
         /// @brief FXMenuCommand for reload data elements
-        FXMenuCommand* reloadDataElements = nullptr;
+        FXMenuCommand* reloadDataElements;
 
     private:
         /// @brief pointer to current GNEApplicationWindows
@@ -285,9 +264,6 @@ struct GNEApplicationWindowHelper {
 
             /// @brief menu command for shape mode
             FXMenuCommand* shapeMode;
-
-            /// @brief menu command for wire mode
-            FXMenuCommand* wireMode;
 
         private:
             /// @brief reference to ModesMenuCommands
@@ -432,14 +408,11 @@ struct GNEApplicationWindowHelper {
             /// @brief hide all options menu checks
             void hideNetworkViewOptionsMenuChecks();
 
-            /// @brief update shortcuts (alt+X)
-            void updateShortcuts();
+            /// @brief update alt labels
+            void updateAltLabels();
 
             /// @brief menu check to show grid button
             FXMenuCheckIcon* menuCheckToggleGrid;
-
-            /// @brief menu check to toggle draw junction shape
-            FXMenuCheckIcon* menuCheckToggleDrawJunctionShape;
 
             /// @brief menu check to draw vehicles in begin position or spread in lane
             FXMenuCheckIcon* menuCheckDrawSpreadVehicles;
@@ -459,9 +432,6 @@ struct GNEApplicationWindowHelper {
             /// @brief menu check to show additional sub-elements
             FXMenuCheckIcon* menuCheckShowAdditionalSubElements;
 
-            /// @brief menu check to show TAZ elements
-            FXMenuCheckIcon* menuCheckShowTAZElements;
-
             /// @brief menu check to extend to edge nodes
             FXMenuCheckIcon* menuCheckExtendSelection;
 
@@ -471,7 +441,7 @@ struct GNEApplicationWindowHelper {
             /// @brief menu check to we should warn about merging junctions
             FXMenuCheckIcon* menuCheckWarnAboutMerge;
 
-            /// @brief menu check to show connection as bubble in "Move" mode.
+            /// @brief menu check to show connection as buuble in "Move" mode.
             FXMenuCheckIcon* menuCheckShowJunctionBubble;
 
             /// @brief menu check to apply movement to elevation
@@ -509,14 +479,8 @@ struct GNEApplicationWindowHelper {
             /// @brief hide all options menu checks
             void hideDemandViewOptionsMenuChecks();
 
-            /// @brief update shortcuts (alt+X)
-            void updateShortcuts();
-
             /// @brief menu check to show grid button
             FXMenuCheckIcon* menuCheckToggleGrid;
-
-            /// @brief menu check to toggle draw junction shape
-            FXMenuCheckIcon* menuCheckToggleDrawJunctionShape;
 
             /// @brief menu check to draw vehicles in begin position or spread in lane
             FXMenuCheckIcon* menuCheckDrawSpreadVehicles;
@@ -571,12 +535,6 @@ struct GNEApplicationWindowHelper {
             /// @brief hide all options menu checks
             void hideDataViewOptionsMenuChecks();
 
-            /// @brief update shortcuts (alt+X)
-            void updateShortcuts();
-
-            /// @brief menu check to toggle draw junction shape
-            FXMenuCheckIcon* menuCheckToggleDrawJunctionShape;
-
             /// @brief menu check to show Additionals
             FXMenuCheckIcon* menuCheckShowAdditionals;
 
@@ -586,17 +544,17 @@ struct GNEApplicationWindowHelper {
             /// @brief menu check to show Demand Elements
             FXMenuCheckIcon* menuCheckShowDemandElements;
 
-            /// @brief menu check to toggle TAZRel drawing mode
-            FXMenuCheckIcon* menuCheckToggleTAZRelDrawing;
+            /// @brief menu check to toogle TAZRel drawing mode
+            FXMenuCheckIcon* menuCheckToogleTAZRelDrawing;
 
-            /// @brief menu check to toggle TAZ draw fill
-            FXMenuCheckIcon* menuCheckToggleTAZDrawFill;
+            /// @brief menu check to toogle TAZ draw fill
+            FXMenuCheckIcon* menuCheckToogleTAZDrawFill;
 
-            /// @brief menu check to toggle TAZRel only from
-            FXMenuCheckIcon* menuCheckToggleTAZRelOnlyFrom;
+            /// @brief menu check to toogle TAZRel only from
+            FXMenuCheckIcon* menuCheckToogleTAZRelOnlyFrom;
 
-            /// @brief menu check to toggle TAZRel only to
-            FXMenuCheckIcon* menuCheckToggleTAZRelOnlyTo;
+            /// @brief menu check to toogle TAZRel only to
+            FXMenuCheckIcon* menuCheckToogleTAZRelOnlyTo;
 
             /// @brief separator
             FXMenuSeparator* separator;
@@ -633,7 +591,7 @@ struct GNEApplicationWindowHelper {
         /// @brief FXMenuCommand for redo last change
         FXMenuCommand* redoLastChange;
 
-        /// @brief FXMenuCommand for open undolist dialog
+        /// @brief FXMenuCommand for open undolist dialgo
         FXMenuCommand* openUndolistDialog;
 
         /// @brief network view options
@@ -716,37 +674,31 @@ struct GNEApplicationWindowHelper {
         /// @name Processing FXMenuCommands for Network mode
         /// @{
         /// @brief menu check to lock junction
-        FXMenuCheckIcon* menuCheckLockJunction = nullptr;
+        FXMenuCheckIcon* menuCheckLockJunction;
 
         /// @brief menu check to lock edges
-        FXMenuCheckIcon* menuCheckLockEdges = nullptr;
+        FXMenuCheckIcon* menuCheckLockEdges;
 
         /// @brief menu check to lock lanes
-        FXMenuCheckIcon* menuCheckLockLanes = nullptr;
+        FXMenuCheckIcon* menuCheckLockLanes;
 
         /// @brief menu check to lock connections
-        FXMenuCheckIcon* menuCheckLockConnections = nullptr;
+        FXMenuCheckIcon* menuCheckLockConnections;
 
         /// @brief menu check to lock crossings
-        FXMenuCheckIcon* menuCheckLockCrossings = nullptr;
-
-        /// @brief menu check to lock walkingAreas
-        FXMenuCheckIcon* menuCheckLockWalkingAreas = nullptr;
+        FXMenuCheckIcon* menuCheckLockCrossings;
 
         /// @brief menu check to lock additionals
-        FXMenuCheckIcon* menuCheckLockAdditionals = nullptr;
+        FXMenuCheckIcon* menuCheckLockAdditionals;
 
         /// @brief menu check to lock TAZs
-        FXMenuCheckIcon* menuCheckLockTAZs = nullptr;
-
-        /// @brief menu check to lock Wires
-        FXMenuCheckIcon* menuCheckLockWires = nullptr;
+        FXMenuCheckIcon* menuCheckLockTAZs;
 
         /// @brief menu check to lock polygons
-        FXMenuCheckIcon* menuCheckLockPolygons = nullptr;
+        FXMenuCheckIcon* menuCheckLockPolygons;
 
         /// @brief menu check to lock POIs
-        FXMenuCheckIcon* menuCheckLockPOIs = nullptr;
+        FXMenuCheckIcon* menuCheckLockPOIs;
 
         /// @}
 
@@ -842,12 +794,6 @@ struct GNEApplicationWindowHelper {
         /// @brief show data processing menu commands
         void hideDataProcessingMenuCommands();
 
-        /// @brief show separator
-        void showSeparator();
-
-        /// @brief hide separator
-        void hideSeparator();
-
         /// @name Processing FXMenuCommands for Network mode
         /// @{
         /// @brief FXMenuCommand for compute network
@@ -895,9 +841,6 @@ struct GNEApplicationWindowHelper {
     private:
         /// @brief pointer to current GNEApplicationWindows
         GNEApplicationWindow* myGNEApp;
-
-        /// @brief separator for optionsMenu
-        FXMenuSeparator* mySeparator;
 
         /// @brief Invalidated copy constructor.
         ProcessingMenuCommands(const ProcessingMenuCommands&) = delete;
@@ -1012,9 +955,6 @@ struct GNEApplicationWindowHelper {
     /// @brief toggle edit options Data menu commands (called in GNEApplicationWindow::onCmdToggleEditOptions)
     static bool toggleEditOptionsData(GNEViewNet* viewNet, const MFXCheckableButton* menuCheck,
                                       const int numericalKeyPressed, FXObject* obj, FXSelector sel);
-
-    /// @brief check if a string ends with another string
-    static bool stringEndsWith(const std::string& str, const std::string& suffix);
 
 private:
     /// @brief Invalidated copy constructor.

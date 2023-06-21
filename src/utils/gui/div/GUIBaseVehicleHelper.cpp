@@ -143,9 +143,10 @@ GUIBaseVehicleHelper::drawAction_drawVehicleAsTrianglePlus(const double width, c
 
 
 void
-GUIBaseVehicleHelper::drawAction_drawVehicleAsCircle(const double width, double detail) {
+GUIBaseVehicleHelper::drawAction_drawVehicleAsCircle(const double width, const double length, double detail) {
+    const double maxDim = MAX2(MIN2(4 * width, length), width);
     const int steps = MIN2(MAX2(16, int(detail / 5)), 64);
-    GLHelper::drawFilledCircle(width / 2, steps);
+    GLHelper::drawFilledCircle(maxDim / 5, steps);
 }
 
 void
@@ -668,11 +669,13 @@ GUIBaseVehicleHelper::drawAction_drawVehicleAsPoly(const GUIVisualizationSetting
 
 
 bool
-GUIBaseVehicleHelper::drawAction_drawVehicleAsImage(const GUIVisualizationSettings& /* s */, const std::string& file, const GUIGlObject* /* o */, const double width, double length) {
+GUIBaseVehicleHelper::drawAction_drawVehicleAsImage(const GUIVisualizationSettings& s, const std::string& file, const GUIGlObject* o, const double width, double length) {
     if (file != "") {
         int textureID = GUITexturesHelper::getTextureID(file);
         if (textureID > 0) {
-            GUITexturesHelper::drawTexturedBox(textureID, -width * 0.5, 0, width * 0.5, length);
+            const double exaggeration = s.vehicleSize.getExaggeration(s, o);
+            const double halfWidth = width / 2.0 * exaggeration;
+            GUITexturesHelper::drawTexturedBox(textureID, -halfWidth, 0, halfWidth, length * exaggeration);
             return true;
         }
     }

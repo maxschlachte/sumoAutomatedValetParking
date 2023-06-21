@@ -46,10 +46,7 @@ public:
     GUIE3Collector(const std::string& id,
                    const CrossSectionVector& entries, const CrossSectionVector& exits,
                    double haltingSpeedThreshold,
-                   SUMOTime haltingTimeThreshold,
-                   const std::string& vTypes,
-                   const std::string& nextEdges,
-                   int detectPersons, bool openEntry);
+                   SUMOTime haltingTimeThreshold, const std::string& vTypes, int detectPersons, bool openEntry);
 
     /// @brief Destructor
     ~GUIE3Collector();
@@ -101,7 +98,7 @@ public:
         GUIParameterTableWindow* getParameterWindow(
             GUIMainWindow& app, GUISUMOAbstractView& parent);
 
-        /// @brief return exaggeration associated with this GLObject
+        /// @brief return exaggeration asociated with this GLObject
         double getExaggeration(const GUIVisualizationSettings& s) const;
 
         /** @brief Returns the boundary to which the view shall be centered in order to show the object

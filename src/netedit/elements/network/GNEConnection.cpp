@@ -48,7 +48,7 @@ static const int NUM_POINTS = 5;
 GNEConnection::GNEConnection(GNELane* from, GNELane* to) :
     GNENetworkElement(from->getNet(), "from" + from->getID() + "to" + to->getID(),
                       GLO_CONNECTION, SUMO_TAG_CONNECTION,
-{}, {}, {}, {}, {}, {}),
+{}, {}, {}, {}, {}, {}, {}, {}),
 myFromLane(from),
 myToLane(to),
 myLinkState(LINKSTATE_TL_OFF_NOSIGNAL),
@@ -76,7 +76,7 @@ GNEConnection::getConnectionShape() const {
 void
 GNEConnection::updateGeometry() {
     // Get shape of from and to lanes
-    const NBEdge::Connection& nbCon = getNBEdgeConnection();
+    NBEdge::Connection& nbCon = getNBEdgeConnection();
     if (myShapeDeprecated) {
         // obtain lane shape from
         PositionVector laneShapeFrom;
@@ -93,7 +93,7 @@ GNEConnection::updateGeometry() {
             return;
         }
         // Calculate shape of connection depending of the size of Junction shape
-        // value obtained from GNEJunction::drawgl
+        // value obtanied from GNEJunction::drawgl
         if (nbCon.customShape.size() != 0) {
             myConnectionGeometry.updateGeometry(nbCon.customShape);
         } else if (getEdgeFrom()->getNBEdge()->getToNode()->getShape().area() > 4) {
@@ -113,7 +113,7 @@ GNEConnection::updateGeometry() {
                 }
                 myConnectionGeometry.updateGeometry(connectionShape);
             } else {
-                // Calculate shape so something can be drawn immediately
+                // Calculate shape so something can be drawn immidiately
                 myConnectionGeometry.updateGeometry(getEdgeFrom()->getNBEdge()->getToNode()->computeSmoothShape(
                                                         laneShapeFrom, laneShapeTo, NUM_POINTS,
                                                         getEdgeFrom()->getNBEdge()->getTurnDestination() == nbCon.toEdge,
@@ -126,7 +126,7 @@ GNEConnection::updateGeometry() {
         }
         // check if internal junction marker must be calculated
         if (nbCon.haveVia && (nbCon.shape.size() != 0)) {
-            // create marker for internal junction waiting position (contPos)
+            // create marker for interal junction waiting position (contPos)
             const double orthoLength = 0.5;
             Position pos = nbCon.shape.back();
             myInternalJunctionMarker = nbCon.shape.getOrthogonal(pos, 10, true, 0.1);
@@ -264,21 +264,13 @@ GNEConnection::markConnectionGeometryDeprecated() {
 
 void
 GNEConnection::updateLinkState() {
-    const NBEdge::Connection& nbCon = getNBEdgeConnection();
+    NBEdge::Connection& nbCon = getNBEdgeConnection();
     myLinkState = getEdgeFrom()->getNBEdge()->getToNode()->getLinkState(getEdgeFrom()->getNBEdge(),
                   nbCon.toEdge,
                   nbCon.fromLane,
                   nbCon.toLane,
                   nbCon.mayDefinitelyPass,
                   nbCon.tlID);
-}
-
-
-void
-GNEConnection::smootShape() {
-    auto shape = getConnectionShape();
-    shape = shape.bezier(5);
-    setAttribute(SUMO_ATTR_CUSTOMSHAPE, toString(shape), myNet->getViewNet()->getUndoList());
 }
 
 
@@ -292,12 +284,11 @@ GNEConnection::getPopUpMenu(GUIMainWindow& app, GUISUMOAbstractView& parent) {
     myNet->getViewNet()->buildSelectionACPopupEntry(ret, this);
     buildShowParamsPopupEntry(ret);
     // build position copy entry
-    buildPositionCopyEntry(ret, app);
+    buildPositionCopyEntry(ret, false);
     // check if we're in supermode network
     if (myNet->getViewNet()->getEditModes().isCurrentSupermodeNetwork()) {
         // create menu commands
         FXMenuCommand* mcCustomShape = GUIDesigns::buildFXMenuCommand(ret, "Set custom connection shape", nullptr, &parent, MID_GNE_CONNECTION_EDIT_SHAPE);
-        GUIDesigns::buildFXMenuCommand(ret, "Smooth connection shape", nullptr, &parent, MID_GNE_CONNECTION_SMOOTH_SHAPE);
         // check if menu commands has to be disabled
         NetworkEditMode editMode = myNet->getViewNet()->getEditModes().networkEditMode;
         // check if we're in the correct edit mode
@@ -428,7 +419,7 @@ GNEConnection::drawGL(const GUIVisualizationSettings& s) const {
             GLHelper::popMatrix();
             // check if edge value has to be shown
             if (s.edgeValue.show(this)) {
-                const NBEdge::Connection& nbCon = getNBEdgeConnection();
+                NBEdge::Connection& nbCon = getNBEdgeConnection();
                 std::string value = nbCon.getParameter(s.edgeParam, "");
                 if (value != "") {
                     int shapeIndex = (int)myConnectionGeometry.getShape().size() / 2;
@@ -460,12 +451,6 @@ GNEConnection::drawGL(const GUIVisualizationSettings& s) const {
 
 
 void
-GNEConnection::updateGLObject() {
-    updateGeometry();
-}
-
-
-void
 GNEConnection::setSpecialColor(const RGBColor* color) {
     mySpecialColor = color;
 }
@@ -476,9 +461,9 @@ GNEConnection::getAttribute(SumoXMLAttr key) const {
     if (key == SUMO_ATTR_ID) {
         // used by GNEReferenceCounter
         // @note: may be called for connections without a valid nbCon reference
-        return getMicrosimID();
+        return getID();
     }
-    const NBEdge::Connection& nbCon = getNBEdgeConnection();
+    NBEdge::Connection& nbCon = getNBEdgeConnection();
     switch (key) {
         case SUMO_ATTR_FROM:
             return getEdgeFrom()->getID();
@@ -686,7 +671,7 @@ GNEConnection::isValid(SumoXMLAttr key, const std::string& value) {
                     (getEdgeFrom()->getNBEdge()->getToNode()->getControllingTLS().size() > 0) &&
                     canParse<int>(value) &&
                     (parse<int>(value) >= 0 || parse<int>(value) == -1)) {
-                // obtain Traffic light definition
+                // obtan Traffic light definition
                 NBTrafficLightDefinition* def = *getEdgeFrom()->getNBEdge()->getToNode()->getControllingTLS().begin();
                 return def->getMaxValidIndex() >= parse<int>(value);
             } else {
@@ -765,7 +750,7 @@ GNEConnection::isAttributeComputed(SumoXMLAttr key) const {
 }
 
 
-const Parameterised::Map&
+const std::map<std::string, std::string>&
 GNEConnection::getACParametersMap() const {
     return getNBEdgeConnection().getParametersMap();
 }

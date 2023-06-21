@@ -18,8 +18,6 @@
 // Testing the threadpool implementation,
 // based on https://github.com/vukis/Cpp-Utilities/tree/master/ThreadPool
 /****************************************************************************/
-#include <config.h>
-
 #include <string>
 #include <vector>
 #include <chrono>

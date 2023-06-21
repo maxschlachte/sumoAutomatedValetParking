@@ -52,8 +52,8 @@ public:
     class LaneDrawingConstants {
 
     public:
-        /// @brief parameter constructor (reference)
-        LaneDrawingConstants(const GUIVisualizationSettings&  s, const GNELane* lane);
+        /// @brief parameter constructor
+        LaneDrawingConstants(const GUIVisualizationSettings& s, const GNELane* lane);
 
         /// @brief selection scale
         const double selectionScale;
@@ -85,7 +85,7 @@ public:
     /// @brief Destructor
     ~GNELane();
 
-    /// @brief get parent edge
+    /// @brief get arent edge
     GNEEdge* getParentEdge() const;
 
     /// @brief check if current lane allow pedestrians
@@ -151,7 +151,7 @@ public:
     /// @brief multiplexes message to two targets
     long onDefault(FXObject*, FXSelector, void*);
 
-    /// @brief return exaggeration associated with this GLObject
+    /// @brief return exaggeration asociated with this GLObject
     double getExaggeration(const GUIVisualizationSettings& s) const;
 
     /// @brief update centering boundary (implies change in RTREE)
@@ -162,9 +162,6 @@ public:
      * @see GUIGlObject::drawGL
      */
     void drawGL(const GUIVisualizationSettings& s) const;
-
-    /// @brief update GLObject (geometry, ID, etc.)
-    void updateGLObject();
     /// @}
 
     /// @brief returns the index of the lane
@@ -210,7 +207,7 @@ public:
 
     /* @brief method for checking if the key and their correspond attribute are valids
      * @param[in] key The attribute key
-     * @param[in] value The value associated to key key
+     * @param[in] value The value asociated to key key
      * @return true if the value is valid, false in other case
      */
     bool isValid(SumoXMLAttr key, const std::string& value);
@@ -227,7 +224,7 @@ public:
     /// @}
 
     /// @brief get parameters map
-    const Parameterised::Map& getACParametersMap() const;
+    const std::map<std::string, std::string>& getACParametersMap() const;
 
     /* @brief method for setting the special color of the lane
      * @param[in] color Pointer to new special color

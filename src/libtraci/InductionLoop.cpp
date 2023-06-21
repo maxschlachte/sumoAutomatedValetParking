@@ -127,12 +127,6 @@ InductionLoop::getVehicleData(const std::string& detID) {
 }
 
 
-void
-InductionLoop::overrideTimeSinceDetection(const std::string& detID, double time) {
-    Dom::setDouble(libsumo::VAR_VIRTUAL_DETECTION, detID, time);
-}
-
-
 LIBTRACI_PARAMETER_IMPLEMENTATION(InductionLoop, INDUCTIONLOOP)
 LIBTRACI_SUBSCRIPTION_IMPLEMENTATION(InductionLoop, INDUCTIONLOOP)
 

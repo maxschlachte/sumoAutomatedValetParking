@@ -37,15 +37,6 @@
 bool GUIMessageWindow::myLocateLinks = true;
 SUMOTime GUIMessageWindow::myBreakPointOffset = TIME2STEPS(-5);
 
-/* -------------------------------------------------------------------------
- * GUISUMOAbstractView - FOX callback mapping
- * ----------------------------------------------------------------------- */
-FXDEFMAP(GUIMessageWindow) GUIMessageWindowMap[] = {
-    FXMAPFUNC(SEL_KEYPRESS,             0,      GUIMessageWindow::onKeyPress),
-};
-
-
-FXIMPLEMENT_ABSTRACT(GUIMessageWindow, FXText, GUIMessageWindowMap, ARRAYNUMBER(GUIMessageWindowMap))
 
 // ===========================================================================
 // method definitions
@@ -138,10 +129,7 @@ GUIMessageWindow::getActiveStringObject(const FXString& text, const FXint pos, c
                 type = "parkingArea";
             }
             const std::string id(text.mid(idS + 2, idE - idS - 2).text());
-            const std::string typedID = type + ":" + id;
-            const GUIGlObject* o = GUIGlObjectStorage::gIDStorage.getObjectBlocking(typedID);
-            //std::cout << " getActiveStringObject '" << typedID << "' o=" << (o == nullptr ? "NULL" : o->getMicrosimID()) << "\n";
-            return o;
+            return GUIGlObjectStorage::gIDStorage.getObjectBlocking(type + ":" + id);
         }
     }
     return nullptr;
@@ -203,13 +191,13 @@ GUIMessageWindow::setCursorPos(FXint pos, FXbool notify) {
                 gSelected.toggleSelection(glObj->getGlID());
             }
         } else {
-            const int lookback = MIN2(pos, 20);
+            const int lookback = MIN2(pos, 10);
             const int start = MAX2(lineStart(pos), pos - lookback);
             const FXString candidate = text.mid(start, lineEnd(pos) - start);
-            FXint timePos = candidate.find(" time") + 6;
+            FXint timePos = candidate.find(" time");
             SUMOTime t = -1;
-            if (pos >= 0 && pos > start + timePos) {
-                t = getTimeString(candidate, timePos, 0, candidate.length());
+            if (pos >= 0) {
+                t = getTimeString(candidate, timePos + 6, 0, candidate.length());
                 if (t >= 0) {
                     t += myBreakPointOffset;
                     std::vector<SUMOTime> breakpoints = myMainWindow->retrieveBreakpoints();
@@ -217,7 +205,6 @@ GUIMessageWindow::setCursorPos(FXint pos, FXbool notify) {
                         breakpoints.push_back(t);
                         std::sort(breakpoints.begin(), breakpoints.end());
                         myMainWindow->setBreakpoints(breakpoints);
-                        myMainWindow->setStatusBarText("Set breakpoint at " + time2string(t));
                     }
                 }
             }
@@ -357,14 +344,5 @@ GUIMessageWindow::unregisterMsgHandlers() {
     MsgHandler::getWarningInstance()->removeRetriever(myWarningRetriever);
 }
 
-long
-GUIMessageWindow::onKeyPress(FXObject* o, FXSelector sel, void* ptr) {
-    FXEvent* e = (FXEvent*) ptr;
-    // permit ctrl+a, ctrl+c
-    if (e->state & CONTROLMASK) {
-        return FXText::onKeyPress(o, sel, ptr);
-    }
-    return 0;
-}
 
 /****************************************************************************/

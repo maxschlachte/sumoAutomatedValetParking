@@ -43,7 +43,7 @@
 // ---------------------------------------------------------------------------
 
 GNEDataInterval::GNEDataInterval(GNEDataSet* dataSetParent, const double begin, const double end) :
-    GNEHierarchicalElement(dataSetParent->getNet(), SUMO_TAG_DATAINTERVAL, {}, {}, {}, {}, {}, {}),
+    GNEHierarchicalElement(dataSetParent->getNet(), SUMO_TAG_DATAINTERVAL, {}, {}, {}, {}, {}, {}, {}, {}),
                        myDataSetParent(dataSetParent),
                        myBegin(begin),
 myEnd(end) {
@@ -104,6 +104,12 @@ GNEDataInterval::getAllAttributeColors() const {
 const std::map<SumoXMLTag, GNEDataSet::AttributeColors>&
 GNEDataInterval::getSpecificAttributeColors() const {
     return mySpecificAttributeColors;
+}
+
+
+const std::string&
+GNEDataInterval::getID() const {
+    return myDataSetParent->getID();
 }
 
 
@@ -182,7 +188,7 @@ GNEDataInterval::removeGenericDataChild(GNEGenericData* genericData) {
     if (it != myGenericDataChildren.end()) {
         // remove generic data child
         myGenericDataChildren.erase(it);
-        // remove it from inspected ACs and GNEElementTree
+        // remove it from inspected ACs and HierarchicalElementTree
         myDataSetParent->getNet()->getViewNet()->removeFromAttributeCarrierInspected(genericData);
         myDataSetParent->getNet()->getViewNet()->getViewParent()->getInspectorFrame()->getHierarchicalElementTree()->removeCurrentEditedAttributeCarrier(genericData);
         // update colors
@@ -214,12 +220,12 @@ GNEDataInterval::getGenericDataChildren() const {
 
 
 bool
-GNEDataInterval::TAZRelExists(const GNEAdditional* TAZ) const {
+GNEDataInterval::TAZRelExists(const GNETAZElement* TAZ) const {
     // interate over all generic datas and check TAZ parents
     for (const auto& genericData : myGenericDataChildren) {
         if ((genericData->getTagProperty().getTag() == SUMO_TAG_TAZREL) &&
-                (genericData->getParentAdditionals().size() == 1) &&
-                (genericData->getParentAdditionals().front() == TAZ)) {
+                (genericData->getParentTAZElements().size() == 1) &&
+                (genericData->getParentTAZElements().front() == TAZ)) {
             return true;
         }
     }
@@ -228,13 +234,13 @@ GNEDataInterval::TAZRelExists(const GNEAdditional* TAZ) const {
 
 
 bool
-GNEDataInterval::TAZRelExists(const GNEAdditional* fromTAZ, const GNEAdditional* toTAZ) const {
+GNEDataInterval::TAZRelExists(const GNETAZElement* fromTAZ, const GNETAZElement* toTAZ) const {
     // interate over all generic datas and check TAZ parents
     for (const auto& genericData : myGenericDataChildren) {
         if ((genericData->getTagProperty().getTag() == SUMO_TAG_TAZREL) &&
-                (genericData->getParentAdditionals().size() == 2) &&
-                (genericData->getParentAdditionals().front() == fromTAZ) &&
-                (genericData->getParentAdditionals().back() == toTAZ)) {
+                (genericData->getParentTAZElements().size() == 2) &&
+                (genericData->getParentTAZElements().front() == fromTAZ) &&
+                (genericData->getParentTAZElements().back() == toTAZ)) {
             return true;
         }
     }
@@ -296,6 +302,18 @@ GNEDataInterval::isValid(SumoXMLAttr key, const std::string& value) {
 }
 
 
+void
+GNEDataInterval::enableAttribute(SumoXMLAttr /*key*/, GNEUndoList* /*undoList*/) {
+    // Nothing to enable
+}
+
+
+void
+GNEDataInterval::disableAttribute(SumoXMLAttr /*key*/, GNEUndoList* /*undoList*/) {
+    // Nothing to disable
+}
+
+
 bool
 GNEDataInterval::isAttributeEnabled(SumoXMLAttr key) const {
     switch (key) {
@@ -304,6 +322,12 @@ GNEDataInterval::isAttributeEnabled(SumoXMLAttr key) const {
         default:
             return true;
     }
+}
+
+
+bool
+GNEDataInterval::isAttributeComputed(SumoXMLAttr /*key*/) const {
+    return false;
 }
 
 
@@ -319,7 +343,7 @@ GNEDataInterval::getHierarchyName() const {
 }
 
 
-const Parameterised::Map&
+const std::map<std::string, std::string>&
 GNEDataInterval::getACParametersMap() const {
     return getParametersMap();
 }
@@ -341,8 +365,12 @@ GNEDataInterval::setAttribute(SumoXMLAttr key, const std::string& value) {
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
-    // mark interval toolbar for update
-    myNet->getViewNet()->getIntervalBar().markForUpdate();
+}
+
+
+void
+GNEDataInterval::toogleAttribute(SumoXMLAttr /*key*/, const bool /*value*/, const int /*previousParameters*/) {
+    throw InvalidArgument("Nothing to enable");
 }
 
 /****************************************************************************/

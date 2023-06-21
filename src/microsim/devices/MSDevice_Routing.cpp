@@ -158,9 +158,7 @@ MSDevice_Routing::MSDevice_Routing(SUMOVehicle& holder, const std::string& id,
     mySkipRouting(-1),
     myRerouteCommand(nullptr),
     myRerouteRailSignal(getBoolParam(holder, OptionsCont::getOptions(), "rerouting.railsignal", true, true)),
-    myLastLaneEntryTime(-1),
-    myRerouteAfterStop(false),
-    myActive(true) {
+    myLastLaneEntryTime(-1) {
     if (myPreInsertionPeriod > 0 || holder.getParameter().wasSet(VEHPARS_FORCE_REROUTE)) {
         // we do always a pre insertion reroute for trips to fill the best lanes of the vehicle with somehow meaningful values (especially for deaprtLane="best")
         myRerouteCommand = new WrappingCommand<MSDevice_Routing>(this, &MSDevice_Routing::preInsertionReroute);
@@ -182,15 +180,26 @@ MSDevice_Routing::~MSDevice_Routing() {
 bool
 MSDevice_Routing::notifyEnter(SUMOTrafficObject& /*veh*/, MSMoveReminder::Notification reason, const MSLane* enteredLane) {
     if (reason == MSMoveReminder::NOTIFICATION_DEPARTED) {
-        if (myRerouteCommand == nullptr && myPreInsertionPeriod > 0 && myHolder.getDepartDelay() > myPreInsertionPeriod) {
+        // clean up pre depart rerouting
+        if (myRerouteCommand != nullptr) {
+            myRerouteCommand->deschedule();
+        } else if (myPreInsertionPeriod > 0 && myHolder.getDepartDelay() > myPreInsertionPeriod && enteredLane != nullptr) {
             // pre-insertion rerouting was disabled. Reroute once if insertion was delayed
             // this is happening in the run thread (not inbeginOfTimestepEvents) so we cannot safely use the threadPool
             myHolder.reroute(MSNet::getInstance()->getCurrentTimeStep(), "device.rerouting",
                              MSRoutingEngine::getRouterTT(myHolder.getRNGIndex(), myHolder.getVClass()),
                              false, MSRoutingEngine::withTaz(), false);
         }
+        myRerouteCommand = nullptr;
         // build repetition trigger if routing shall be done more often
-        rebuildRerouteCommand();
+        if (myPeriod > 0) {
+            myRerouteCommand = new WrappingCommand<MSDevice_Routing>(this, &MSDevice_Routing::wrappedRerouteCommandExecute);
+            SUMOTime start = MSNet::getInstance()->getCurrentTimeStep();
+            if (OptionsCont::getOptions().getBool("device.rerouting.synchronize")) {
+                start -= start % myPeriod;
+            }
+            MSNet::getInstance()->getBeginOfTimestepEvents()->addEvent(myRerouteCommand, myPeriod + start);
+        }
     }
     if (MSGlobals::gWeightsSeparateTurns > 0) {
         if (reason == MSMoveReminder::NOTIFICATION_JUNCTION) {
@@ -204,32 +213,6 @@ MSDevice_Routing::notifyEnter(SUMOTrafficObject& /*veh*/, MSMoveReminder::Notifi
         return true;
     } else {
         return false;
-    }
-}
-
-
-void
-MSDevice_Routing::notifyStopEnded() {
-    if (myRerouteAfterStop) {
-        reroute(SIMSTEP);
-        myRerouteAfterStop = false;
-    }
-}
-
-
-void
-MSDevice_Routing::rebuildRerouteCommand() {
-    if (myRerouteCommand != nullptr) {
-        myRerouteCommand->deschedule();
-        myRerouteCommand = nullptr;
-    }
-    if (myPeriod > 0) {
-        myRerouteCommand = new WrappingCommand<MSDevice_Routing>(this, &MSDevice_Routing::wrappedRerouteCommandExecute);
-        SUMOTime start = MSNet::getInstance()->getCurrentTimeStep();
-        if (OptionsCont::getOptions().getBool("device.rerouting.synchronize")) {
-            start -= start % myPeriod;
-        }
-        MSNet::getInstance()->getBeginOfTimestepEvents()->addEvent(myRerouteCommand, myPeriod + start);
     }
 }
 
@@ -273,11 +256,7 @@ MSDevice_Routing::preInsertionReroute(const SUMOTime currentTime) {
 
 SUMOTime
 MSDevice_Routing::wrappedRerouteCommandExecute(SUMOTime currentTime) {
-    if (myHolder.isStopped()) {
-        myRerouteAfterStop = true;
-    } else {
-        reroute(currentTime);
-    }
+    reroute(currentTime);
     return myPeriod;
 }
 
@@ -286,7 +265,7 @@ void
 MSDevice_Routing::reroute(const SUMOTime currentTime, const bool onInit) {
     MSRoutingEngine::initEdgeWeights(myHolder.getVClass());
     //check whether the weights did change since the last reroute
-    if (myLastRouting >= MSRoutingEngine::getLastAdaptation() || !myActive) {
+    if (myLastRouting >= MSRoutingEngine::getLastAdaptation()) {
         return;
     }
     myLastRouting = currentTime;
@@ -328,7 +307,7 @@ MSDevice_Routing::setParameter(const std::string& key, const std::string& value)
     } else if (key == "period") {
         myPeriod = TIME2STEPS(doubleValue);
         // re-schedule routing command
-        rebuildRerouteCommand();
+        notifyEnter(myHolder, MSMoveReminder::NOTIFICATION_DEPARTED, nullptr);
     } else {
         throw InvalidArgument("Setting parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
     }

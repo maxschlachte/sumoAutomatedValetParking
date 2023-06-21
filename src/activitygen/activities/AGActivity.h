@@ -50,9 +50,6 @@ public:
         timePerKm(das->speedTimePerKm),
         carPreference(das->carPreference) {};
 
-    /// @brief empty destructor
-    virtual ~AGActivity() {}
-
     /**
      * returns whether the generation could have been well done
      */

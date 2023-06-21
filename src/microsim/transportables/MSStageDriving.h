@@ -38,7 +38,6 @@
 class MSEdge;
 class MSLane;
 class MSNet;
-class MSStop;
 class MSStoppingPlace;
 class MSVehicleType;
 class OutputDevice;
@@ -170,7 +169,7 @@ public:
     }
 
     /// @brief checks whether the person may exit at the current vehicle position
-    bool canLeaveVehicle(const MSTransportable* t, const SUMOVehicle& veh, const MSStop& stop);
+    bool canLeaveVehicle(const MSTransportable* t, const SUMOVehicle& veh);
 
     /** @brief Saves the current state into the given stream
      */
@@ -209,10 +208,6 @@ protected:
 
     std::string myIntendedVehicleID;
     SUMOTime myIntendedDepart;
-
-private:
-    /// brief register waiting person (on proceed or loadState)
-    void registerWaiting(MSTransportable* transportable, SUMOTime now);
 
 private:
     /// @brief Invalidated copy constructor.

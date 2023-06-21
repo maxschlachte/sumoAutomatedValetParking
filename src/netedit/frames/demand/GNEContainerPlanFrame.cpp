@@ -39,19 +39,19 @@ GNEContainerPlanFrame::GNEContainerPlanFrame(FXHorizontalFrame* horizontalFrameP
     myRouteHandler("", viewNet->getNet(), true) {
 
     // create container types selector modul
-    myContainerSelector = new DemandElementSelector(this, {GNETagProperties::TagType::CONTAINER});
+    myContainerSelector = new GNEFrameModules::DemandElementSelector(this, {GNETagProperties::TagType::CONTAINER});
 
     // Create tag selector for container plan
-    myContainerPlanTagSelector = new GNETagSelector(this, GNETagProperties::TagType::CONTAINERPLAN, GNE_TAG_TRANSPORT_EDGE);
+    myContainerPlanTagSelector = new GNEFrameModules::TagSelector(this, GNETagProperties::TagType::CONTAINERPLAN, GNE_TAG_TRANSPORT_EDGE);
 
     // Create container parameters
-    myContainerPlanAttributes = new GNEAttributesCreator(this);
+    myContainerPlanAttributes = new GNEFrameAttributeModules::AttributesCreator(this);
 
     // create myPathCreator Module
-    myPathCreator = new GNEPathCreator(this);
+    myPathCreator = new GNEFrameModules::PathCreator(this);
 
-    // Create GNEElementTree modul
-    myContainerHierarchy = new GNEElementTree(this);
+    // Create HierarchicalElementTree modul
+    myContainerHierarchy = new GNEFrameModules::HierarchicalElementTree(this);
 }
 
 
@@ -129,7 +129,7 @@ GNEContainerPlanFrame::addContainerPlanElement(const GNEViewNetHelper::ObjectsUn
 }
 
 
-GNEPathCreator*
+GNEFrameModules::PathCreator*
 GNEContainerPlanFrame::getPathCreator() const {
     return myPathCreator;
 }
@@ -195,7 +195,7 @@ GNEContainerPlanFrame::demandElementSelected() {
 
 
 void
-GNEContainerPlanFrame::createPath(const bool /*useLastRoute*/) {
+GNEContainerPlanFrame::createPath() {
     // first check that all attributes are valid
     if (!myContainerPlanAttributes->areValuesValid()) {
         myViewNet->setStatusBarText("Invalid " + myContainerPlanTagSelector->getCurrentTemplateAC()->getTagProperty().getTagStr() + " parameters.");
@@ -205,8 +205,8 @@ GNEContainerPlanFrame::createPath(const bool /*useLastRoute*/) {
                     myContainerPlanTagSelector->getCurrentTemplateAC()->getTagProperty().getTag(),
                     myContainerSelector->getCurrentDemandElement(),
                     myContainerPlanAttributes,
-                    myPathCreator, true)) {
-            // refresh GNEElementTree
+                    myPathCreator)) {
+            // refresh HierarchicalElementTree
             myContainerHierarchy->refreshHierarchicalElementTree();
             // abort path creation
             myPathCreator->abortPathCreation();

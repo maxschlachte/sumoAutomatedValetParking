@@ -9,14 +9,12 @@ set(netedit_frames_network_SRCS
    GNECrossingFrame.cpp
    GNETAZFrame.h
    GNETAZFrame.cpp
-   GNEShapeFrame.h
-   GNEShapeFrame.cpp
+   GNEPolygonFrame.h
+   GNEPolygonFrame.cpp
    GNECreateEdgeFrame.h
    GNECreateEdgeFrame.cpp
    GNEProhibitionFrame.h
    GNEProhibitionFrame.cpp
-   GNEWireFrame.h
-   GNEWireFrame.cpp
    )
 
 add_library(netedit_frames_network STATIC ${netedit_frames_network_SRCS})

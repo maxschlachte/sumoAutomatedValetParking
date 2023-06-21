@@ -52,7 +52,7 @@ public:
      *
      * @param[in] file The file to write the state into
      */
-    static void saveState(const std::string& file, SUMOTime step, bool usePrefix = true);
+    static void saveState(const std::string& file, SUMOTime step);
 
     /// @brief get time
     SUMOTime getTime() const {

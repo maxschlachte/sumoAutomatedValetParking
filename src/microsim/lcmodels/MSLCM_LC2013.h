@@ -96,15 +96,11 @@ public:
 
     void changed() override;
 
-    void resetState() override;
-
     double getSafetyFactor() const override;
 
     double getOppositeSafetyFactor() const override;
 
     void prepareStep() override;
-
-    double getExtraReservation(int bestLaneOffset) const override;
 
     /// @brief try to retrieve the given parameter from this device. Throw exception for unsupported key
     std::string getParameter(const std::string& key) const override;
@@ -122,7 +118,7 @@ public:
 protected:
 
     /** helper function which contains the actual logic */
-    double _patchSpeed(double min, const double wanted, double max,
+    double _patchSpeed(const double min, const double wanted, const double max,
                        const MSCFModel& cfModel);
 
     /// @brief helper function for doing the actual work
@@ -172,11 +168,16 @@ protected:
     /// @brief anticipate future follow speed for the given leader
     double anticipateFollowSpeed(const std::pair<MSVehicle*, double>& leaderDist, double dist, double vMax, bool acceleratingLeader);
 
+    /// @brief save space for vehicles which need to counter-lane-change
+    void saveBlockerLength(MSVehicle* blocker, int lcaCounter);
+
     /// @brief react to pedestrians on the given lane
     void adaptSpeedToPedestrians(const MSLane* lane, double& v);
 
     /// @brief reserve space at the end of the lane to avoid dead locks
-    bool saveBlockerLength(double length, double foeLeftSpace) override;
+    inline void saveBlockerLength(double length) override {
+        myLeadingBlockerLength = MAX2(length, myLeadingBlockerLength);
+    };
 
     inline bool amBlockingLeader() {
         return (myOwnState & LCA_AMBLOCKINGLEADER) != 0;
@@ -251,6 +252,8 @@ protected:
     double myRoundaboutBonus;
     // @brief factor for cooperative speed adjustment
     double myCooperativeSpeed;
+    // allow overtaking right even though it is prohibited
+    double myOvertakeRightParam;
 
     // time for unrestricted driving on the right to accept keepRight change
     double myKeepRightAcceptanceTime;

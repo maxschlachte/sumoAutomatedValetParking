@@ -47,10 +47,6 @@ SystemFrame::addConfigurationOptions(OptionsCont& oc) {
     oc.addSynonyme("save-config", "save-configuration");
     oc.addDescription("save-configuration", "Configuration", "Saves current configuration into FILE");
 
-    oc.doRegister("save-configuration.relative", new Option_Bool(false));
-    oc.addSynonyme("save-config.relative", "save-configuration.relative");
-    oc.addDescription("save-configuration.relative", "Configuration", "Enforce relative paths when saving the configuration");
-
     oc.doRegister("save-template", new Option_FileName());
     oc.addDescription("save-template", "Configuration", "Saves a configuration template (empty) into FILE");
 
@@ -139,7 +135,7 @@ SystemFrame::checkOptions() {
         gWeightsWalkOppositeFactor = oc.getFloat("persontrip.walk-opposite-factor");
     }
     if (oc.exists("xml-validation.routes") && oc.isDefault("xml-validation.routes") && !oc.isDefault("xml-validation")) {
-        oc.setDefault("xml-validation.routes", oc.getString("xml-validation"));
+        oc.set("xml-validation.routes", oc.getString("xml-validation"));
     }
     std::cout << std::setprecision(gPrecision);
     return true;

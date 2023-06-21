@@ -48,7 +48,7 @@ class GUILoadThread : public FXSingleEventThread {
 public:
     /// constructor
     GUILoadThread(FXApp* app, GUIApplicationWindow* mw, FXSynchQue<GUIEvent*>& eq,
-                  FXEX::FXThreadEvent& ev, const bool isLibsumo);
+                  FXEX::FXThreadEvent& ev);
 
     /// destructor
     virtual ~GUILoadThread();
@@ -93,8 +93,5 @@ protected:
     FXSynchQue<GUIEvent*>& myEventQue;
 
     FXEX::FXThreadEvent& myEventThrow;
-
-    /// whether we are running in libsumo
-    const bool myAmLibsumo;
 
 };

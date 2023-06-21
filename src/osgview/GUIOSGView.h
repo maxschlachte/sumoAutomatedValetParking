@@ -13,7 +13,6 @@
 /****************************************************************************/
 /// @file    GUIOSGView.h
 /// @author  Daniel Krajzewicz
-/// @author  Mirko Barthauer
 /// @date    19.01.2012
 ///
 // An OSG-based 3D view on the simulation
@@ -62,16 +61,6 @@ class NodeTrackerManipulator;
 class GUIOSGView : public GUISUMOAbstractView {
     FXDECLARE(GUIOSGView)
 public:
-    /// @brief Used osg::NodeSet groups
-    enum NodeSetGroup {
-        /// @brief semi-transparent domes around user-placed TLS models
-        NODESET_TLSDOMES,
-        /// @brief markers above lanes showing the signal state of the corresponding tlIndex
-        NODESET_TLSLINKMARKERS,
-        /// @brief auto-generated TLS models
-        NODESET_TLSMODELS,
-    };
-
     /**
      * @class Command_TLSChange
      * @brief Updates scene on each tls switch
@@ -121,7 +110,6 @@ public:
     struct OSGMovable {
         osg::ref_ptr<osg::PositionAttitudeTransform> pos;
         osg::ref_ptr<osg::ShapeDrawable> geom;
-        osg::ref_ptr<osg::Material> mat;
         osg::ref_ptr<osg::Switch> lights;
         bool active;
     };
@@ -134,14 +122,8 @@ public:
     /// @brief destructor
     virtual ~GUIOSGView();
 
-    /// @brief Returns the cursor's x/y position within the network
-    Position getPositionInformation() const;
-
     /// @brief recalculate boundaries
     void recalculateBoundaries();
-
-    /// @brief confirm 3D view to viewport editor
-    bool is3DView() const;
 
     /// @brief builds the view toolbars
     virtual void buildViewToolBars(GUIGlChildWindow*);
@@ -156,9 +138,6 @@ public:
      * @note caller is responsible for calling update
      */
     void centerTo(GUIGlID id, bool applyZoom, double zoomDist = 20);
-
-    /// @brief update the viewport chooser with the current view values
-    void updateViewportValues();
 
     /// @brief show viewport editor
     void showViewportEditor();
@@ -209,40 +188,12 @@ public:
     long onPaint(FXObject*, FXSelector, void*);
     long OnIdle(FXObject* sender, FXSelector sel, void* ptr);
 
-    /// @brief interaction with the simulation
-    long onCmdCloseLane(FXObject*, FXSelector, void*);
-    long onCmdCloseEdge(FXObject*, FXSelector, void*);
-    long onCmdAddRerouter(FXObject*, FXSelector, void*);
-
-    /// @brief highlight edges according to reachability
-    long onCmdShowReachability(FXObject*, FXSelector, void*);
-
-    // @brief get the new camera position given a zoom value
-    void zoom2Pos(Position& camera, Position& lookAt, double zoom);
-protected:
-    /// @brief Store the normalized OSG window cursor coordinates
-    void setWindowCursorPosition(float x, float y);
-
-    void updatePositionInformation() const;
-
-    /// @brief Compute the world coordinate on the ground plane given the normalized cursor position inside the OSG view (range X, Y [-1;1])
-    bool getPositionAtCursor(float xNorm, float yNorm, Position& pos) const;
-
-    /// @brief returns the GUIGlObject under the cursor using OSG ray intersecting
-    std::vector<GUIGlObject*> getGUIGlObjectsUnderCursor();
-
-    /* @brief Find GUILane which intersects with a ray from the camera to the stored cursor position
-     * @return The first found GUILane found or nullptr
-     */
-    GUILane* getLaneUnderCursor();
 private:
-    double calculateRotation(const osg::Vec3d& lookFrom, const osg::Vec3d& lookAt, const osg::Vec3d& up);
-
     class SUMOTerrainManipulator : public osgGA::TerrainManipulator {
     public:
-        SUMOTerrainManipulator(): myLastY(0) {
+        SUMOTerrainManipulator() {
             setAllowThrow(false);
-            setVerticalAxisFixed(false);
+            setRotationMode(ELEVATION_AZIM_ROLL); // default is ELEVATION_AZIM and this prevents rotating the view around the z-axis
         }
         bool performMovementLeftMouseButton(const double eventTimeDelta, const double dx, const double dy) {
             return osgGA::TerrainManipulator::performMovementMiddleMouseButton(eventTimeDelta, dx, dy);
@@ -253,8 +204,6 @@ private:
         bool performMovementRightMouseButton(const double eventTimeDelta, const double dx, const double dy) {
             return osgGA::TerrainManipulator::performMovementRightMouseButton(eventTimeDelta, dx, -dy);
         }
-    private:
-        float myLastY;
     };
 
     class FXOSGAdapter : public osgViewer::GraphicsWindow {
@@ -290,17 +239,6 @@ private:
         FXCursor* const myOldCursor;
     };
 
-    class PickHandler : public osgGA::GUIEventHandler {
-    public:
-        PickHandler(GUIOSGView* parent) : myParent(parent), myDrag(false) {};
-        bool handle(const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa);
-    protected:
-        ~PickHandler() {};
-    private:
-        GUIOSGView* const myParent;
-        bool myDrag;
-    };
-
 protected:
     GUIOSGView() {}
 
@@ -310,11 +248,9 @@ protected:
 
 private:
     GUIVehicle* myTracked;
-    osg::ref_ptr<SUMOTerrainManipulator> myCameraManipulator;
+    osg::ref_ptr<osgGA::CameraManipulator> myCameraManipulator;
 
     SUMOTime myLastUpdate;
-
-    float myOSGNormalizedCursorX, myOSGNormalizedCursorY;
 
     std::map<MSVehicle*, OSGMovable > myVehicles;
     std::map<MSTransportable*, OSGMovable > myPersons;
@@ -323,7 +259,6 @@ private:
     osg::ref_ptr<osg::Node> myYellowLight;
     osg::ref_ptr<osg::Node> myRedLight;
     osg::ref_ptr<osg::Node> myRedYellowLight;
-    osg::ref_ptr<osg::Node> myPoleBase;
 };
 
 #endif

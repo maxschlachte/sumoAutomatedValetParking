@@ -33,11 +33,10 @@ class MSLane;
 
 
 // ===========================================================================
-// type definitions
+// types definitions
 // ===========================================================================
 typedef std::pair<const MSVehicle*, double> CLeaderDist;
 typedef std::pair<MSVehicle*, double> LeaderDist;
-
 
 // ===========================================================================
 // class definitions
@@ -48,7 +47,7 @@ typedef std::pair<MSVehicle*, double> LeaderDist;
 class MSLeaderInfo {
 public:
     /// Constructor
-    MSLeaderInfo(const double laneWidth, const MSVehicle* ego = nullptr, const double latOffset = 0.);
+    MSLeaderInfo(const MSLane* lane, const MSVehicle* ego = 0, double latOffset = 0);
 
     /// Destructor
     virtual ~MSLeaderInfo();
@@ -59,7 +58,7 @@ public:
      * @param[in] latOffset The lateral offset that must be added to the position of veh
      * @return The number of free sublanes
      */
-    virtual int addLeader(const MSVehicle* veh, bool beyond, double latOffset = 0.);
+    virtual int addLeader(const MSVehicle* veh, bool beyond, double latOffset = 0);
 
     /// @brief discard all information
     virtual void clear();
@@ -99,13 +98,6 @@ public:
         return myVehicles;
     }
 
-    int getSublaneOffset() const {
-        return myOffset;
-    }
-
-    /// @brief set number of sublanes by which to shift positions
-    void setSublaneOffset(int offset);
-
     /// @brief whether a stopped vehicle is leader
     bool hasStoppedVehicle() const;
 
@@ -120,9 +112,6 @@ protected:
     /// @brief the width of the lane to which this instance applies
     // @note: not const to simplify assignment
     double myWidth;
-
-    /// @brief an extra offset for shifting the interpretation of sublane borders (default [0,myWidth])
-    int myOffset;
 
     std::vector<const MSVehicle*> myVehicles;
 
@@ -144,10 +133,10 @@ protected:
 class MSLeaderDistanceInfo : public MSLeaderInfo {
 public:
     /// Constructor
-    MSLeaderDistanceInfo(const double laneWidth, const MSVehicle* ego, const double latOffset);
+    MSLeaderDistanceInfo(const MSLane* lane, const MSVehicle* ego, double latOffset);
 
     /// @brief Construct for the non-sublane-case
-    MSLeaderDistanceInfo(const CLeaderDist& cLeaderDist, const double laneWidth);
+    MSLeaderDistanceInfo(const CLeaderDist& cLeaderDist, const MSLane* dummy);
 
     /// Destructor
     virtual ~MSLeaderDistanceInfo();
@@ -185,13 +174,8 @@ public:
     /// @brief subtract vehicle length from all gaps if the leader vehicle is driving in the opposite direction
     void fixOppositeGaps(bool isFollower);
 
-    /// @brief add given value to all gaps
-    void patchGaps(double amount);
-
     /// @brief return vehicle with the smalles gap
     CLeaderDist getClosest() const;
-
-    void moveSamePosTo(const MSVehicle* ego, MSLeaderDistanceInfo& other);
 
 protected:
 
@@ -206,7 +190,7 @@ protected:
 class MSCriticalFollowerDistanceInfo : public MSLeaderDistanceInfo {
 public:
     /// Constructor
-    MSCriticalFollowerDistanceInfo(const double laneWidth, const MSVehicle* ego, const double latOffset, const bool haveOppositeLeaders = false);
+    MSCriticalFollowerDistanceInfo(const MSLane* lane, const MSVehicle* ego, double latOffset, bool haveOppositeLeaders = false);
 
     /// Destructor
     virtual ~MSCriticalFollowerDistanceInfo();

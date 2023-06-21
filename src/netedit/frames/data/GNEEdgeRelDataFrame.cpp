@@ -52,9 +52,9 @@ GNEEdgeRelDataFrame::addEdgeRelationData(const GNEViewNetHelper::ObjectsUnderCur
 
 
 void
-GNEEdgeRelDataFrame::createPath(const bool /*useLastRoute*/) {
-    // first check that we have at least two edges and parameters are valid
-    if ((myPathCreator->getSelectedEdges().size() > 1) && (myGenericDataAttributes->areAttributesValid())) {
+GNEEdgeRelDataFrame::createPath() {
+    // first check that we have at least two edges
+    if (myPathCreator->getSelectedEdges().size() > 1) {
         GNEDataHandler dataHandler(myViewNet->getNet(), "", true);
         // create data interval object and fill it
         CommonXMLStructure::SumoBaseObject* dataIntervalObject = new CommonXMLStructure::SumoBaseObject(nullptr);

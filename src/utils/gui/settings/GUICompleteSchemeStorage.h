@@ -114,30 +114,16 @@ public:
      */
     void saveViewport(const double x, const double y, const double z, const double rot);
 
-    /** @brief Makes the given decals the default
-     */
-    void saveDecals(const std::vector<GUISUMOAbstractView::Decal>& decals);
 
     /** @brief Sets the default viewport
      * @param[in] parent the view for which the viewport has to be set
      */
     void setViewport(GUISUMOAbstractView* view);
 
-    /** @brief Returns the default decals
-     */
-    const std::vector<GUISUMOAbstractView::Decal>& getDecals() {
-        return myDecals;
-    }
-
-    /** @brief Clear the default decals
-     */
-    void clearDecals() {
-        myDecals.clear();
-    }
 
 protected:
     /// @brief A map of settings referenced by their names
-    std::map<std::string, GUIVisualizationSettings*> mySettings;
+    std::map<std::string, GUIVisualizationSettings> mySettings;
 
     /// @brief List of known setting names
     std::vector<std::string> mySortedSchemeNames;
@@ -152,8 +138,6 @@ protected:
     Position myLookFrom, myLookAt;
     double myRotation;
 
-    /// @brief The default decals
-    std::vector<GUISUMOAbstractView::Decal> myDecals;
 
 };
 

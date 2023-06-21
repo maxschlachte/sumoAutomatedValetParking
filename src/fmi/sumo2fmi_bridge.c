@@ -13,7 +13,6 @@
 /****************************************************************************/
 /// @file    sumo2fmi_bridge.c
 /// @author  Robert Hilbrich
-/// @author  Matthias Schwamborn
 /// @date    Tue, 03 Mar 2020
 ///
 // Implementation of the FMI to SUMO bridge features
@@ -23,7 +22,6 @@
 // Avoid warnings in windows build because of strcpy instead of strcpy_s,
 // because the latter is not available on all platforms
 #define _CRT_SECURE_NO_WARNINGS
-#pragma warning(disable:4820 4514 5045)
 #endif
 
 #include <foreign/fmi/fmi2Functions.h>
@@ -34,47 +32,18 @@
 /* Explicit definition of unused parameters to avoid compiler warnings */
 #define UNREFERENCED_PARAMETER(P) (P)
 
-#define BUFFER_SIZE 256
-
 void
 sumo2fmi_set_startValues(ModelInstance *comp) {
-    char sumoHomePath[BUFFER_SIZE];
-    /* check if $SUMO_HOME exists */
-    if (!getenv("SUMO_HOME")) {
-        sumo2fmi_logError(comp, "$SUMO_HOME was not found.");
-        return;
-    }
-    /* check if BUFFER_SIZE is large enough */
-    if (snprintf(sumoHomePath, BUFFER_SIZE, "%s", getenv("SUMO_HOME")) >= BUFFER_SIZE) {
-        sumo2fmi_logError(comp, "$SUMO_HOME path is longer than %d chars.", BUFFER_SIZE);
-        return;
-    }
-
     comp->freeMemory(comp->libsumoCallOptions);
 
-    char defaultCallOptions[BUFFER_SIZE * 2];
-    snprintf(defaultCallOptions, BUFFER_SIZE * 2, "-c %s/tools/game/grid6.sumocfg", sumoHomePath);
+    char* defaultCallOptions = "-c tools/game/grid6.sumocfg";
     comp->libsumoCallOptions = (char *)comp->allocateMemory(1 + strlen(defaultCallOptions), sizeof(char));
     strcpy((char *)comp->libsumoCallOptions, (char *)defaultCallOptions);
 }
 
 void
-sumo2fmi_logEvent(ModelInstance *comp, const char *message, ...) {
-    if (!comp->logEvents) {
-        return;
-    }
-
-    va_list args;
-    va_start(args, message);
-    sumo2fmi_logMessage(comp, fmi2OK, "logEvents", message, args);
-    va_end(args);
-}
-
-void
 sumo2fmi_logError(ModelInstance *comp, const char *message, ...) {
-    if (!comp->logErrors) {
-        return;
-    }
+    if (!comp->logErrors) return;
 
     va_list args;
     va_start(args, message);
@@ -107,8 +76,9 @@ fmi2Status
 sumo2fmi_getInteger(ModelInstance* comp, const fmi2ValueReference vr, int* value) {
     UNREFERENCED_PARAMETER(comp);
 
+    // Do we need the pointer to comp here?
     switch (vr) {
-        case 2:
+        case 1:
             *value = libsumo_vehicle_getIDCount();
             return fmi2OK;
         default:
@@ -117,22 +87,10 @@ sumo2fmi_getInteger(ModelInstance* comp, const fmi2ValueReference vr, int* value
 }
 
 fmi2Status
-sumo2fmi_getString(ModelInstance *comp, const fmi2ValueReference vr, fmi2String *value) {
+sumo2fmi_getString(ModelInstance* comp, const fmi2ValueReference vr, const char* value) {
     switch (vr) {
         case 0:
-            *value = comp->libsumoCallOptions;
-            return fmi2OK;
-        case 1:
-            *value = comp->getterParameters;
-            return fmi2OK;
-        case 4:
-            libsumo_vehicle_getParameterWithKey(comp, value);
-            return fmi2OK;
-        case 5:
-            libsumo_vehicle_getLaneID(comp, value);
-            return fmi2OK;
-        case 6:
-            libsumo_vehicle_getPosition(comp, value);
+            value = comp->libsumoCallOptions;
             return fmi2OK;
         default:
             return fmi2Error;
@@ -140,20 +98,12 @@ sumo2fmi_getString(ModelInstance *comp, const fmi2ValueReference vr, fmi2String 
 }
 
 fmi2Status
-sumo2fmi_setString(ModelInstance* comp, fmi2ValueReference vr, fmi2String value) {
+sumo2fmi_setString(ModelInstance* comp, fmi2ValueReference vr, const char* value) {
     switch (vr) {
         case 0:
             comp->freeMemory(comp->libsumoCallOptions);
             comp->libsumoCallOptions = (char *)comp->allocateMemory(1 + strlen(value), sizeof(char));
             strcpy(comp->libsumoCallOptions, value);
-            return fmi2OK;
-        case 1:
-            comp->freeMemory(comp->getterParameters);
-            comp->getterParameters = (char *)comp->allocateMemory(1 + strlen(value), sizeof(char));
-            strcpy(comp->getterParameters, value);
-            return fmi2OK;
-        case 3:
-            libsumo_vehicle_moveToXY(value);
             return fmi2OK;
         default:
             return fmi2Error;

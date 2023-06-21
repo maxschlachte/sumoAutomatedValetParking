@@ -58,8 +58,6 @@
 template<class E, class V>
 class AbstractLookupTable {
 public:
-    virtual ~AbstractLookupTable() {}
-
     /// @brief provide a lower bound on the distance between from and to (excluding traveltime of both edges)
     virtual double lowerBound(const E* from, const E* to, double speed, double speedFactor, double fromEffort, double toEffort) const = 0;
 
@@ -222,8 +220,6 @@ public:
                         }
                     }
                 }
-#else
-                UNUSED_PARAMETER(reverseRouter);
 #endif
             }
         }

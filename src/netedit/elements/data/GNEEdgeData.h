@@ -33,25 +33,23 @@
 
 /**
  * @class GNEEdgeData
- * @brief An Element which don't belong to GNENet but has influence in the simulation
+ * @brief An Element which don't belongs to GNENet but has influency in the simulation
  */
 class GNEEdgeData : public GNEGenericData {
 
 public:
     /**@brief Constructor
      * @param[in] dataIntervalParent pointer to data interval parent
-     * @param[in] edgeParent pointer to Edge parent
+     * @param[in] edgeParent poinetr to Edge parent
      * @param[in] parameters parameters map
      */
-    GNEEdgeData(GNEDataInterval* dataIntervalParent, GNEEdge* edgeParent, const Parameterised::Map& parameters);
+    GNEEdgeData(GNEDataInterval* dataIntervalParent, GNEEdge* edgeParent, const std::map<std::string, std::string>& parameters);
 
     /// @brief Destructor
     ~GNEEdgeData();
 
     /// @brief get edge data color
-    void setColor(const GUIVisualizationSettings& s) const;
-
-    double getColorValue(const GUIVisualizationSettings& s, int activeScheme) const;
+    const RGBColor& getColor() const;
 
     /// @brief check if current edge data is visible
     bool isGenericDataVisible() const;
@@ -64,12 +62,12 @@ public:
 
     /// @name members and functions relative to write data sets into XML
     /// @{
-    /**@brief write data set element into a xml file
+    /**@brief writte data set element into a xml file
      * @param[in] device device in which write parameters of data set element
      */
     void writeGenericData(OutputDevice& device) const;
 
-    /// @brief check if current data set is valid to be written into XML (by default true, can be reimplemented in children)
+    /// @brief check if current data set is valid to be writed into XML (by default true, can be reimplemented in children)
     bool isGenericDataValid() const;
 
     /// @brief return a string with the current data set problem (by default empty, can be reimplemented in children)
@@ -88,7 +86,7 @@ public:
      */
     void drawGL(const GUIVisualizationSettings& s) const;
 
-    /// @brief return exaggeration associated with this GLObject
+    /// @brief return exaggeration asociated with this GLObject
     double getExaggeration(const GUIVisualizationSettings& s) const;
 
     //// @brief Returns the boundary to which the view shall be centered in order to show the object
@@ -149,10 +147,24 @@ public:
 
     /**@brief method for checking if the key and their conrrespond attribute are valids
      * @param[in] key The attribute key
-     * @param[in] value The value associated to key key
+     * @param[in] value The value asociated to key key
      * @return true if the value is valid, false in other case
      */
     bool isValid(SumoXMLAttr key, const std::string& value);
+
+    /* @brief method for enable attribute
+     * @param[in] key The attribute key
+     * @param[in] undoList The undoList on which to register changes
+     * @note certain attributes can be only enabled, and can produce the disabling of other attributes
+     */
+    void enableAttribute(SumoXMLAttr key, GNEUndoList* undoList);
+
+    /* @brief method for disable attribute
+     * @param[in] key The attribute key
+     * @param[in] undoList The undoList on which to register changes
+     * @note certain attributes can be only enabled, and can produce the disabling of other attributes
+     */
+    void disableAttribute(SumoXMLAttr key, GNEUndoList* undoList);
 
     /* @brief method for check if the value for certain attribute is set
      * @param[in] key The attribute key
@@ -169,6 +181,9 @@ public:
 private:
     /// @brief method for setting the attribute and nothing else (used in GNEChange_Attribute)
     void setAttribute(SumoXMLAttr key, const std::string& value);
+
+    /// @brief method for enable or disable the attribute and nothing else (used in GNEChange_EnableAttribute)
+    void toogleAttribute(SumoXMLAttr key, const bool value, const int previousParameters);
 
     /// @brief Invalidated copy constructor.
     GNEEdgeData(const GNEEdgeData&) = delete;

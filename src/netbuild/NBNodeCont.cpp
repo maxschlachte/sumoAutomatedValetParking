@@ -64,7 +64,6 @@
 // ===========================================================================
 
 //#define DEBUG_JOINJUNCTIONS
-//#define DEBUG_JOINJUNCTIONS_CONNECTIONS
 //#define DEBUG_GUESSSIGNALS
 #define DEBUGNODEID ""
 #define DEBUGNODEID2 ""
@@ -1620,9 +1619,8 @@ NBNodeCont::joinNodeCluster(NodeSet cluster, NBDistrictCont& dc, NBEdgeCont& ec,
             }
         }
     }
-#ifdef DEBUG_JOINJUNCTIONS_CONNECTIONS
-    std::cout << "joining cluster " << joinNamedToString(cluster, ' ')
-              << "  resetConnections=" << resetConnections << "\n"
+#ifdef DEBUG_JOINJUNCTIONS
+    std::cout << "joining cluster " << joinNamedToString(cluster, ' ') << "\n"
               << "  incoming=" << joinNamedToString(clusterIncoming, ' ') << "\n"
               << "  inside=" << joinNamedToString(inside, ' ') << "\n";
 #endif
@@ -1707,7 +1705,7 @@ NBNodeCont::joinNodeCluster(NodeSet cluster, NBDistrictCont& dc, NBEdgeCont& ec,
                 reachable[e].insert(reached);
             }
         }
-#ifdef DEBUG_JOINJUNCTIONS_CONNECTIONS
+#ifdef DEBUG_JOINJUNCTIONS
         std::cout << " reachable e=" << e->getID() << " seen=" << toString(seen) << " reachable=" << toString(reachable[e]) << "\n";
 #endif
     }
@@ -1752,9 +1750,6 @@ NBNodeCont::joinNodeCluster(NodeSet cluster, NBDistrictCont& dc, NBEdgeCont& ec,
             if ((*k).fromLane >= 0 && (*k).fromLane < e->getNumLanes() && e->getLaneStruct((*k).fromLane).connectionsDone) {
                 // @note (see NIImporter_DlrNavteq::ConnectedLanesHandler)
                 e->declareConnectionsAsLoaded(NBEdge::EdgeBuildingStep::INIT);
-#ifdef DEBUG_JOINJUNCTIONS_CONNECTIONS
-                std::cout << "   e=" << e->getID() << " declareConnectionsAsLoaded\n";
-#endif
             }
         }
     }
@@ -1815,7 +1810,7 @@ NBNodeCont::analyzeCluster(NodeSet cluster, std::string& id, Position& pos,
         } else if (nodeType != otherType) {
             if (hasTLS) {
                 nodeType = SumoXMLNodeType::TRAFFIC_LIGHT;
-            } else if (otherType != SumoXMLNodeType::UNKNOWN) {
+            } else {
                 if ((nodeType != SumoXMLNodeType::PRIORITY && (nodeType != SumoXMLNodeType::NOJUNCTION || otherType != SumoXMLNodeType::PRIORITY))
                         || (otherType != SumoXMLNodeType::NOJUNCTION && otherType != SumoXMLNodeType::UNKNOWN && otherType != SumoXMLNodeType::PRIORITY)) {
                     WRITE_WARNINGF("Ambiguous node type for node cluster '%' (%,%), setting to '" + toString(SumoXMLNodeType::PRIORITY) + "'.", id, toString(nodeType), toString(otherType));
@@ -1824,7 +1819,7 @@ NBNodeCont::analyzeCluster(NodeSet cluster, std::string& id, Position& pos,
             }
         }
     }
-    pos.mul(1. / (double)cluster.size());
+    pos.mul(1.0 / cluster.size());
     if (ambiguousType) {
         type = SUMOXMLDefinitions::TrafficLightTypes.get(OptionsCont::getOptions().getString("tls.default-type"));
         WRITE_WARNINGF("Ambiguous traffic light type for node cluster '%', setting to '%'.", id, toString(type));
@@ -1913,6 +1908,7 @@ NBNodeCont::guessTLs(OptionsCont& oc, NBTrafficLightLogicCont& tlc) {
     myGuessedTLS.clear();
     // build list of definitely not tls-controlled junctions
     const double laneSpeedThreshold = oc.getFloat("tls.guess.threshold");
+    std::vector<NBNode*> ncontrolled;
     if (oc.isSet("tls.unset")) {
         std::vector<std::string> notTLControlledNodes = oc.getStringVector("tls.unset");
         for (std::vector<std::string>::const_iterator i = notTLControlledNodes.begin(); i != notTLControlledNodes.end(); ++i) {
@@ -1925,7 +1921,7 @@ NBNodeCont::guessTLs(OptionsCont& oc, NBTrafficLightLogicCont& tlc) {
                 (*j)->removeNode(n);
             }
             n->removeTrafficLights();
-            myUnsetTLS.insert(n);
+            ncontrolled.push_back(n);
         }
     }
 
@@ -1935,7 +1931,7 @@ NBNodeCont::guessTLs(OptionsCont& oc, NBTrafficLightLogicCont& tlc) {
     if (oc.exists("tls.taz-nodes") && oc.getBool("tls.taz-nodes")) {
         for (NodeCont::iterator i = myNodes.begin(); i != myNodes.end(); i++) {
             NBNode* cur = (*i).second;
-            if (cur->isNearDistrict() && myUnsetTLS.count(cur) == 0) {
+            if (cur->isNearDistrict() && std::find(ncontrolled.begin(), ncontrolled.end(), cur) == ncontrolled.end()) {
                 setAsTLControlled(cur, tlc, type);
             }
         }
@@ -2001,7 +1997,7 @@ NBNodeCont::guessTLs(OptionsCont& oc, NBTrafficLightLogicCont& tlc) {
         // check which nodes should be controlled
         for (std::map<std::string, NBNode*>::const_iterator i = myNodes.begin(); i != myNodes.end(); ++i) {
             NBNode* node = i->second;
-            if (myUnsetTLS.count(node) != 0) {
+            if (find(ncontrolled.begin(), ncontrolled.end(), node) != ncontrolled.end()) {
                 continue;
             }
             const EdgeVector& incoming = node->getIncomingEdges();
@@ -2092,7 +2088,7 @@ NBNodeCont::guessTLs(OptionsCont& oc, NBTrafficLightLogicCont& tlc) {
             // regard only junctions which are not yet controlled and are not
             //  forbidden to be controlled
             for (NodeSet::iterator j = c.begin(); j != c.end();) {
-                if ((*j)->isTLControlled() || myUnsetTLS.count(*j) != 0) {
+                if ((*j)->isTLControlled() || std::find(ncontrolled.begin(), ncontrolled.end(), *j) != ncontrolled.end()) {
                     c.erase(j++);
                 } else {
                     ++j;
@@ -2100,7 +2096,7 @@ NBNodeCont::guessTLs(OptionsCont& oc, NBTrafficLightLogicCont& tlc) {
             }
             // check whether the cluster should be controlled
             // to avoid gigantic clusters, assume that at most 4 nodes should be needed for a guessed-joined-tls
-            if (c.size() == 0 || !shouldBeTLSControlled(c, laneSpeedThreshold * (double)c.size() / MIN2((double)c.size(), 4.))) {
+            if (c.size() == 0 || !shouldBeTLSControlled(c, laneSpeedThreshold * c.size() / MIN2((int)c.size(), 4))) {
                 i = cands.erase(i);
             } else {
                 ++i;
@@ -2134,7 +2130,7 @@ NBNodeCont::guessTLs(OptionsCont& oc, NBTrafficLightLogicCont& tlc) {
                 continue;
             }
             // do nothing if in the list of explicit non-controlled junctions
-            if (myUnsetTLS.count(cur) != 0) {
+            if (find(ncontrolled.begin(), ncontrolled.end(), cur) != ncontrolled.end()) {
                 continue;
             }
             NodeSet c;
@@ -2147,7 +2143,6 @@ NBNodeCont::guessTLs(OptionsCont& oc, NBTrafficLightLogicCont& tlc) {
         }
     }
 }
-
 
 void NBNodeCont::recheckGuessedTLS(NBTrafficLightLogicCont& tlc) {
     std::set<NBTrafficLightDefinition*> recompute;
@@ -2475,11 +2470,8 @@ NBNodeCont::discardRailSignals() {
 
 
 int
-NBNodeCont::remapIDs(bool numericaIDs, bool reservedIDs, const std::string& prefix, NBTrafficLightLogicCont& tlc) {
+NBNodeCont::remapIDs(bool numericaIDs, bool reservedIDs, const std::string& prefix) {
     bool startGiven = !OptionsCont::getOptions().isDefault("numerical-ids.node-start");
-    if (!numericaIDs && !reservedIDs && prefix == "" && !startGiven) {
-        return 0;
-    }
     std::vector<std::string> avoid;
     if (startGiven) {
         avoid.push_back(toString(OptionsCont::getOptions().getInt("numerical-ids.node-start") - 1));
@@ -2530,11 +2522,6 @@ NBNodeCont::remapIDs(bool numericaIDs, bool reservedIDs, const std::string& pref
         for (auto item : oldNodes) {
             if (!StringUtils::startsWith(item.first, prefix)) {
                 rename(item.second, prefix + item.first);
-                for (NBTrafficLightDefinition* tlDef : item.second->getControllingTLS()) {
-                    if (!StringUtils::startsWith(tlDef->getID(), prefix)) {
-                        tlc.rename(tlDef, prefix + tlDef->getID());
-                    }
-                }
                 renamed++;
             }
         }

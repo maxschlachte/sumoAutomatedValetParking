@@ -59,7 +59,7 @@ class LaneAreaDomain(Domain):
         return self._getUniversal(tc.LAST_STEP_VEHICLE_ID_LIST, detID)
 
     def getLastStepOccupancy(self, detID):
-        """getLastStepOccupancy(string) -> double
+        """getLastStepMeanSpeed(string) -> double
 
         Returns the percentage of space the detector was occupied by a vehicle [%]
         """
@@ -99,10 +99,3 @@ class LaneAreaDomain(Domain):
         Returns the number of vehicles which were halting during the last time step.
         """
         return self._getUniversal(tc.LAST_STEP_VEHICLE_HALTING_NUMBER, detID)
-
-    def overrideVehicleNumber(self, detID, vehNum):
-        """overrideVehicleNumber(string, integer) -> None
-        Persistently overrides the number of vehicles on the detector.
-        Setting a negative value resets the override.
-        """
-        return self._setCmd(tc.VAR_VIRTUAL_DETECTION, detID, "i", vehNum)

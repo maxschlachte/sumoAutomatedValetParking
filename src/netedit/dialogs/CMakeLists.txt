@@ -1,18 +1,14 @@
-add_subdirectory(tools)
-
 set(netedit_dialogs_SRCS
    GNEVariableSpeedSignDialog.h
    GNEVariableSpeedSignDialog.cpp
    GNEAbout.h
    GNEAbout.cpp
-   GNEAllowVClassesDialog.h
-   GNEAllowVClassesDialog.cpp
+   GNEAllowDisallow.h
+   GNEAllowDisallow.cpp
    GNESingleParametersDialog.h
    GNESingleParametersDialog.cpp
    GNEMultipleParametersDialog.h
    GNEMultipleParametersDialog.cpp
-   GNEFixNetworkElements.h
-   GNEFixNetworkElements.cpp
    GNEFixAdditionalElements.h
    GNEFixAdditionalElements.cpp
    GNEFixDemandElements.h

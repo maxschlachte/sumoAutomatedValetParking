@@ -43,9 +43,6 @@ public:
     /// @brief Definition of the key to pointer map type
     typedef std::map< std::string, T > IDMap;
 
-    ///@brief Constructor
-    NamedObjectCont() {}
-
     ///@brief Destructor
     virtual ~NamedObjectCont() {
         // iterate over all elements to delete it
@@ -61,21 +58,20 @@ public:
      *
      * @param[in] id The id of the item to add
      * @param[in] item The item to add
-     * @return If the item could be added (no item with the same id was within the container before)
+     * @return If the item could been added (no item with the same id was within the container before)
      */
     bool add(const std::string& id, T item) {
-        const auto it = myMap.lower_bound(id);
-        if (it == myMap.end() || it->first != id) {
-            myMap.emplace_hint(it, id, item);
-            return true;
+        if (myMap.find(id) != myMap.end()) {
+            return false;
         }
-        return false;
+        myMap.insert(std::make_pair(id, item));
+        return true;
     }
 
     /** @brief Removes an item
      * @param[in] id The id of the item to remove
      * @param[in] del delete item after removing of container
-     * @return If the item could be removed (an item with the id was within the container before)
+     * @return If the item could been removed (an item with the id was within the container before)
      */
     bool remove(const std::string& id, const bool del = true) {
         auto it = myMap.find(id);

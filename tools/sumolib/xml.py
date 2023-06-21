@@ -24,7 +24,6 @@ import re
 import gzip
 import io
 import datetime
-import fileinput
 try:
     import xml.etree.cElementTree as ET
 except ImportError as e:
@@ -74,7 +73,7 @@ def _prefix_keyword(name, warn=False):
     result = ''.join([c for c in name if c.isalnum() or c == '_'])
     if result != name:
         if result == '':
-            result = 'attr_'
+            result == 'attr_'
         if warn:
             print("Warning: Renaming attribute '%s' to '%s' because it contains illegal characters" % (
                 name, result), file=sys.stderr)
@@ -223,20 +222,7 @@ def compound_object(element_name, attrnames, warn=False):
     return CompoundObject
 
 
-def parselines(xmlline, element_name, element_attrs=None, attr_conversions=None,
-               heterogeneous=True, warn=False, addRoot="dummy"):
-    tagStart1 = "<%s>" % element_name
-    tagStart2 = "<%s " % element_name
-    if tagStart1 in xmlline or tagStart2 in xmlline:
-        if addRoot is not None:
-            xmlline = "<%s>\n%s</%s>\n" % (addRoot, xmlline, addRoot)
-        xmlfile = io.StringIO(xmlline)
-        for x in parse(xmlfile, element_name, element_attrs, attr_conversions,
-                       heterogeneous, warn):
-            yield x
-
-
-def parse(xmlfile, element_names, element_attrs=None, attr_conversions=None,
+def parse(xmlfile, element_names, element_attrs={}, attr_conversions={},
           heterogeneous=True, warn=False):
     """
     Parses the given element_names from xmlfile and yield compound objects for
@@ -263,14 +249,10 @@ def parse(xmlfile, element_names, element_attrs=None, attr_conversions=None,
     """
     if isinstance(element_names, str):
         element_names = [element_names]
-    if element_attrs is None:
-        element_attrs = {}
-    if attr_conversions is None:
-        attr_conversions = {}
-    element_types = {}
+    elementTypes = {}
     for _, parsenode in ET.iterparse(_open(xmlfile, None)):
         if parsenode.tag in element_names:
-            yield _get_compound_object(parsenode, element_types,
+            yield _get_compound_object(parsenode, elementTypes,
                                        parsenode.tag, element_attrs,
                                        attr_conversions, heterogeneous, warn)
             parsenode.clear()
@@ -280,26 +262,26 @@ def _IDENTITY(x):
     return x
 
 
-def _get_compound_object(node, element_types, element_name, element_attrs, attr_conversions, heterogeneous, warn):
-    if element_name not in element_types or heterogeneous:
+def _get_compound_object(node, elementTypes, element_name, element_attrs, attr_conversions, heterogeneous, warn):
+    if element_name not in elementTypes or heterogeneous:
         # initialized the compound_object type from the first encountered #
         # element
         attrnames = element_attrs.get(element_name, node.keys())
         if len(attrnames) != len(set(attrnames)):
             raise Exception(
                 "non-unique attributes %s for element '%s'" % (attrnames, element_name))
-        element_types[element_name] = compound_object(
+        elementTypes[element_name] = compound_object(
             element_name, attrnames, warn)
     # prepare children
     child_dict = {}
     child_list = []
     if len(node) > 0:
         for c in node:
-            child = _get_compound_object(c, element_types, c.tag, element_attrs, attr_conversions, heterogeneous, warn)
+            child = _get_compound_object(c, elementTypes, c.tag, element_attrs, attr_conversions, heterogeneous, warn)
             child_dict.setdefault(c.tag, []).append(child)
             child_list.append(child)
-    attrnames = element_types[element_name]._original_fields
-    return element_types[element_name](
+    attrnames = elementTypes[element_name]._original_fields
+    return elementTypes[element_name](
         [attr_conversions.get(a, _IDENTITY)(node.get(a)) for a in attrnames],
         child_dict, node.text, child_list)
 
@@ -382,14 +364,13 @@ def parse_fast(xmlfile, element_name, attrnames, warn=False, optional=False, enc
     @Example: parse_fast('plain.edg.xml', 'edge', ['id', 'speed'])
     """
     Record, reprog = _createRecordAndPattern(element_name, attrnames, warn, optional)
-    with _open(xmlfile, encoding) as xml_in:
-        for line in _comment_filter(xml_in):
-            m = reprog.search(line)
-            if m:
-                if optional:
-                    yield Record(**m.groupdict())
-                else:
-                    yield Record(*m.groups())
+    for line in _comment_filter(_open(xmlfile, encoding)):
+        m = reprog.search(line)
+        if m:
+            if optional:
+                yield Record(**m.groupdict())
+            else:
+                yield Record(*m.groups())
 
 
 def parse_fast_nested(xmlfile, element_name, attrnames, element_name2, attrnames2,
@@ -404,23 +385,22 @@ def parse_fast_nested(xmlfile, element_name, attrnames, element_name2, attrnames
     Record, reprog = _createRecordAndPattern(element_name, attrnames, warn, optional)
     Record2, reprog2 = _createRecordAndPattern(element_name2, attrnames2, warn, optional)
     record = None
-    with _open(xmlfile, encoding) as xml_in:
-        for line in _comment_filter(xml_in):
-            m2 = reprog2.search(line)
-            if record and m2:
-                if optional:
-                    yield record, Record2(**m2.groupdict())
-                else:
-                    yield record, Record2(*m2.groups())
+    for line in _comment_filter(_open(xmlfile, encoding)):
+        m2 = reprog2.search(line)
+        if record and m2:
+            if optional:
+                yield record, Record2(**m2.groupdict())
             else:
-                m = reprog.search(line)
-                if m:
-                    if optional:
-                        record = Record(**m.groupdict())
-                    else:
-                        record = Record(*m.groups())
-                elif element_name in line:
-                    record = None
+                yield record, Record2(*m2.groups())
+        else:
+            m = reprog.search(line)
+            if m:
+                if optional:
+                    record = Record(**m.groupdict())
+                else:
+                    record = Record(*m.groups())
+            elif element_name in line:
+                record = None
 
 
 def parse_fast_structured(xmlfile, element_name, attrnames, nested,
@@ -438,68 +418,34 @@ def parse_fast_structured(xmlfile, element_name, attrnames, nested,
     re2 = [(elem,) + _createRecordAndPattern(elem, attr, warn, optional) for elem, attr in nested.items()]
     finalizer = "</%s>" % element_name
     record = None
-    with _open(xmlfile, encoding) as xml_in:
-        for line in _comment_filter(xml_in):
-            if record:
-                for name2, Record2, reprog2 in re2:
-                    m2 = reprog2.search(line)
-                    if m2:
-                        if optional:
-                            inner = Record2(**m2.groupdict())
-                        else:
-                            inner = Record2(*m2.groups())
-                        getattr(record, name2).append(inner)
-                        break
-                else:
-                    if finalizer in line:
-                        yield record
-                        record = None
-            else:
-                m = reprog.search(line)
-                if m:
+    for line in _comment_filter(_open(xmlfile, encoding)):
+        if record:
+            for name2, Record2, reprog2 in re2:
+                m2 = reprog2.search(line)
+                if m2:
                     if optional:
-                        args = dict(m.groupdict())
-                        for name, _, __ in re2:
-                            args[name] = []
-                        record = Record(**args)
+                        inner = Record2(**m2.groupdict())
                     else:
-                        args = list(m.groups())
-                        for _ in range(len(re2)):
-                            args.append([])
-                        record = Record(*args)
-
-
-def buildHeader(script=None, root=None, schemaPath=None, rootAttrs="", options=None, includeXMLDeclaration=False):
-    """
-    Builds an XML header with schema information and a comment on how the file has been generated
-    (script name, arguments and datetime).
-    If script name is not given, it is determined from the command line call.
-    If root is not given, no root element is printed (and thus no schema).
-    If schemaPath is not given, it is derived from the root element.
-    If rootAttrs is given as a string, it can be used to add further attributes to the root element.
-    If rootAttrs is set to None, the schema related attributes are not printed.
-    """
-    if script is None or script == "$Id$":
-        script = os.path.basename(sys.argv[0])
-    if options is None:
-        optionString = "  options: %s\n" % (' '.join(sys.argv[1:]).replace('--', '<doubleminus>'))
-    else:
-        optionString = options.config_as_string
-    if includeXMLDeclaration:
-        header = '<?xml version="1.0" encoding="UTF-8"?>\n\n'
-    else:
-        header = ''
-    header += '<!-- generated on %s by %s %s\n%s-->\n\n' % (datetime.datetime.now(), script,
-                                                            version.gitDescribe(), optionString)
-    if root is not None:
-        if rootAttrs is None:
-            header += '<%s>\n' % root
+                        inner = Record2(*m2.groups())
+                    getattr(record, name2).append(inner)
+                    break
+            else:
+                if finalizer in line:
+                    yield record
+                    record = None
         else:
-            if schemaPath is None:
-                schemaPath = root + "_file.xsd"
-            header += ('<%s%s xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ' +
-                       'xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/%s">\n') % (root, rootAttrs, schemaPath)
-    return header
+            m = reprog.search(line)
+            if m:
+                if optional:
+                    args = dict(m.groupdict())
+                    for name, _, __ in re2:
+                        args[name] = []
+                    record = Record(**args)
+                else:
+                    args = list(m.groups())
+                    for _ in range(len(re2)):
+                        args.append([])
+                    record = Record(*args)
 
 
 def writeHeader(outf, script=None, root=None, schemaPath=None, rootAttrs="", options=None):
@@ -513,19 +459,27 @@ def writeHeader(outf, script=None, root=None, schemaPath=None, rootAttrs="", opt
     If rootAttrs is given as a string, it can be used to add further attributes to the root element.
     If rootAttrs is set to None, the schema related attributes are not printed.
     """
-    outf.write(buildHeader(script, root, schemaPath, rootAttrs, options, True))
+    if script is None or script == "$Id$":
+        script = os.path.basename(sys.argv[0])
+    if options is None:
+        optionString = "  options: %s" % (' '.join(sys.argv[1:]).replace('--', '<doubleminus>'))
+    else:
+        optionString = options.config_as_string
 
-
-def insertOptionsHeader(filename, options):
-    """
-    Inserts a comment header with the options used to call the script into an existing file.
-    """
-    header = buildHeader(options=options)
-    with fileinput.FileInput(filename, inplace=True) as fileToPatch:
-        for lineNbr, line in enumerate(fileToPatch):
-            if lineNbr == 2:
-                print(header, end='')
-            print(line, end='')
+    outf.write(u"""<?xml version="1.0" encoding="UTF-8"?>
+<!-- generated on %s by %s %s
+%s
+-->
+""" % (datetime.datetime.now(), script, version.gitDescribe(), optionString))
+    if root is not None:
+        if rootAttrs is None:
+            outf.write((u'<%s>\n') % root)
+        else:
+            if schemaPath is None:
+                schemaPath = root + "_file.xsd"
+            outf.write((u'<%s%s xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ' +
+                        u'xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/%s">\n') %
+                       (root, rootAttrs, schemaPath))
 
 
 def quoteattr(val):

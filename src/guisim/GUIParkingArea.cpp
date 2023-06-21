@@ -98,7 +98,7 @@ GUIParkingArea::getPopUpMenu(GUIMainWindow& app,
     buildNameCopyPopupEntry(ret);
     buildSelectionPopupEntry(ret);
     buildShowParamsPopupEntry(ret);
-    buildPositionCopyEntry(ret, app);
+    buildPositionCopyEntry(ret, false);
     return ret;
 }
 
@@ -146,7 +146,7 @@ GUIParkingArea::drawGL(const GUIVisualizationSettings& s) const {
         // calculate index Updater
         int indexUpdater = (int)((double)mySpaceOccupancies.size() / ShapeLength);
         // check if indexUpdater is 0
-        if (indexUpdater == 0 || (myCapacity != myRoadSideCapacity)) {
+        if (indexUpdater == 0) {
             indexUpdater = 1;
         }
         // draw spaceOccupancies
@@ -210,14 +210,12 @@ GUIParkingArea::drawGL(const GUIVisualizationSettings& s) const {
     }
     GLHelper::popName();
     drawName(getCenteringBoundary().getCenter(), s.scale, s.addName, s.angle);
-    if (myCapacity != myRoadSideCapacity) {
-        // draw parking vehicles (their lane might not be within drawing range. if it is, they are drawn twice)
-        myLane.getVehiclesSecure();
-        for (const MSBaseVehicle* const v : myLane.getParkingVehicles()) {
-            static_cast<const GUIVehicle*>(v)->drawGL(s);
-        }
-        myLane.releaseVehicles();
+    // draw parking vehicles (their lane might not be within drawing range. if it is, they are drawn twice)
+    myLane.getVehiclesSecure();
+    for (const MSBaseVehicle* const v : myLane.getParkingVehicles()) {
+        static_cast<const GUIVehicle*>(v)->drawGL(s);
     }
+    myLane.releaseVehicles();
 }
 
 void

@@ -19,13 +19,11 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-import os
 import sys
 import subprocess
 import smtplib
 import re
 import io
-import time
 from os.path import basename, commonprefix
 from datetime import datetime
 import logging
@@ -34,20 +32,11 @@ import logging.handlers
 
 def killall(debugSuffix, binaries):
     bins = set([name + suff + ".exe" for name in binaries for suff in debugSuffix])
-    printLog("Looking for running instances of %s." % bins)
-    for i in range(2):  # killing twice is better than once ;-)
-        clean = True
-        for taskline in subprocess.check_output(["tasklist", "/nh"], universal_newlines=True).splitlines():
-            task = taskline.split()
-            if task and task[0] in bins:
-                printLog("Found %s." % task)
-                log_subprocess(["taskkill", "/f", "/im", task[0]])
-                printLog("Sent kill to all %s (try %s)." % (task[0], i))
-                bins.remove(task[0])
-                clean = False
-        if clean:
-            return
-        time.sleep(10)
+    for taskline in subprocess.check_output(["tasklist", "/nh"]).splitlines():
+        task = taskline.split()
+        if task and task[0] in bins:
+            subprocess.call(["taskkill", "/f", "/im", task[0]])
+            bins.remove(task[0])
 
 
 def set_rotating_log(filename, remove=None):
@@ -88,11 +77,11 @@ def findErrors(line, warnings, errors, failed):
     return warnings, errors, failed
 
 
-def printStatus(makeLog, makeAllLog, smtpServer="localhost", out=sys.stdout, toAddr="sumo-tests@dlr.de", testLog=None):
+def printStatus(makeLog, makeAllLog, smtpServer="localhost", out=sys.stdout, toAddr="sumo-tests@dlr.de"):
     failed = ""
     build = commonprefix([basename(makeLog), basename(makeAllLog)])
     print(build, end=' ', file=out)
-    print(datetime.fromtimestamp(os.stat(makeLog).st_ctime).ctime(), file=out)
+    print(datetime.now().ctime(), file=out)
     print("--", file=out)
     print(basename(makeLog), file=out)
     warnings = 0
@@ -120,10 +109,6 @@ def printStatus(makeLog, makeAllLog, smtpServer="localhost", out=sys.stdout, toA
         print(errors, "errors", file=out)
         failed += "make debug failed\n\n"
     print("--", file=out)
-    if testLog:
-        print(basename(testLog), file=out)
-        print(datetime.now().ctime(), file=out)
-        print("--", file=out)
     if failed:
         fromAddr = "sumo-tests@dlr.de"
         message = """From: "%s" <%s>
@@ -140,5 +125,4 @@ Subject: Error occurred while building
 
 
 if __name__ == "__main__":
-    printStatus(sys.argv[1], sys.argv[2], sys.argv[3], sys.stdout, sys.argv[4],
-                sys.argv[5] if len(sys.argv) > 5 else None)
+    printStatus(sys.argv[1], sys.argv[2], sys.argv[3], sys.stdout, sys.argv[4])

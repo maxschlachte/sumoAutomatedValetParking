@@ -59,6 +59,7 @@ typedef std::vector<const MSEdge*> ConstMSEdgeVector;
  */
 class SUMOVehicle : public SUMOTrafficObject {
 public:
+    typedef long long int NumericalID;
 
     /// @brief Constructor
     SUMOVehicle(const std::string& id) : SUMOTrafficObject(id) {}
@@ -151,7 +152,7 @@ public:
      *
      * @return The vehicle's emission parameters
      */
-    virtual EnergyParams* getEmissionParameters() const = 0;
+    virtual const EnergyParams* getEmissionParameters() const = 0;
 
     /** @brief Replaces the vehicle's parameter
      */
@@ -231,7 +232,7 @@ public:
     virtual int getNumberReroutes() const = 0;
 
     /// @brief whether the given transportable is allowed to board this vehicle
-    virtual bool allowsBoarding(const MSTransportable* t) const = 0;
+    virtual bool allowsBoarding(MSTransportable* t) const = 0;
 
     /** @brief Adds a person or container to this vehicle
      *
@@ -305,12 +306,8 @@ public:
      */
     virtual bool isStoppedTriggered() const = 0;
 
-    /** @brief Returns whether the vehicle is at a stop and parking
-     */
-    virtual bool isStoppedParking() const = 0;
-
     /** @brief Returns whether the vehicle is stopped in the range of the given position */
-    virtual bool isStoppedInRange(const double pos, const double tolerance, bool checkFuture = false) const = 0;
+    virtual bool isStoppedInRange(const double pos, const double tolerance) const = 0;
 
     /** @brief Returns whether the vehicle stops at the given stopping place */
     virtual bool stopsAt(MSStoppingPlace* stop) const = 0;
@@ -370,6 +367,10 @@ public:
 
     /// @brief @return The index of the vehicle's associated RNG
     virtual int getRNGIndex() const = 0;
+
+    /// @brief return the numerical ID which is only for internal usage
+    //  (especially fast comparison in maps which need vehicles as keys)
+    virtual NumericalID getNumericalID() const = 0;
 
     /// @brief Returns the vehicles's length
     virtual double getLength() const = 0;

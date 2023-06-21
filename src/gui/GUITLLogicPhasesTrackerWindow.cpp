@@ -509,13 +509,14 @@ GUITLLogicPhasesTrackerWindow::drawValues(GUITLLogicPhasesTrackerPanel& caller) 
     IndexVector::iterator ii = myPhaseIndex.begin() + myFirstPhase2Show;
 
     SUMOTime fpo = myFirstPhaseOffset;
-    const bool phaseNames = myIndexMode->getCheck() == TRUE;
+    const bool phaseNames = myIndexMode->getCheck();
     std::string lastName = "";
     double spaceForName = 0;
 
     // start drawing
     std::vector<SUMOTime> runningGreen(myTLLogic->getLinks().size(), 0);
     for (DurationsVector::iterator pd = myDurations.begin() + myFirstPhase2Show; pd != myDurations.end(); ++pd) {
+        SUMOTime i = 30;
         // the first phase may be drawn incompletely
         SUMOTime duration = *pd - fpo;
         // compute the height and the width of the phase
@@ -561,13 +562,13 @@ GUITLLogicPhasesTrackerWindow::drawValues(GUITLLogicPhasesTrackerPanel& caller) 
                         runningGreen[j] += *pd;
                         if (pd + 1 == myDurations.end()) {
                             drawnDuration = runningGreen[j];
-                            xOffset =  -(double)(drawnDuration - *pd) / panelWidth * (barWidth / ((double)(myLastTime - myBeginTime)));
+                            xOffset =  -(drawnDuration - *pd) / panelWidth * (barWidth / ((double)(myLastTime - myBeginTime)));
                         }
                     }
                 } else {
                     if (runningGreen[j] > 0) {
                         drawnDuration = runningGreen[j];
-                        xOffset =  -(double)drawnDuration / panelWidth * (barWidth / ((double)(myLastTime - myBeginTime)));
+                        xOffset =  -drawnDuration / panelWidth * (barWidth / ((double)(myLastTime - myBeginTime)));
                     }
                     runningGreen[j] = 0;
                 }
@@ -602,6 +603,7 @@ GUITLLogicPhasesTrackerWindow::drawValues(GUITLLogicPhasesTrackerPanel& caller) 
         }
         lastName = name;
         // proceed to next phase
+        i += duration;
         ++pi;
         ++ii;
         x = x2;
@@ -637,11 +639,11 @@ GUITLLogicPhasesTrackerWindow::drawValues(GUITLLogicPhasesTrackerPanel& caller) 
         }
         // draw time information
         //h = (double)(myTLLogic->getLinks().size() * 20 + 12);
-        double glh = 1. - (double)myTLLogic->getLinks().size() * h20 - hTop;
+        double glh = (double)(1.0 - myTLLogic->getLinks().size() * h20 - hTop);
         // current begin time
         // time ticks
         SUMOTime currTime = myFirstTime2Show;
-        double glpos = 31. / panelWidth;
+        double glpos = (double) 31 / panelWidth;
         const double ticSize = 4. / panelHeight;
         if (leftOffset > 0) {
             const double a = STEPS2TIME(leftOffset) * barWidth / timeRange;
@@ -666,7 +668,7 @@ GUITLLogicPhasesTrackerWindow::drawValues(GUITLLogicPhasesTrackerPanel& caller) 
                                          ? StringUtils::padFront(toString((currTime % 3600000) / 60000), 2, '0') + ":"
                                          + StringUtils::padFront(toString((currTime % 60000) / 1000), 2, '0')
                                          : toString((int)STEPS2TIME(cycleTime ? timeInCycle : currTime)));
-            const double w = 10 * (double)timeStr.size() / panelWidth;
+            const double w = 10 * timeStr.size() / panelWidth;
             glTranslated(glpos - w / 2., glh - h20 * ticShift, 0);
             GLHelper::drawText(timeStr, Position(0, 0), 1, fontHeight, RGBColor::WHITE, 0, FONS_ALIGN_LEFT | FONS_ALIGN_MIDDLE, fontWidth);
             glTranslated(-glpos + w / 2., -glh + h20 * ticShift, 0);
@@ -696,7 +698,7 @@ GUITLLogicPhasesTrackerWindow::drawValues(GUITLLogicPhasesTrackerPanel& caller) 
                     glColor3d(0.4, 0.4, 0.4);
                     glBegin(GL_LINES);
                     glVertex2d(glpos, hStart);
-                    hStart -= (double)myDetectorNames.size() * h20;
+                    hStart -=  myDetectorNames.size() * h20;
                     glVertex2d(glpos, hStart);
                     glEnd();
                     hStart -= h35;
@@ -705,7 +707,7 @@ GUITLLogicPhasesTrackerWindow::drawValues(GUITLLogicPhasesTrackerPanel& caller) 
                     glColor3d(0.4, 0.4, 0.4);
                     glBegin(GL_LINES);
                     glVertex2d(glpos, hStart);
-                    glVertex2d(glpos, hStart - (double)myConditionNames.size() * h20);
+                    glVertex2d(glpos, hStart - myConditionNames.size() * h20);
                     glEnd();
                 }
             }
@@ -741,8 +743,8 @@ GUITLLogicPhasesTrackerWindow::drawValues(GUITLLogicPhasesTrackerPanel& caller) 
                 tickDist += TIME2STEPS(10);
                 t -= barWidth / 4.;
             }
-            glh = 1. - (double)myLinkNames.size() * h20 - h80;
-            glh -= h20 * (double)(myDetectorMode->getCheck() ? myDetectorNames.size() : myConditionNames.size());
+            glh = (double)(1.0 - myLinkNames.size() * h20 - h80);
+            glh -= h20 * (myDetectorMode->getCheck() ? myDetectorNames.size() : myConditionNames.size());
             currTime = myFirstTime2Show;
             int pos = 31;
             glpos = (double) pos / panelWidth;
@@ -762,7 +764,7 @@ GUITLLogicPhasesTrackerWindow::drawValues(GUITLLogicPhasesTrackerPanel& caller) 
                                              ? StringUtils::padFront(toString((currTime % 3600000) / 60000), 2, '0') + ":"
                                              + StringUtils::padFront(toString((currTime % 60000) / 1000), 2, '0')
                                              : toString((int)STEPS2TIME(cycleTime ? findTimeInCycle(currTime) : currTime)));
-                const double w = 10. * (double)timeStr.size() / panelWidth;
+                const double w = 10 * timeStr.size() / panelWidth;
                 glTranslated(glpos - w / 2., glh - h20, 0);
                 GLHelper::drawText(timeStr, Position(0, 0), 1, fontHeight, RGBColor::WHITE, 0, FONS_ALIGN_LEFT | FONS_ALIGN_MIDDLE, fontWidth);
                 glTranslated(-glpos + w / 2., -glh + h20, 0);
@@ -828,6 +830,7 @@ GUITLLogicPhasesTrackerWindow::drawAdditionalStates(GUITLLogicPhasesTrackerPanel
     std::string tooltip = "";
     // start drawing
     for (auto pd = durations.begin() + first2Show; pd != durations.end(); ++pd) {
+        SUMOTime i = 30;
         // the first phase may be drawn incompletely
         SUMOTime duration = *pd - fpo;
         // compute the height and the width of the phase
@@ -858,6 +861,7 @@ GUITLLogicPhasesTrackerWindow::drawAdditionalStates(GUITLLogicPhasesTrackerPanel
             h -= h20;
         }
         // proceed to next phase
+        i += duration;
         ++di;
         x = x2;
         // all further phases are drawn in full
@@ -880,7 +884,7 @@ GUITLLogicPhasesTrackerWindow::findTimeInCycle(SUMOTime t) {
     //    << " lookBack=" << STEPS2TIME(lookBack)
     //    << " i0=" << i;
     // look backwards through the phases until to the first cycle crossing before t
-    while (lookBack > 0 && i > 1) {
+    while (lookBack > 0 && i >= 0) {
         i--;
         lookBack -= myDurations[i];
     }
@@ -1000,10 +1004,10 @@ GUITLLogicPhasesTrackerWindow::loadSettings() {
     setWidth(MAX2(getApp()->reg().readIntEntry("TL_TRACKER", "width", 700), minSize));
     myBeginOffset->setValue(getApp()->reg().readIntEntry("TL_TRACKER", "timeRange", (int)myBeginOffset->getValue()));
     myTimeMode->setCurrentItem(getApp()->reg().readIntEntry("TL_TRACKER", "timeMode", myTimeMode->getCurrentItem()));
-    myGreenMode->setCurrentItem(getApp()->reg().readIntEntry("TL_TRACKER", "greenMode", myGreenMode->getCurrentItem()));
-    myIndexMode->setCheck((FXbool)getApp()->reg().readIntEntry("TL_TRACKER", "indexMode", (int)(myIndexMode->getCheck())));
-    myDetectorMode->setCheck((FXbool)getApp()->reg().readIntEntry("TL_TRACKER", "detectorMode", (int)(myDetectorMode->getCheck())));
-    myConditionMode->setCheck((FXbool)getApp()->reg().readIntEntry("TL_TRACKER", "conditionMode", (int)(myConditionMode->getCheck())));
+    myGreenMode->setCurrentItem((bool)getApp()->reg().readIntEntry("TL_TRACKER", "greenMode", (int)(myGreenMode->getCurrentItem())));
+    myIndexMode->setCheck((bool)getApp()->reg().readIntEntry("TL_TRACKER", "indexMode", (int)(myIndexMode->getCheck())));
+    myDetectorMode->setCheck((bool)getApp()->reg().readIntEntry("TL_TRACKER", "detectorMode", (int)(myDetectorMode->getCheck())));
+    myConditionMode->setCheck((bool)getApp()->reg().readIntEntry("TL_TRACKER", "conditionMode", (int)(myConditionMode->getCheck())));
 }
 
 /****************************************************************************/

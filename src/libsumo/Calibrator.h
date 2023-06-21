@@ -20,13 +20,8 @@
 #pragma once
 #include <vector>
 #include <libsumo/TraCIDefs.h>
-
-
-// ===========================================================================
-// class declarations
-// ===========================================================================
 #ifndef LIBTRACI
-class MSCalibrator;
+#include <microsim/trigger/MSCalibrator.h>
 #endif
 
 
@@ -71,6 +66,7 @@ public:
 
 private:
     static MSCalibrator* getCalibrator(const std::string& id);
+    static MSCalibrator::AspiredState getCalibratorState(const MSCalibrator* c);
 
 private:
     static SubscriptionResults mySubscriptionResults;

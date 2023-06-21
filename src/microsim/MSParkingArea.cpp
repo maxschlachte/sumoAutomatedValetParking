@@ -37,7 +37,7 @@
 
 //#define DEBUG_RESERVATIONS
 //#define DEBUG_GET_LAST_FREE_POS
-//#define DEBUG_COND2(obj) (obj.getID() == "v.3")
+//#define DEBUG_COND2(obj) (obj.getID() == "f_eAuto.7")
 #define DEBUG_COND2(obj) (obj.isSelected())
 
 
@@ -53,7 +53,6 @@ MSParkingArea::MSParkingArea(const std::string& id, const std::vector<std::strin
                              // (chs): add parameters for charging space (power, efficiency and charge delay)
                              double power, double efficiency, SUMOTime chargeDelay) :
     MSStoppingPlace(id, SUMO_TAG_PARKING_AREA, lines, lane, begPos, endPos, name),
-    myRoadSideCapacity(capacity),
     myCapacity(0),
     myOnRoad(onRoad),
     myWidth(width),
@@ -114,12 +113,11 @@ MSParkingArea::MSParkingArea(const std::string& id, const std::vector<std::strin
         // (chs): declare chargingSpace
         MSChargingSpace* chargingSpace = nullptr;
         // (chs): if the area was declared as a charging area (has a positive power value) create every lot as a charging space
-        if(power > 0) {
+        if(power >= 0) {
             std::string id_cs = id + "_cs_" + toString(i) + "_0";
             chargingSpace = new MSChargingSpace(id_cs, power, efficiency, chargeDelay);
         }
         // add lotEntry
-        // (chs): pass chargingSpace
         addLotEntry(pos.x(), pos.y(), pos.z(), myWidth, myLength, spaceAngle, spaceSlope, chargingSpace);
         // update endPos
         mySpaceOccupancies.back().endPos = MIN2(myEndPos, myBegPos + MAX2(POSITION_EPS, spaceDim * (i + 1)));
@@ -130,13 +128,10 @@ MSParkingArea::MSParkingArea(const std::string& id, const std::vector<std::strin
 
 MSParkingArea::~MSParkingArea() {}
 
-
+// (chs): add paramter for charging space
 void
-MSParkingArea::addLotEntry(double x, double y, double z, double width, double length, double angle, double slope,
-    // (chs): add paramter for charging space
-    MSChargingSpace* chargingSpace) {
+MSParkingArea::addLotEntry(double x, double y, double z, double width, double length, double angle, double slope, MSChargingSpace* chargingSpace) {
     // create LotSpaceDefinition
-    // (chs): pass charging space to new lsd
     LotSpaceDefinition lsd((int)mySpaceOccupancies.size(), nullptr, x, y, z, angle, slope, width, length, chargingSpace);
     // If we are modelling parking set the end position to the lot position relative to the lane
     // rather than the end of the parking area - this results in vehicles stopping nearer the space
@@ -144,7 +139,7 @@ MSParkingArea::addLotEntry(double x, double y, double z, double width, double le
     // enter the space and re-enter at the end of the parking area.)
     if (MSGlobals::gModelParkingManoeuver) {
         const double offset = this->getLane().getShape().nearest_offset_to_point2D(lsd.position);
-        // (utl): handle invalid offset
+        // (utl): consider spaces protruding into the prior or following junction
         if (offset == GeomHelper::INVALID_OFFSET) {
             // (utl): measures distance to lot and decides whether it is at the end or at the front of the parking area
             if (this->getLane().getEdge().getFromJunction()->getShape().getPolygonCenter().distanceTo(lsd.position) < this->getLane().getEdge().getToJunction()->getShape().getPolygonCenter().distanceTo(lsd.position)) {
@@ -152,7 +147,7 @@ MSParkingArea::addLotEntry(double x, double y, double z, double width, double le
             } else {
                 lsd.endPos = this->getLane().getLength() - POSITION_EPS;
             }
-        } else if (offset <  getBeginLanePosition()) {
+        } else if (offset < getBeginLanePosition()) {
             lsd.endPos =  getBeginLanePosition() + POSITION_EPS;
         } else {
             if (this->getLane().getLength() > offset) {
@@ -191,6 +186,7 @@ MSParkingArea::addLotEntry(double x, double y, double z, double width, double le
 // (utl): sorting method for spaces
 void
 MSParkingArea::sortSpaceOccupancies() {
+    assert(mySpaceOccupancies.size() > 0);
     if (MSGlobals::gModelParkingManoeuver) {
         // (utl): sort the mySpaceOccupancies by endPos - this is needed especially for custom spaces if they are not ordered correctly in the additional file
         std::sort(mySpaceOccupancies.begin(), mySpaceOccupancies.end(), compareEndPos);
@@ -338,6 +334,7 @@ MSParkingArea::getLastFreePos(const SUMOVehicle& forVehicle, double brakePos) co
         } else {
             // find free pos after minPos
             for (const auto& lsd : mySpaceOccupancies) {
+                // (qpk): if the second space is unoccupied, the vehicle in the space will move forward
                 if ((lsd.vehicle == nullptr && lsd.endPos >= minPos) || (lsd.subspaces.size() > 0 && lsd.subspaces.at(0).vehicle == nullptr)) {
 #ifdef DEBUG_GET_LAST_FREE_POS
                     if (DEBUG_COND2(forVehicle)) {
@@ -357,6 +354,7 @@ MSParkingArea::getLastFreePos(const SUMOVehicle& forVehicle, double brakePos) co
         }
     }
 }
+
 
 Position
 MSParkingArea::getVehiclePosition(const SUMOVehicle& forVehicle) const {
@@ -437,6 +435,16 @@ MSParkingArea::getVehicleSlope(const SUMOVehicle& forVehicle) const {
 // (qpk): check if a vehicle is on the last space of a queue and if so return true
 bool
 MSParkingArea::vehicleIsOnValidExitSpace(const SUMOVehicle& forVehicle) const {
+    /*std::cout << "start vehicleIsOnValidExitSpace" << std::endl;
+    std::cout << "for vehicle '" << (&forVehicle)->getParameter().id << "'" << std::endl;
+    if (&forVehicle == nullptr) {
+        std::cout << "forVehicle is null" << std::endl;
+        return false;
+    }
+    if (&mySpaceOccupancies == nullptr) {
+        std::cout << "space occus are null" << std::endl;
+        return false;
+    }*/
     for (const auto& lsd : mySpaceOccupancies) {
         if (lsd.subspaces.size() > 0) {
             if (lsd.subspaces.at(lsd.subspaces.size()-1).vehicle == &forVehicle) return true;
@@ -456,7 +464,7 @@ MSParkingArea::nextSpaceIsOnRightSide() {
     double xDelta = myLane.geometryPositionAtOffset(lanePosOfParkingArea).x() - myShape.getPolygonCenter().x();
     double yDelta = myLane.geometryPositionAtOffset(lanePosOfParkingArea).y() - myShape.getPolygonCenter().y();
     // (utl): If there were no spaces defined return the standard value (true, the space is on the right side)
-    if (mySpaceOccupancies.size() < myLastFreeLot) {
+    if ((int)mySpaceOccupancies.size() < myLastFreeLot) {
         return true;
     }
     // (utl): substract x and y coordinates of the next parking space from the respective x and y of the geometry position of the space position on the lane
@@ -474,6 +482,7 @@ MSParkingArea::nextSpaceIsOnRightSide() {
     // (utl): if the values do not match the space is on the left side
     return false;
 }
+
 
 double
 MSParkingArea::getGUIAngle(const SUMOVehicle& forVehicle) const {
@@ -498,6 +507,7 @@ MSParkingArea::getGUIAngle(const SUMOVehicle& forVehicle) const {
     }
     return 0.;
 }
+
 
 int
 MSParkingArea::getManoeuverAngle(const SUMOVehicle& forVehicle) const {
@@ -555,14 +565,25 @@ MSParkingArea::enter(SUMOVehicle* veh) {
         myUpdateEvent = new WrappingCommand<MSParkingArea>(this, &MSParkingArea::updateOccupancy);
         MSNet::getInstance()->getEndOfTimestepEvents()->addEvent(myUpdateEvent);
     }
-    int lotIndex = getLotIndex(veh);
-    if (lotIndex < 0) {
-        WRITE_WARNING("Unsuitable parking position for vehicle '" + veh->getID() + "' at parkingArea '" + getID() + "' time=" + time2string(SIMSTEP));
-        lotIndex = myLastFreeLot;
+    // (inc): include fix from current nightly build in order to prevent two vehicles targeting the same space https://github.com/eclipse/sumo/issues/10007
+    int lotIndex = myLastFreeLot;
+    if (veh->getPositionOnLane() > myLastFreePos) {
+        // vehicle has gone past myLastFreePos and we need to find the actual lot
+        int closestLot = 0;
+        for (int i = 0; i < (int)mySpaceOccupancies.size(); i++) {
+            const LotSpaceDefinition lsd = mySpaceOccupancies[i];
+            if (lsd.vehicle == nullptr) {
+                closestLot = i;
+                if (lsd.endPos >= veh->getPositionOnLane()) {
+                    lotIndex = i;
+                    break;
+                }
+            }
+        }
+        if (lotIndex == myLastFreeLot) {
+            lotIndex = closestLot;
+        }
     }
-#ifdef DEBUG_GET_LAST_FREE_POS
-    ((SUMOVehicleParameter&)veh->getParameter()).setParameter("lotIndex", toString(lotIndex));
-#endif
     assert(myLastFreePos >= 0);
     assert(lotIndex < (int)mySpaceOccupancies.size());
     mySpaceOccupancies[lotIndex].vehicle = veh;
@@ -672,7 +693,7 @@ MSParkingArea::computeLastFreePos() {
             break;
         } else {
             myLastFreePos = MIN2(myLastFreePos,
-                                 lsd.endPos - lsd.vehicle->getVehicleType().getLength() - NUMERICAL_EPS);
+                             lsd.endPos - lsd.vehicle->getVehicleType().getLength() - NUMERICAL_EPS);
             // (qpk): if there is a free lot in the queue we want to take the lsd at the start of the queue
             for (auto& ssd : lsd.subspaces) {
                 if (ssd.vehicle == nullptr) {
@@ -809,7 +830,6 @@ void
 MSParkingArea::setNumAlternatives(int alternatives) {
     myNumAlternatives = MAX2(myNumAlternatives, alternatives);
 }
-
 
 // (qpk): getter for myFirstRowCapacity
 int

@@ -99,7 +99,7 @@ GNEVehicleTypeDialog::VTypeAtributes::VClassRow::setVariable() {
             setVClassLabelImage();
             // obtain default vType parameters
             SUMOVTypeParameter::VClassDefaultValues defaultVTypeParameters(myVTypeAtributesParent->myVehicleTypeDialog->myEditedDemandElement->getVClass());
-            // check if mutable rows need to be updated
+            // check if mutable rows haben to be updated
             if (!myVTypeAtributesParent->myVehicleTypeDialog->myEditedDemandElement->isAttributeEnabled(SUMO_ATTR_LENGTH)) {
                 myVTypeAtributesParent->myLength->updateValue(toString(defaultVTypeParameters.length));
             }
@@ -156,7 +156,7 @@ GNEVehicleTypeDialog::VTypeAtributes::VClassRow::updateValue() {
 
 void
 GNEVehicleTypeDialog::VTypeAtributes::VClassRow::setVClassLabelImage() {
-    // by default vClass is passenger
+    // by default vclass is passenger
     if (myVTypeAtributesParent->myVehicleTypeDialog->myEditedDemandElement->getAttribute(SUMO_ATTR_VCLASS).empty()) {
         myComboBoxVClassLabelImage->setIcon(GUIIconSubSys::getIcon(GUIIcon::VCLASS_PASSENGER));
     } else {
@@ -1013,7 +1013,7 @@ GNEVehicleTypeDialog::VTypeAtributes::updateValues() {
     myVShapeRow->updateValues();
     // update rows
     myLaneChangeModel->updateValue();
-    myLatAlignment->updateValue(toString(defaultVTypeParameters.latAlignmentProcedure));
+    myLatAlignment->updateValue();
     myColor->updateValue();
     myLength->updateValue(toString(defaultVTypeParameters.length));
     myMinGap->updateValue(toString(defaultVTypeParameters.minGap));
@@ -1104,7 +1104,7 @@ GNEVehicleTypeDialog::VTypeAtributes::onCmdSetAttribute(FXObject*, FXSelector, v
     myOSGFile->setVariable(toString(defaultVTypeParameters.osgFile));
     // set attributes in rows
     myLaneChangeModel->setVariable();
-    myLatAlignment->setVariable(toString(defaultVTypeParameters.latAlignmentProcedure));
+    myLatAlignment->setVariable();
     myLength->setVariable(toString(defaultVTypeParameters.length));
     myMinGap->setVariable(toString(defaultVTypeParameters.minGap));
     myMaxSpeed->setVariable(toString(defaultVTypeParameters.maxSpeed));
@@ -1371,7 +1371,7 @@ GNEVehicleTypeDialog::CarFollowingModelParameters::CarFollowingModelParameters(G
     myLabelIncompleteAttribute = new FXLabel(myVerticalFrameRows, "Some attributes wasn't\nimplemented yet", nullptr, GUIDesignLabelAboutInfoCenter);
     myLabelIncompleteAttribute->hide();
 
-    // show or hide ComboBox depending of current selected CFM
+    // show or hidde ComboBox depending of current selected CFM
     refreshCFMFields();
 }
 
@@ -1680,7 +1680,7 @@ GNEVehicleTypeDialog::onCmdAccept(FXObject*, FXSelector, void*) {
     } else {
         // accept changes before closing dialog
         acceptChanges();
-        // stop dialog successfully
+        // stop dialgo sucesfully
         getApp()->stopModal(this, TRUE);
         return 1;
     }

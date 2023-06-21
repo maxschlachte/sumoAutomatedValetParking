@@ -65,16 +65,13 @@ public:
         LaneTypeDefinition(const EdgeTypeDefinition* edgeTypeDefinition);
 
         /// @brief parameter constructor
-        LaneTypeDefinition(const double speed, const double friction, const double width, SVCPermissions permissions, const std::set<SumoXMLAttr>& attrs);
+        LaneTypeDefinition(const double speed, const double width, SVCPermissions permissions, const std::set<SumoXMLAttr>& attrs);
 
         /// @brief copy constructor
         LaneTypeDefinition(const LaneTypeDefinition* laneTypeDefinition);
 
         /// @brief The maximal velocity on a lane in m/s
         double speed;
-
-        /// @brief The default friction on a lane
-        double friction;
 
         /// @brief List of vehicle edgeTypes that are allowed on this lane
         SVCPermissions permissions;
@@ -99,7 +96,7 @@ public:
         EdgeTypeDefinition(const EdgeTypeDefinition* edgeType);
 
         /// @brief parameter Constructor
-        EdgeTypeDefinition(int numLanes, double speed, double friction, int priority,
+        EdgeTypeDefinition(int numLanes, double speed, int priority,
                            double width, SVCPermissions permissions, LaneSpreadFunction spreadType,
                            bool oneWay, double sideWalkWidth, double bikeLaneWidth,
                            double widthResolution, double maxWidth, double minWidth);
@@ -109,9 +106,6 @@ public:
 
         /// @brief The maximal velocity on an edge in m/s
         double speed;
-
-        /// @brief The default friction on an edge
-        double friction;
 
         /// @brief The priority of an edge
         int priority;
@@ -174,13 +168,12 @@ public:
      * @param[in] defaultNumLanes The default number of lanes an edge has
      * @param[in] defaultLaneWidth The default width of lanes
      * @param[in] defaultSpeed The default speed allowed on an edge
-     * @param[in] defaultFriction The default friction on an edge
      * @param[in] defaultPriority The default priority of an edge
      * @param[in] defaultPermissions The default permissions of an edge
      * @param[in] defaultSpreadType The default lane spread type of an edge
      */
     void setEdgeTypeDefaults(int defaultNumLanes, double defaultLaneWidth,
-                             double defaultSpeed, double defaultFriction, int defaultPriority,
+                             double defaultSpeed, int defaultPriority,
                              SVCPermissions defaultPermissions,
                              LaneSpreadFunction defaultSpreadType);
 
@@ -322,14 +315,6 @@ public:
      * @return The allowed speed on edges of this edgeType
      */
     double getEdgeTypeSpeed(const std::string& edgeType) const;
-
-    /**@brief Returns the default friction for the given edgeType [-]
-     *
-     * If the named edgeType is not known, the default is returned
-     * @param[in] edgeType The name of the edgeType to return the speed for
-     * @return The friction on edges of this edgeType
-     */
-    double getEdgeTypeFriction(const std::string& edgeType) const;
 
     /**@brief Returns the priority for the given edgeType
      *

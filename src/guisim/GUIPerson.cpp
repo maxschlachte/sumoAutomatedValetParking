@@ -26,7 +26,6 @@
 #include <microsim/transportables/MSTransportableControl.h>
 #include <microsim/logging/FunctionBinding.h>
 #include <microsim/transportables/MSPModel_Striping.h>
-#include <microsim/transportables/MSStageWaiting.h>
 #include <utils/common/ScopedLocker.h>
 #include <utils/gui/div/GLHelper.h>
 #include <utils/gui/div/GUIGlobalSelection.h>
@@ -152,7 +151,7 @@ GUIPerson::GUIPersonPopupMenu::onCmdRemoveObject(FXObject*, FXSelector, void*) {
     GUIPerson* person = static_cast<GUIPerson*>(myObject);
     MSStage* stage = person->getCurrentStage();
     stage->abort(person);
-    stage->getEdge()->removeTransportable(person);
+    stage->getEdge()->removePerson(person);
     if (stage->getDestinationStop() != nullptr) {
         stage->getDestinationStop()->removeTransportable(person);
     }
@@ -214,7 +213,7 @@ GUIPerson::getPopUpMenu(GUIMainWindow& app, GUISUMOAbstractView& parent) {
     buildShowTypeParamsPopupEntry(ret);
     GUIDesigns::buildFXMenuCommand(ret, "Show Plan", GUIIconSubSys::getIcon(GUIIcon::APP_TABLE), ret, MID_SHOWPLAN);
     new FXMenuSeparator(ret);
-    buildPositionCopyEntry(ret, app);
+    buildPositionCopyEntry(ret, false);
     return ret;
 }
 
@@ -266,7 +265,7 @@ GUIPerson::getTypeParameterWindow(GUIMainWindow& app,
 
 double
 GUIPerson::getExaggeration(const GUIVisualizationSettings& s) const {
-    return s.personSize.getExaggeration(s, this, s.personQuality == 1 ? 40 : 80);
+    return s.personSize.getExaggeration(s, this, 80);
 }
 
 
@@ -297,7 +296,7 @@ GUIPerson::drawGL(const GUIVisualizationSettings& s) const {
             GUIBasePersonHelper::drawAction_drawAsTriangle(angle, getVehicleType().getLength(), getVehicleType().getWidth());
             break;
         case 1:
-            GUIBasePersonHelper::drawAction_drawAsCircle(angle, getVehicleType().getLength(), getVehicleType().getWidth(), s.scale * exaggeration);
+            GUIBasePersonHelper::drawAction_drawAsCircle(getVehicleType().getLength(), getVehicleType().getWidth(), s.scale * exaggeration);
             break;
         case 2:
             GUIBasePersonHelper::drawAction_drawAsPoly(angle, getVehicleType().getLength(), getVehicleType().getWidth());
@@ -305,7 +304,7 @@ GUIPerson::drawGL(const GUIVisualizationSettings& s) const {
         case 3:
         default:
             GUIBasePersonHelper::drawAction_drawAsImage(angle, getVehicleType().getLength(), getVehicleType().getWidth(),
-                    getVehicleType().getImgFile(), getVehicleType().getGuiShape(), 1);
+                    getVehicleType().getImgFile(), getVehicleType().getGuiShape(), exaggeration);
             break;
     }
     GLHelper::popMatrix();
@@ -429,7 +428,7 @@ GUIPerson::setFunctionalColor(int activeScheme) const {
         }
         case 10: { // color randomly (by pointer)
             const double hue = (double)((long long int)this % 360); // [0-360]
-            const double sat = (double)(((long long int)this / 360) % 67) / 100. + 0.33; // [0.33-1]
+            const double sat = (((long long int)this / 360) % 67) / 100.0 + 0.33; // [0.33-1]
             GLHelper::setColor(RGBColor::fromHSV(hue, sat, 1.));
             return true;
         }
@@ -510,7 +509,7 @@ GUIPerson::getGUIPosition(const GUIVisualizationSettings* s) const {
                    && s != nullptr
                    && s->gaming
                    && getCurrentStage()->getOriginStop() != nullptr
-                   && s->addSize.getExaggeration(*s, nullptr) > 1) {
+                   && s->addSize.getExaggeration(s, nullptr) > 1) {
             // shift position away from stop center
             Position pos = MSPerson::getPosition();
             Position ref = getCurrentStage()->getOriginStop()->getCenterPos();

@@ -25,10 +25,8 @@
 #include <microsim/MSLane.h>
 #include <microsim/MSNet.h>
 #include <microsim/MSStoppingPlace.h>
-#include <microsim/transportables/MSPModel.h>
 #include <microsim/transportables/MSPerson.h>
 #include <microsim/transportables/MSStageDriving.h>
-#include <microsim/transportables/MSStageWaiting.h>
 #include <microsim/devices/MSDevice_Taxi.h>
 #include <microsim/devices/MSDispatch_TraCI.h>
 #include <libsumo/TraCIConstants.h>
@@ -513,7 +511,7 @@ Person::add(const std::string& personID, const std::string& edgeID, double pos, 
 
     if (departInSecs < 0.) {
         const int proc = (int) - departInSecs;
-        if (proc >= static_cast<int>(DepartDefinition::DEF_MAX)) {
+        if (proc >= static_cast<int>(DEPART_DEF_MAX)) {
             throw TraCIException("Invalid departure time." + toString(depart) + " " + toString(proc));
         }
         vehicleParams.departProcedure = (DepartDefinition)proc;
@@ -786,28 +784,27 @@ Person::rerouteTraveltime(const std::string& personID) {
 
 
 void
-Person::moveTo(const std::string& personID, const std::string& laneID, double pos, double posLat) {
+Person::moveTo(const std::string& personID, const std::string& edgeID, double /* position */) {
     MSPerson* p = getPerson(personID);
-    MSLane* l = MSLane::dictionary(laneID);
-    if (l == nullptr) {
-        throw TraCIException("Unknown lane '" + laneID + "'.");
+    MSEdge* e = MSEdge::dictionary(edgeID);
+    if (e == nullptr) {
+        throw TraCIException("Unknown edge '" + edgeID + "'.");
     }
-    if (posLat == INVALID_DOUBLE_VALUE) {
-        posLat = 0;
-    } else if (fabs(posLat) >= (0.5 * (l->getWidth() + p->getVehicleType().getWidth()) + MSPModel::SIDEWALK_OFFSET)) {
-        // see MSPModel_Striping::moveToXY
-        throw TraCIException("Invalid lateral position " + toString(posLat) + " on lane '" + laneID + "'.");
-    }
+    /*
     switch (p->getStageType(0)) {
-        case MSStageType::WALKING: {
-            MSPerson::MSPersonStage_Walking* s = dynamic_cast<MSPerson::MSPersonStage_Walking*>(p->getCurrentStage());
+       case MSTransportable::MOVING_WITHOUT_VEHICLE: {
+           MSPerson::MSPersonStage_Walking* s = dynamic_cast<MSPerson::MSPersonStage_Walking*>(p->getCurrentStage());
             assert(s != 0);
-            s->getState()->moveTo(p, l, pos, posLat, SIMSTEP);
+            const std::string error = s->moveTo(p, Simulation::getCurrentTime());
+            if (error != "") {
+                throw TraCIException("Command moveTo failed for person '" + personID + "' (" + error + ").");
+            }
             break;
         }
         default:
-            throw TraCIException("Command moveTo is not supported for person '" + personID + "' while " + p->getCurrentStageDescription() + ".");
-    }
+        */
+    throw TraCIException("Command moveTo is not supported for person '" + personID + "' while " + p->getCurrentStageDescription() + ".");
+    //}
 }
 
 
@@ -941,6 +938,8 @@ Person::moveToXY(const std::string& personID, const std::string& edgeID, const d
                 break;
             }
             case MSStageType::WAITING_FOR_DEPART:
+                MSNet::getInstance()->getPersonControl().forceDeparture();
+                FALLTHROUGH;
             case MSStageType::WAITING: {
                 if (p->getNumRemainingStages() <= 1 || p->getStageType(1) != MSStageType::WALKING) {
                     // insert walking stage after the current stage
@@ -980,27 +979,8 @@ Person::moveToXY(const std::string& personID, const std::string& edgeID, const d
 void
 Person::setParameter(const std::string& personID, const std::string& key, const std::string& value) {
     MSTransportable* p = getPerson(personID);
-    if (StringUtils::startsWith(key, "device.")) {
-        throw TraCIException("Person '" + personID + "' does not support device parameters\n");
-    } else if (StringUtils::startsWith(key, "laneChangeModel.")) {
-        throw TraCIException("Person '" + personID + "' does not support laneChangeModel parameters\n");
-    } else if (StringUtils::startsWith(key, "carFollowModel.")) {
-        throw TraCIException("Person '" + personID + "' does not support carFollowModel parameters\n");
-    } else if (StringUtils::startsWith(key, "junctionModel.")) {
-        try {
-            // use the whole key (including junctionModel prefix)
-            p->setJunctionModelParameter(key, value);
-        } catch (InvalidArgument& e) {
-            // error message includes id since it is also used for xml input
-            throw TraCIException(e.what());
-        }
-    } else if (StringUtils::startsWith(key, "has.") && StringUtils::endsWith(key, ".device")) {
-        throw TraCIException("Person '" + personID + "' does not support chanigng device status\n");
-    } else {
-        ((SUMOVehicleParameter&)p->getParameter()).setParameter(key, value);
-    }
+    ((SUMOVehicleParameter&)p->getParameter()).setParameter(key, value);
 }
-
 
 void
 Person::setLength(const std::string& personID, double length) {

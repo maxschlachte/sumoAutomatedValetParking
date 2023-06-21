@@ -75,22 +75,6 @@ GUIDottedGeometry::DottedGeometryColor::getColor(DottedContourType type) {
             myColorFlag = true;
             return RGBColor::MAGENTA.changedBrightness(-30);
         }
-    } else if (type == DottedContourType::ORANGE) {
-        if (myColorFlag) {
-            myColorFlag = false;
-            return RGBColor::ORANGE;
-        } else {
-            myColorFlag = true;
-            return RGBColor::ORANGE.changedBrightness(-30);
-        }
-    } else if (type == DottedContourType::YELLOW) {
-        if (myColorFlag) {
-            myColorFlag = false;
-            return RGBColor::YELLOW;
-        } else {
-            myColorFlag = true;
-            return RGBColor::YELLOW.changedBrightness(-30);
-        }
     } else {
         return RGBColor::BLACK;
     }
@@ -155,7 +139,7 @@ GUIDottedGeometry::GUIDottedGeometry(const GUIVisualizationSettings& s, Position
         for (auto& segment : myDottedGeometrySegments) {
             segment.shape = segment.shape.resample(segmentLength, true);
         }
-        // calculate shape rotations and lengths
+        // calculate shape rotations and lenghts
         calculateShapeRotationsAndLengths();
     }
 }
@@ -192,7 +176,7 @@ GUIDottedGeometry::GUIDottedGeometry(const GUIVisualizationSettings& s,
     for (auto& segment : myDottedGeometrySegments) {
         segment.shape = segment.shape.resample(s.dottedContourSettings.segmentLength, true);
     }
-    // calculate shape rotations and lengths
+    // calculate shape rotations and lenghts
     calculateShapeRotationsAndLengths();
 }
 
@@ -211,7 +195,7 @@ GUIDottedGeometry::updateDottedGeometry(const GUIVisualizationSettings& s, const
     for (auto& segment : myDottedGeometrySegments) {
         segment.shape = segment.shape.resample(s.dottedContourSettings.segmentLength, true);
     }
-    // calculate shape rotations and lengths
+    // calculate shape rotations and lenghts
     calculateShapeRotationsAndLengths();
 }
 
@@ -235,7 +219,7 @@ GUIDottedGeometry::updateDottedGeometry(const GUIVisualizationSettings& s, Posit
         for (auto& segment : myDottedGeometrySegments) {
             segment.shape = segment.shape.resample(s.dottedContourSettings.segmentLength, true);
         }
-        // calculate shape rotations and lengths
+        // calculate shape rotations and lenghts
         calculateShapeRotationsAndLengths();
     }
 }

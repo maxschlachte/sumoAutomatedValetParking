@@ -39,6 +39,8 @@ public:
 
     /// @name Function related with graphics
     /// @{
+    /// @brief get ID (all Attribute Carriers have one)
+    const std::string& getID() const;
 
     /// @brief get GUIGlObject associated with this AttributeCarrier
     GUIGlObject* getGUIGlObject();
@@ -69,10 +71,29 @@ public:
      */
     bool isValid(SumoXMLAttr key, const std::string& value);
 
+    /* @brief method for enable attribute
+     * @param[in] key The attribute key
+     * @param[in] undoList The undoList on which to register changes
+     * @note certain attributes can be only enabled, and can produce the disabling of other attributes
+     */
+    void enableAttribute(SumoXMLAttr key, GNEUndoList* undoList);
+
+    /* @brief method for disable attribute
+     * @param[in] key The attribute key
+     * @param[in] undoList The undoList on which to register changes
+     * @note certain attributes can be only enabled, and can produce the disabling of other attributes
+     */
+    void disableAttribute(SumoXMLAttr key, GNEUndoList* undoList);
+
     /* @brief method for check if the value for certain attribute is set
      * @param[in] key The attribute key
      */
     bool isAttributeEnabled(SumoXMLAttr key) const;
+
+    /* @brief method for check if the value for certain attribute is computed (for example, due a network recomputing)
+     * @param[in] key The attribute key
+     */
+    bool isAttributeComputed(SumoXMLAttr key) const;
 
     /// @brief get PopPup ID (Used in AC Hierarchy)
     std::string getPopUpID() const;
@@ -83,7 +104,7 @@ public:
     /// @}
 
     /// @brief get parameters map
-    const Parameterised::Map& getACParametersMap() const;
+    const std::map<std::string, std::string>& getACParametersMap() const;
 
 protected:
     /// @brief pointer to original lane
@@ -92,6 +113,9 @@ protected:
 private:
     /// @brief set attribute after validation
     void setAttribute(SumoXMLAttr key, const std::string& value);
+
+    /// @brief method for enable or disable the attribute and nothing else (used in GNEChange_EnableAttribute)
+    void toogleAttribute(SumoXMLAttr key, const bool value, const int previousParameters);
 
     /// @brief invalidated copy constructor
     GNELaneTemplate(const GNELaneTemplate& s) = delete;

@@ -241,6 +241,10 @@ protected:
         const int dir; // the direction when entering this path
         const double length;
 
+    private:
+        /// @brief Invalidated assignment operator
+        WalkingAreaPath& operator=(const WalkingAreaPath& s) = delete;
+
     };
 
     class walkingarea_path_sorter {
@@ -276,7 +280,6 @@ protected:
         SUMOTime getWaitingTime(const MSStageMoving& stage, SUMOTime now) const;
         double getSpeed(const MSStageMoving& stage) const;
         const MSEdge* getNextEdge(const MSStageMoving& stage) const;
-        void moveTo(MSPerson* p, MSLane* lane, double lanePos, double lanePosLat, SUMOTime t);
         void moveToXY(MSPerson* p, Position pos, MSLane* lane, double lanePos,
                       double lanePosLat, double angle, int routeOffset,
                       const ConstMSEdgeVector& edges, SUMOTime t);
@@ -431,6 +434,10 @@ protected:
 
     private:
         const int myDir;
+
+    private:
+        /// @brief Invalidated assignment operator.
+        by_xpos_sorter& operator=(const by_xpos_sorter&) = delete;
     };
 
 

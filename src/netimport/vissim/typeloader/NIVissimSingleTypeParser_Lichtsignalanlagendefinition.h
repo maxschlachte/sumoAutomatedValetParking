@@ -22,7 +22,7 @@
 
 #include <iostream>
 #include <string>
-#include <netimport/vissim/NIImporter_Vissim.h>
+#include "../NIImporter_Vissim.h"
 
 
 // ===========================================================================

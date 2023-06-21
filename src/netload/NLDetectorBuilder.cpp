@@ -64,15 +64,12 @@
 NLDetectorBuilder::E3DetectorDefinition::E3DetectorDefinition(const std::string& id,
         const std::string& device, double haltingSpeedThreshold,
         SUMOTime haltingTimeThreshold, SUMOTime splInterval,
-        const std::string& vTypes,
-        const std::string& nextEdges,
-        int detectPersons, bool openEntry) :
+        const std::string& vTypes, int detectPersons, bool openEntry) :
     myID(id), myDevice(device),
     myHaltingSpeedThreshold(haltingSpeedThreshold),
     myHaltingTimeThreshold(haltingTimeThreshold),
     mySampleInterval(splInterval),
     myVehicleTypes(vTypes),
-    myNextEdges(nextEdges),
     myDetectPersons(detectPersons),
     myOpenEntry(openEntry) {
 }
@@ -95,28 +92,16 @@ NLDetectorBuilder::~NLDetectorBuilder() {
 
 Parameterised*
 NLDetectorBuilder::buildInductLoop(const std::string& id,
-                                   const std::string& lane, double pos, double length, SUMOTime splInterval,
+                                   const std::string& lane, double pos, SUMOTime splInterval,
                                    const std::string& device, bool friendlyPos,
-                                   const std::string& vTypes,
-                                   const std::string& nextEdges,
-                                   int detectPersons) {
+                                   const std::string& vTypes, int detectPersons) {
     checkSampleInterval(splInterval, SUMO_TAG_E1DETECTOR, id);
     // get and check the lane
     MSLane* clane = getLaneChecking(lane, SUMO_TAG_E1DETECTOR, id);
     // get and check the position
     pos = getPositionChecking(pos, clane, friendlyPos, SUMO_TAG_E1DETECTOR, id);
-    if (length < 0) {
-        throw InvalidArgument("The length of " + toString(SUMO_TAG_E1DETECTOR) + " '" + id + "' cannot be negative");
-    } else if (length > 0 && pos + length > clane->getLength()) {
-        if (friendlyPos) {
-            length = MIN2(length, clane->getLength());
-            pos = clane->getLength() - length;
-        } else {
-            throw InvalidArgument("The length of " + toString(SUMO_TAG_E1DETECTOR) + " '" + id + "' puts it beyond the lane's '" + clane->getID() + "' end.");
-        }
-    }
     // build the loop
-    MSDetectorFileOutput* loop = createInductLoop(id, clane, pos, length, vTypes, nextEdges, detectPersons);
+    MSDetectorFileOutput* loop = createInductLoop(id, clane, pos, vTypes, detectPersons);
     // add the file output
     myNet.getDetectorControl().add(SUMO_TAG_INDUCTION_LOOP, loop, device, splInterval);
     return loop;
@@ -127,14 +112,13 @@ Parameterised*
 NLDetectorBuilder::buildInstantInductLoop(const std::string& id,
         const std::string& lane, double pos,
         const std::string& device, bool friendlyPos,
-        const std::string& vTypes,
-        const std::string& nextEdges) {
+        const std::string& vTypes) {
     // get and check the lane
     MSLane* clane = getLaneChecking(lane, SUMO_TAG_INSTANT_INDUCTION_LOOP, id);
     // get and check the position
     pos = getPositionChecking(pos, clane, friendlyPos, SUMO_TAG_INSTANT_INDUCTION_LOOP, id);
     // build the loop
-    MSDetectorFileOutput* loop = createInstantInductLoop(id, clane, pos, device, vTypes, nextEdges);
+    MSDetectorFileOutput* loop = createInstantInductLoop(id, clane, pos, device, vTypes);
     // add the file output
     myNet.getDetectorControl().add(SUMO_TAG_INSTANT_INDUCTION_LOOP, loop);
     return loop;
@@ -145,9 +129,7 @@ Parameterised*
 NLDetectorBuilder::buildE2Detector(const std::string& id, MSLane* lane, double pos, double endPos, double length,
                                    const std::string& device, SUMOTime frequency,
                                    SUMOTime haltingTimeThreshold, double haltingSpeedThreshold, double jamDistThreshold,
-                                   const std::string& vTypes,
-                                   const std::string& nextEdges,
-                                   int detectPersons, bool friendlyPos, bool showDetector,
+                                   const std::string& vTypes, int detectPersons, bool friendlyPos, bool showDetector,
                                    MSTLLogicControl::TLSLogicVariants* tlls, MSLane* toLane) {
 
     bool tlsGiven = tlls != nullptr;
@@ -196,7 +178,7 @@ NLDetectorBuilder::buildE2Detector(const std::string& id, MSLane* lane, double p
     MSE2Collector* det = nullptr;
     if (tlsGiven) {
         // Detector connected to TLS
-        det =  createE2Detector(id, DU_USER_DEFINED, lane, pos, endPos, length, haltingTimeThreshold, haltingSpeedThreshold, jamDistThreshold, vTypes, nextEdges, detectPersons, showDetector);
+        det =  createE2Detector(id, DU_USER_DEFINED, lane, pos, endPos, length, haltingTimeThreshold, haltingSpeedThreshold, jamDistThreshold, vTypes, detectPersons, showDetector);
         myNet.getDetectorControl().add(SUMO_TAG_LANE_AREA_DETECTOR, det);
         // add the file output (XXX: Where's the corresponding delete?)
         if (toLaneGiven) {
@@ -216,7 +198,7 @@ NLDetectorBuilder::buildE2Detector(const std::string& id, MSLane* lane, double p
     } else {
         // User specified detector for xml-output
         checkSampleInterval(frequency, SUMO_TAG_E2DETECTOR, id);
-        det =  createE2Detector(id, DU_USER_DEFINED, lane, pos, endPos, length, haltingTimeThreshold, haltingSpeedThreshold, jamDistThreshold, vTypes, nextEdges, detectPersons, showDetector);
+        det =  createE2Detector(id, DU_USER_DEFINED, lane, pos, endPos, length, haltingTimeThreshold, haltingSpeedThreshold, jamDistThreshold, vTypes, detectPersons, showDetector);
         myNet.getDetectorControl().add(SUMO_TAG_LANE_AREA_DETECTOR, det, device, frequency);
     }
     return det;
@@ -227,9 +209,7 @@ Parameterised*
 NLDetectorBuilder::buildE2Detector(const std::string& id, std::vector<MSLane*> lanes, double pos, double endPos,
                                    const std::string& device, SUMOTime frequency,
                                    SUMOTime haltingTimeThreshold, double haltingSpeedThreshold, double jamDistThreshold,
-                                   const std::string& vTypes,
-                                   const std::string& nextEdges,
-                                   int detectPersons, bool friendlyPos, bool showDetector,
+                                   const std::string& vTypes, int detectPersons, bool friendlyPos, bool showDetector,
                                    MSTLLogicControl::TLSLogicVariants* tlls, MSLane* toLane) {
 
     bool tlsGiven = tlls != nullptr;
@@ -276,7 +256,7 @@ NLDetectorBuilder::buildE2Detector(const std::string& id, std::vector<MSLane*> l
     MSE2Collector* det = nullptr;
     if (tlsGiven) {
         // Detector connected to TLS
-        det = createE2Detector(id, DU_USER_DEFINED, lanes, pos, endPos, haltingTimeThreshold, haltingSpeedThreshold, jamDistThreshold, vTypes, nextEdges, detectPersons, showDetector);
+        det = createE2Detector(id, DU_USER_DEFINED, lanes, pos, endPos, haltingTimeThreshold, haltingSpeedThreshold, jamDistThreshold, vTypes, detectPersons, showDetector);
         myNet.getDetectorControl().add(SUMO_TAG_LANE_AREA_DETECTOR, det);
         // add the file output (XXX: Where's the corresponding delete?)
         if (toLaneGiven) {
@@ -297,7 +277,7 @@ NLDetectorBuilder::buildE2Detector(const std::string& id, std::vector<MSLane*> l
         // User specified detector for xml-output
         checkSampleInterval(frequency, SUMO_TAG_E2DETECTOR, id);
 
-        det = createE2Detector(id, DU_USER_DEFINED, lanes, pos, endPos, haltingTimeThreshold, haltingSpeedThreshold, jamDistThreshold, vTypes, nextEdges, detectPersons, showDetector);
+        det = createE2Detector(id, DU_USER_DEFINED, lanes, pos, endPos, haltingTimeThreshold, haltingSpeedThreshold, jamDistThreshold, vTypes, detectPersons, showDetector);
         myNet.getDetectorControl().add(SUMO_TAG_LANE_AREA_DETECTOR, det, device, frequency);
     }
     return det;
@@ -310,11 +290,9 @@ NLDetectorBuilder::beginE3Detector(const std::string& id,
                                    const std::string& device, SUMOTime splInterval,
                                    double haltingSpeedThreshold,
                                    SUMOTime haltingTimeThreshold,
-                                   const std::string& vTypes,
-                                   const std::string& nextEdges,
-                                   int detectPersons, bool openEntry) {
+                                   const std::string& vTypes, int detectPersons, bool openEntry) {
     checkSampleInterval(splInterval, SUMO_TAG_E3DETECTOR, id);
-    myE3Definition = new E3DetectorDefinition(id, device, haltingSpeedThreshold, haltingTimeThreshold, splInterval, vTypes, nextEdges, detectPersons, openEntry);
+    myE3Definition = new E3DetectorDefinition(id, device, haltingSpeedThreshold, haltingTimeThreshold, splInterval, vTypes, detectPersons, openEntry);
     return myE3Definition;
 }
 
@@ -367,18 +345,16 @@ NLDetectorBuilder::endE3Detector() {
         MSDetectorFileOutput* det = createE3Detector(myE3Definition->myID,
                                     myE3Definition->myEntries, myE3Definition->myExits,
                                     myE3Definition->myHaltingSpeedThreshold, myE3Definition->myHaltingTimeThreshold,
-                                    myE3Definition->myVehicleTypes,
-                                    myE3Definition->myNextEdges,
-                                    myE3Definition->myDetectPersons,
+                                    myE3Definition->myVehicleTypes, myE3Definition->myDetectPersons,
                                     myE3Definition->myOpenEntry);
         det->updateParameters(myE3Definition->getParametersMap());
         // add to net
         myNet.getDetectorControl().add(SUMO_TAG_ENTRY_EXIT_DETECTOR, det, myE3Definition->myDevice, myE3Definition->mySampleInterval);
-    } else {
+    } else
         WRITE_WARNING(toString(SUMO_TAG_E3DETECTOR) + " with id = '" + myE3Definition->myID + "' will not be created because is empty (no " + toString(SUMO_TAG_DET_ENTRY) + " or " + toString(SUMO_TAG_DET_EXIT) + " was defined)")
-    }
-    // clean up
-    delete myE3Definition;
+
+        // clean up
+        delete myE3Definition;
     myE3Definition = nullptr;
 }
 
@@ -407,24 +383,21 @@ NLDetectorBuilder::buildRouteProbe(const std::string& id, const std::string& edg
 MSDetectorFileOutput*
 NLDetectorBuilder::createInductLoop(const std::string& id,
                                     MSLane* lane, double pos,
-                                    double length,
                                     const std::string& vTypes,
-                                    const std::string& nextEdges,
                                     int detectPersons,
                                     bool /*show*/) {
     if (MSGlobals::gUseMesoSim) {
-        return new MEInductLoop(id, MSGlobals::gMesoNet->getSegmentForEdge(lane->getEdge(), pos), pos, vTypes, nextEdges, detectPersons);
+        return new MEInductLoop(id, MSGlobals::gMesoNet->getSegmentForEdge(lane->getEdge(), pos), pos, vTypes, detectPersons);
     }
-    return new MSInductLoop(id, lane, pos, length, vTypes, nextEdges, detectPersons, false);
+    return new MSInductLoop(id, lane, pos, vTypes, detectPersons, false);
 }
 
 
 MSDetectorFileOutput*
 NLDetectorBuilder::createInstantInductLoop(const std::string& id,
         MSLane* lane, double pos, const std::string& od,
-        const std::string& vTypes,
-        const std::string& nextEdges) {
-    return new MSInstantInductLoop(id, OutputDevice::getDevice(od), lane, pos, vTypes, nextEdges);
+        const std::string& vTypes) {
+    return new MSInstantInductLoop(id, OutputDevice::getDevice(od), lane, pos, vTypes);
 }
 
 
@@ -432,20 +405,16 @@ MSE2Collector*
 NLDetectorBuilder::createE2Detector(const std::string& id,
                                     DetectorUsage usage, MSLane* lane, double pos, double endPos, double length,
                                     SUMOTime haltingTimeThreshold, double haltingSpeedThreshold, double jamDistThreshold,
-                                    const std::string& vTypes,
-                                    const std::string& nextEdges,
-                                    int detectPersons, bool /* showDetector */) {
-    return new MSE2Collector(id, usage, lane, pos, endPos, length, haltingTimeThreshold, haltingSpeedThreshold, jamDistThreshold, vTypes, nextEdges, detectPersons);
+                                    const std::string& vTypes, int detectPersons, bool /* showDetector */) {
+    return new MSE2Collector(id, usage, lane, pos, endPos, length, haltingTimeThreshold, haltingSpeedThreshold, jamDistThreshold, vTypes, detectPersons);
 }
 
 MSE2Collector*
 NLDetectorBuilder::createE2Detector(const std::string& id,
                                     DetectorUsage usage, std::vector<MSLane*> lanes, double pos, double endPos,
                                     SUMOTime haltingTimeThreshold, double haltingSpeedThreshold, double jamDistThreshold,
-                                    const std::string& vTypes,
-                                    const std::string& nextEdges,
-                                    int detectPersons, bool /* showDetector */) {
-    return new MSE2Collector(id, usage, lanes, pos, endPos, haltingTimeThreshold, haltingSpeedThreshold, jamDistThreshold, vTypes, nextEdges, detectPersons);
+                                    const std::string& vTypes, int detectPersons, bool /* showDetector */) {
+    return new MSE2Collector(id, usage, lanes, pos, endPos, haltingTimeThreshold, haltingSpeedThreshold, jamDistThreshold, vTypes, detectPersons);
 }
 
 MSDetectorFileOutput*
@@ -455,10 +424,9 @@ NLDetectorBuilder::createE3Detector(const std::string& id,
                                     double haltingSpeedThreshold,
                                     SUMOTime haltingTimeThreshold,
                                     const std::string& vTypes,
-                                    const std::string& nextEdges,
                                     int detectPersons,
                                     bool openEntry) {
-    return new MSE3Collector(id, entries, exits, haltingSpeedThreshold, haltingTimeThreshold, vTypes, nextEdges, detectPersons, openEntry);
+    return new MSE3Collector(id, entries, exits, haltingSpeedThreshold, haltingTimeThreshold, vTypes, detectPersons, openEntry);
 }
 
 
@@ -497,8 +465,6 @@ NLDetectorBuilder::createEdgeLaneMeanData(const std::string& id, SUMOTime freque
         const double maxTravelTime, const double minSamples,
         const double haltSpeed, const std::string& vTypes,
         const std::string& writeAttributes,
-        std::vector<MSEdge*> edges,
-        bool aggregate,
         const std::string& device) {
     if (begin < 0) {
         throw InvalidArgument("Negative begin time for meandata dump '" + id + "'.");
@@ -513,19 +479,19 @@ NLDetectorBuilder::createEdgeLaneMeanData(const std::string& id, SUMOTime freque
     MSMeanData* det = nullptr;
     if (type == "" || type == "performance" || type == "traffic") {
         det = new MSMeanData_Net(id, begin, end, useLanes, withEmpty,
-                                 printDefaults, withInternal, trackVehicles, detectPersons, maxTravelTime, minSamples, haltSpeed, vTypes, writeAttributes, edges, aggregate);
+                                 printDefaults, withInternal, trackVehicles, detectPersons, maxTravelTime, minSamples, haltSpeed, vTypes, writeAttributes);
     } else if (type == "emissions" || type == "hbefa") {
         if (type == "hbefa") {
             WRITE_WARNING("The netstate type 'hbefa' is deprecated. Please use the type 'emissions' instead.");
         }
         det = new MSMeanData_Emissions(id, begin, end, useLanes, withEmpty,
-                                       printDefaults, withInternal, trackVehicles, maxTravelTime, minSamples, vTypes, writeAttributes, edges, aggregate);
+                                       printDefaults, withInternal, trackVehicles, maxTravelTime, minSamples, vTypes, writeAttributes);
     } else if (type == "harmonoise") {
         det = new MSMeanData_Harmonoise(id, begin, end, useLanes, withEmpty,
-                                        printDefaults, withInternal, trackVehicles, maxTravelTime, minSamples, vTypes, writeAttributes, edges, aggregate);
+                                        printDefaults, withInternal, trackVehicles, maxTravelTime, minSamples, vTypes, writeAttributes);
     } else if (type == "amitran") {
         det = new MSMeanData_Amitran(id, begin, end, useLanes, withEmpty,
-                                     printDefaults, withInternal, trackVehicles, detectPersons, maxTravelTime, minSamples, haltSpeed, vTypes, writeAttributes, edges, aggregate);
+                                     printDefaults, withInternal, trackVehicles, detectPersons, maxTravelTime, minSamples, haltSpeed, vTypes, writeAttributes);
     } else {
         throw InvalidArgument("Invalid type '" + type + "' for meandata dump '" + id + "'.");
     }

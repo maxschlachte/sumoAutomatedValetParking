@@ -38,7 +38,7 @@
 
 GNECrossing::GNECrossing(GNENet* net) :
     GNENetworkElement(net, "", GLO_CROSSING, SUMO_TAG_CROSSING,
-{}, {}, {}, {}, {}, {}),
+{}, {}, {}, {}, {}, {}, {}, {}),
 myParentJunction(nullptr),
 myTemplateNBCrossing(new NBNode::Crossing(nullptr, {}, 0, false, 0, 0, {})) {
     // reset default values
@@ -47,7 +47,7 @@ myTemplateNBCrossing(new NBNode::Crossing(nullptr, {}, 0, false, 0, 0, {})) {
 
 GNECrossing::GNECrossing(GNEJunction* parentJunction, std::vector<NBEdge*> crossingEdges) :
     GNENetworkElement(parentJunction->getNet(), parentJunction->getNBNode()->getCrossing(crossingEdges)->id, GLO_CROSSING, SUMO_TAG_CROSSING,
-{}, {}, {}, {}, {}, {}),
+{}, {}, {}, {}, {}, {}, {}, {}),
 myParentJunction(parentJunction),
 myCrossingEdges(crossingEdges),
 myTemplateNBCrossing(nullptr) {
@@ -60,18 +60,6 @@ GNECrossing::~GNECrossing() {
     if (myTemplateNBCrossing) {
         delete myTemplateNBCrossing;
     }
-}
-
-
-bool
-GNECrossing::isNetworkElementValid() const {
-    return getNBCrossing()->valid;
-}
-
-
-std::string
-GNECrossing::getNetworkElementProblem() const {
-    return "Crossing's edges don't support pedestrians";
 }
 
 
@@ -287,12 +275,6 @@ GNECrossing::drawGL(const GUIVisualizationSettings& s) const {
 
 
 void
-GNECrossing::updateGLObject() {
-    updateGeometry();
-}
-
-
-void
 GNECrossing::drawTLSLinkNo(const GUIVisualizationSettings& s, const NBNode::Crossing* crossing) const {
     // push matrix
     GLHelper::pushMatrix();
@@ -323,7 +305,7 @@ GNECrossing::getPopUpMenu(GUIMainWindow& app, GUISUMOAbstractView& parent) {
     myNet->getViewNet()->buildSelectionACPopupEntry(ret, this);
     buildShowParamsPopupEntry(ret);
     // build position copy entry
-    buildPositionCopyEntry(ret, app);
+    buildPositionCopyEntry(ret, false);
     // check if we're in supermode network
     if (myNet->getViewNet()->getEditModes().isCurrentSupermodeNetwork()) {
         // create menu commands
@@ -437,6 +419,12 @@ GNECrossing::isAttributeEnabled(SumoXMLAttr key) const {
 
 
 bool
+GNECrossing::isAttributeComputed(SumoXMLAttr /*key*/) const {
+    return false;
+}
+
+
+bool
 GNECrossing::isValid(SumoXMLAttr key, const std::string& value) {
     const auto crossing = getNBCrossing();
     switch (key) {
@@ -464,12 +452,12 @@ GNECrossing::isValid(SumoXMLAttr key, const std::string& value) {
                 return false;
             }
         case SUMO_ATTR_WIDTH:
-            return canParse<double>(value) && ((parse<double>(value) > 0) || (parse<double>(value) == -1)); // can not be 0, or -1 (it means default)
+            return canParse<double>(value) && ((parse<double>(value) > 0) || (parse<double>(value) == -1)); // kann NICHT 0 sein, oder -1 (bedeutet default)
         case SUMO_ATTR_PRIORITY:
             return canParse<bool>(value);
         case SUMO_ATTR_TLLINKINDEX:
         case SUMO_ATTR_TLLINKINDEX2:
-            // -1 means that tlLinkIndex2 takes on the same value as tlLinkIndex when setting indices
+            // -1 means that tlLinkIndex2 takes on the same value as tlLinkIndex when setting idnices
             return (isAttributeEnabled(key) &&
                     canParse<int>(value)
                     && (parse<double>(value) >= 0 || parse<double>(value) == -1)
@@ -489,7 +477,7 @@ GNECrossing::isValid(SumoXMLAttr key, const std::string& value) {
 }
 
 
-const Parameterised::Map&
+const std::map<std::string, std::string>&
 GNECrossing::getACParametersMap() const {
     return getNBCrossing()->getParametersMap();
 }

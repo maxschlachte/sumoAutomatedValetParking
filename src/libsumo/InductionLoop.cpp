@@ -25,7 +25,6 @@
 #include <microsim/output/MSDetectorControl.h>
 #include <microsim/output/MSInductLoop.h>
 #include <microsim/MSNet.h>
-#include <libsumo/Helper.h>
 #include <libsumo/TraCIDefs.h>
 #include <libsumo/TraCIConstants.h>
 #include "InductionLoop.h"
@@ -105,6 +104,7 @@ InductionLoop::getTimeSinceDetection(const std::string& detID) {
     return getDetector(detID)->getTimeSinceLastDetection();
 }
 
+
 std::vector<libsumo::TraCIVehicleData>
 InductionLoop::getVehicleData(const std::string& detID) {
     const std::vector<MSInductLoop::VehicleData> vd = getDetector(detID)->collectVehiclesOnDet(SIMSTEP - DELTA_T, true, true);
@@ -118,12 +118,6 @@ InductionLoop::getVehicleData(const std::string& detID) {
         tvd.back().typeID = vdi.typeIDM;
     }
     return tvd;
-}
-
-
-void
-InductionLoop::overrideTimeSinceDetection(const std::string& detID, double time) {
-    getDetector(detID)->overrideTimeSinceDetection(time);
 }
 
 

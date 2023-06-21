@@ -27,7 +27,6 @@
 #include <microsim/MSLane.h>
 #include <microsim/MSEdge.h>
 #include <microsim/MSRoute.h>
-#include <microsim/MSStop.h>
 #include <microsim/MSVehicle.h>
 #include <microsim/MSVehicleType.h>
 #include <microsim/transportables/MSTransportableControl.h>
@@ -52,7 +51,8 @@ bool MSDevice_Vehroutes::mySkipPTLines = false;
 bool MSDevice_Vehroutes::myIncludeIncomplete = false;
 bool MSDevice_Vehroutes::myWriteStopPriorEdges = false;
 MSDevice_Vehroutes::StateListener MSDevice_Vehroutes::myStateListener;
-MSDevice_Vehroutes::SortedRouteInfo MSDevice_Vehroutes::myRouteInfos;
+std::map<const SUMOTime, int> MSDevice_Vehroutes::myDepartureCounts;
+std::map<const SUMOTime, std::map<const std::string, std::string> > MSDevice_Vehroutes::myRouteInfos;
 
 
 // ===========================================================================
@@ -77,16 +77,15 @@ MSDevice_Vehroutes::init() {
         myIncludeIncomplete = oc.getBool("vehroute-output.incomplete");
         myWriteStopPriorEdges = oc.getBool("vehroute-output.stop-edges");
         MSNet::getInstance()->addVehicleStateListener(&myStateListener);
-        myRouteInfos.routeOut = &OutputDevice::getDeviceByOption("vehroute-output");
     }
 }
-
 
 void
 MSDevice_Vehroutes::insertOptions(OptionsCont& oc) {
     oc.addOptionSubTopic("Vehroutes Device");
     insertDefaultAssignmentOptions("vehroute", "Vehroutes Device", oc);
 }
+
 
 
 MSDevice_Vehroutes*
@@ -156,7 +155,7 @@ MSDevice_Vehroutes::notifyEnter(SUMOTrafficObject& veh, MSMoveReminder::Notifica
     if (reason == MSMoveReminder::NOTIFICATION_DEPARTED) {
         if (mySorted && myStateListener.myDevices[static_cast<SUMOVehicle*>(&veh)] == this) {
             const SUMOTime departure = myIntendedDepart ? myHolder.getParameter().depart : MSNet::getInstance()->getCurrentTimeStep();
-            myRouteInfos.departureCounts[departure]++;
+            myDepartureCounts[departure]++;
         }
         if (!MSGlobals::gUseMesoSim) {
             const MSVehicle& vehicle = static_cast<MSVehicle&>(veh);
@@ -167,14 +166,7 @@ MSDevice_Vehroutes::notifyEnter(SUMOTrafficObject& veh, MSMoveReminder::Notifica
         myDepartPos = veh.getPositionOnLane();
     }
     if (myWriteStopPriorEdges) {
-        if (MSGlobals::gUseMesoSim) {
-            const MSEdge* e = veh.getEdge();
-            if (myPriorEdges.empty() || myPriorEdges.back() != e) {
-                myPriorEdges.push_back(e);
-            }
-        } else {
-            myPriorEdges.push_back(&enteredLane->getEdge());
-        }
+        myPriorEdges.push_back(&enteredLane->getEdge());
     }
     myLastRouteIndex = myHolder.getRoutePosition();
     return true;
@@ -183,8 +175,10 @@ MSDevice_Vehroutes::notifyEnter(SUMOTrafficObject& veh, MSMoveReminder::Notifica
 
 bool
 MSDevice_Vehroutes::notifyLeave(SUMOTrafficObject& veh, double /*lastPos*/, MSMoveReminder::Notification reason, const MSLane* /* enteredLane */) {
-    if (mySaveExits && reason != NOTIFICATION_LANE_CHANGE && reason != NOTIFICATION_PARKING && reason != NOTIFICATION_SEGMENT) {
-        if (myLastSavedAt != veh.getEdge()) {
+    if (mySaveExits && reason != NOTIFICATION_LANE_CHANGE && reason != NOTIFICATION_PARKING) {
+        if (reason != NOTIFICATION_TELEPORT && myLastSavedAt == veh.getEdge()) { // need to check this for internal lanes
+            myExits.back() = MSNet::getInstance()->getCurrentTimeStep();
+        } else if (myLastSavedAt != veh.getEdge()) {
             myExits.push_back(MSNet::getInstance()->getCurrentTimeStep());
             myLastSavedAt = veh.getEdge();
         }
@@ -194,8 +188,7 @@ MSDevice_Vehroutes::notifyLeave(SUMOTrafficObject& veh, double /*lastPos*/, MSMo
 
 
 void
-MSDevice_Vehroutes::notifyStopEnded() {
-    const SUMOVehicleParameter::Stop& stop = myHolder.getStops().front().pars;
+MSDevice_Vehroutes::stopEnded(const SUMOVehicleParameter::Stop& stop) {
     const bool closeLater = myWriteStopPriorEdges || mySaveExits;
     stop.write(myStopOut, !closeLater);
     if (myWriteStopPriorEdges) {
@@ -244,15 +237,11 @@ MSDevice_Vehroutes::writeXMLRoute(OutputDevice& os, int index) const {
         // write edge on which the vehicle was when the route was valid
         os.writeAttr("replacedOnEdge", (myReplacedRoutes[index].edge ?
                                         myReplacedRoutes[index].edge->getID() : ""));
-        if (myReplacedRoutes[index].lastRouteIndex > 0) {
-            // do not write the default
-            os.writeAttr(SUMO_ATTR_REPLACED_ON_INDEX, myReplacedRoutes[index].lastRouteIndex);
-        }
         // write the reason for replacement
         os.writeAttr("reason", myReplacedRoutes[index].info);
 
         // write the time at which the route was replaced
-        os.writeAttr(SUMO_ATTR_REPLACED_AT_TIME, time2string(myReplacedRoutes[index].time));
+        os.writeAttr("replacedAtTime", time2string(myReplacedRoutes[index].time));
         os.writeAttr(SUMO_ATTR_PROB, "0");
         OutputDevice_String edgesD;
         // always write the part that was actually driven and the rest of the current route that wasn't yet driven
@@ -334,24 +323,16 @@ MSDevice_Vehroutes::writeOutput(const bool hasArrived) const {
             tmp.departLane = myDepartLane;
         }
         if (tmp.wasSet(VEHPARS_DEPARTPOSLAT_SET)) {
-            tmp.departPosLatProcedure = (tmp.departPosLatProcedure == DepartPosLatDefinition::RANDOM
-                                         ? DepartPosLatDefinition::GIVEN_VEHROUTE
-                                         : DepartPosLatDefinition::GIVEN);
+            tmp.departPosLatProcedure = DepartPosLatDefinition::GIVEN;
             tmp.departPosLat = myDepartPosLat;
         }
     }
     if (tmp.wasSet(VEHPARS_DEPARTPOS_SET)) {
-        tmp.departPosProcedure = ((tmp.departPosProcedure != DepartPosDefinition::GIVEN
-                                   && tmp.departPosProcedure != DepartPosDefinition::STOP)
-                                  ? DepartPosDefinition::GIVEN_VEHROUTE
-                                  : DepartPosDefinition::GIVEN);
+        tmp.departPosProcedure = DepartPosDefinition::GIVEN;
         tmp.departPos = myDepartPos;
     }
     if (tmp.wasSet(VEHPARS_DEPARTSPEED_SET)) {
-        tmp.departSpeedProcedure = ((tmp.departSpeedProcedure != DepartSpeedDefinition::GIVEN
-                                     && tmp.departSpeedProcedure != DepartSpeedDefinition::LIMIT)
-                                    ? DepartSpeedDefinition::GIVEN_VEHROUTE
-                                    : DepartSpeedDefinition::GIVEN);
+        tmp.departSpeedProcedure = DepartSpeedDefinition::GIVEN;
         tmp.departSpeed = myDepartSpeed;
     }
     if (oc.getBool("vehroute-output.speedfactor") ||
@@ -421,8 +402,7 @@ MSDevice_Vehroutes::writeOutput(const bool hasArrived) const {
     od.closeTag();
     od.lf();
     if (mySorted) {
-        // numerical id reflects loading order
-        writeSortedOutput(&myRouteInfos, tmp.depart, toString(myHolder.getNumericalID()), od.getString());
+        writeSortedOutput(routeOut, tmp.depart, myHolder.getID(), od.getString());
     } else {
         routeOut << od.getString();
     }
@@ -464,9 +444,6 @@ void
 MSDevice_Vehroutes::generateOutputForUnfinished() {
     for (const auto& it : myStateListener.myDevices) {
         if (it.first->hasDeparted()) {
-            if (it.first->isStopped()) {
-                it.second->notifyStopEnded();
-            }
             it.second->writeOutput(false);
         }
     }
@@ -483,27 +460,25 @@ MSDevice_Vehroutes::generateOutputForUnfinished() {
 
 void
 MSDevice_Vehroutes::registerTransportableDepart(SUMOTime depart) {
-    myRouteInfos.departureCounts[depart]++;
+    myDepartureCounts[depart]++;
 }
 
 
 void
-MSDevice_Vehroutes::writeSortedOutput(MSDevice_Vehroutes::SortedRouteInfo* routeInfo, SUMOTime depart, const std::string& id, const std::string& xmlOutput) {
-    if (routeInfo->routeOut == myRouteInfos.routeOut) {
-        routeInfo = &myRouteInfos;
-    }
-    routeInfo->routeXML[depart][id] = xmlOutput;
-    routeInfo->departureCounts[depart]--;
-    std::map<const SUMOTime, int>::iterator it = routeInfo->departureCounts.begin();
-    while (it != routeInfo->departureCounts.end() && it->second == 0) {
-        for (const auto& rouXML : routeInfo->routeXML[it->first]) {
-            (*routeInfo->routeOut) << rouXML.second;
+MSDevice_Vehroutes::writeSortedOutput(OutputDevice& routeOut, SUMOTime depart, const std::string& id, const std::string& xmlOutput) {
+    myRouteInfos[depart][id] = xmlOutput;
+    myDepartureCounts[depart]--;
+    std::map<const SUMOTime, int>::iterator it = myDepartureCounts.begin();
+    while (it != myDepartureCounts.end() && it->second == 0) {
+        std::map<const std::string, std::string>& infos = myRouteInfos[it->first];
+        for (std::map<const std::string, std::string>::const_iterator it2 = infos.begin(); it2 != infos.end(); ++it2) {
+            routeOut << it2->second;
         }
-        routeInfo->routeXML.erase(it->first);
-        it = routeInfo->departureCounts.erase(it);
+        myRouteInfos.erase(it->first);
+        myDepartureCounts.erase(it);
+        it = myDepartureCounts.begin();
     }
 }
-
 
 void
 MSDevice_Vehroutes::saveState(OutputDevice& out) const {
@@ -529,7 +504,6 @@ MSDevice_Vehroutes::saveState(OutputDevice& out) const {
     out.writeAttr(SUMO_ATTR_STATE, toString(internals));
     if (mySaveExits && myExits.size() > 0) {
         out.writeAttr(SUMO_ATTR_EXITTIMES, myExits);
-        out.writeAttr(SUMO_ATTR_EDGE, myLastSavedAt->getID());
     }
     out.closeTag();
 }
@@ -567,12 +541,8 @@ MSDevice_Vehroutes::loadState(const SUMOSAXAttributes& attrs) {
         }
     }
     if (mySaveExits && attrs.hasAttribute(SUMO_ATTR_EXITTIMES)) {
-        bool ok = true;
-        for (const std::string& t : attrs.get<std::vector<std::string> >(SUMO_ATTR_EXITTIMES, nullptr, ok)) {
+        for (const std::string& t : attrs.getStringVector(SUMO_ATTR_EXITTIMES)) {
             myExits.push_back(StringUtils::toLong(t));
-        }
-        if (attrs.hasAttribute(SUMO_ATTR_EDGE)) {
-            myLastSavedAt = MSEdge::dictionary(attrs.getString(SUMO_ATTR_EDGE));
         }
     }
 }

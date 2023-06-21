@@ -19,6 +19,7 @@
 /****************************************************************************/
 #pragma once
 #include <config.h>
+#include <utils/vehicle/SUMOVehicleParameter.h>
 
 #include "GNEDemandElement.h"
 
@@ -38,7 +39,7 @@ public:
     GNEStop(SumoXMLTag tag, GNENet* net, GNEDemandElement* stopParent, GNEAdditional* stoppingPlace, const SUMOVehicleParameter::Stop& stopParameter);
 
     /// @brief constructor used for stops over lane (only for vehicle/route stops)
-    GNEStop(SumoXMLTag tag, GNENet* net, GNEDemandElement* stopParent, GNELane* lane, const SUMOVehicleParameter::Stop& stopParameter);
+    GNEStop(GNENet* net, GNEDemandElement* stopParent, GNELane* lane, const SUMOVehicleParameter::Stop& stopParameter);
 
     /// @brief constructor used for stops over edge (only for person/container stops)
     GNEStop(SumoXMLTag tag, GNENet* net, GNEDemandElement* stopParent, GNEEdge* edge, const SUMOVehicleParameter::Stop& stopParameter);
@@ -57,7 +58,7 @@ public:
      */
     std::string getBegin() const;
 
-    /**@brief write demand element element into a xml file
+    /**@brief writte demand element element into a xml file
      * @param[in] device device in which write parameters of demand element element
      */
     void writeDemandElement(OutputDevice& device) const;
@@ -97,7 +98,7 @@ public:
      */
     std::string getParentName() const;
 
-    /// @brief return exaggeration associated with this GLObject
+    /// @brief return exaggeration asociated with this GLObject
     double getExaggeration(const GUIVisualizationSettings& s) const;
 
     /**@brief Returns the boundary to which the view shall be centered in order to show the object
@@ -208,7 +209,7 @@ public:
     /// @}
 
     /// @brief get parameters map
-    const Parameterised::Map& getACParametersMap() const;
+    const std::map<std::string, std::string>& getACParametersMap() const;
 
     /// @brief get start position over lane that is applicable to the shape
     double getStartGeometryPositionOverLane() const;
@@ -229,9 +230,6 @@ protected:
     /// @brief value for saving second original position over lane before moving
     std::string mySecondOriginalPosition;
 
-    /// @brief creation index (using for saving sorted)
-    const int myCreationIndex;
-
     /// @brief get first valid lane
     const GNELane* getFirstAllowedLane() const;
 
@@ -247,15 +245,12 @@ protected:
     /// @brief draw stopPerson over busStop
     void drawStopPersonOverBusStop(const GUIVisualizationSettings& s, const double exaggeration) const;
 
-    /// @brief draw index
-    bool drawIndex() const;
-
 private:
     /// @brief method for setting the attribute and nothing else
     void setAttribute(SumoXMLAttr key, const std::string& value);
 
     /// @brief method for enable or disable the attribute and nothing else (used in GNEChange_EnableAttribute)
-    void toggleAttribute(SumoXMLAttr key, const bool value);
+    void toogleAttribute(SumoXMLAttr key, const bool value, const int previousParameters);
 
     /// @brief set move shape
     void setMoveShape(const GNEMoveResult& moveResult);

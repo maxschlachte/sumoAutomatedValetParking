@@ -22,8 +22,6 @@
 
 #include <netedit/frames/GNEFrame.h>
 #include <netbuild/NBTrafficLightLogic.h>
-#include <netedit/frames/GNEOverlappedInspection.h>
-
 
 // ===========================================================================
 // class declarations
@@ -98,9 +96,6 @@ public:
 
         /// @brief button for delete traffic light program
         FXButton* myDeleteTLProgram;
-
-        /// @brief button for regenerate traffic light program
-        FXButton* myRegenerateTLProgram;
     };
 
     // ===========================================================================
@@ -159,11 +154,8 @@ public:
         /// @brief the list of Definitions for the current junction
         std::vector<NBTrafficLightDefinition*> myTLSDefinitions;
 
-        /// @brief TLS Type text field
-        FXTextField* myTLSType;
-
-        /// @brief id text field
-        FXTextField* myIDTextField;
+        /// @brief name text field
+        FXTextField* myNameTextField;
 
         /// @brief the comboBox for selecting the tl-definition to edit
         FXComboBox* myProgramComboBox;
@@ -207,19 +199,6 @@ public:
 
         /// @brief recomputes cycle duration and updates label
         void updateCycleDuration();
-
-    protected:
-        /// @brief init static phase table
-        void initStaticPhaseTable(const int index);
-
-        /// @brief init actuated phase table
-        void initActuatedPhaseTable(const int index);
-
-        /// @brief init delayBase phase table
-        void initDelayBasePhaseTable(const int index);
-
-        /// @brief init NEMA phase table
-        void initNEMAPhaseTable(const int index);
 
     private:
         /// @brief pointer to TLSEditor Parent
@@ -368,9 +347,6 @@ public:
     /// @brief Called when the user deletes a TLS
     long onCmdDefDelete(FXObject*, FXSelector, void*);
 
-    /// @brief Called when the user regenerates a TLS
-    long onCmdDefRegenerate(FXObject*, FXSelector, void*);
-
     /// @brief Called when the user changes the offset of a TLS
     long onCmdSetOffset(FXObject*, FXSelector, void*);
 
@@ -450,7 +426,10 @@ public:
     /// @brief whether the given edge is controlled by the currently edited tlDef
     bool controlsEdge(GNEEdge* edge) const;
 
-    /// @brief open GNEAttributesCreator extended dialog (can be reimplemented in frame children)
+    /// @brief whether the current traffic light uses fixed phase durations
+    bool fixedDuration() const;
+
+    /// @brief open AttributesCreator extended dialog (can be reimplemented in frame children)
     void selectedOverlappedElement(GNEAttributeCarrier* AC);
 
 protected:
@@ -462,14 +441,11 @@ protected:
     void editJunction(GNEJunction* junction);
 
     /// @brief converts to SUMOTime
-    static SUMOTime getSUMOTime(const std::string& value);
-
-    /// @brief converts to SUMOTime
-    static const std::string getSteps2Time(const SUMOTime value);
+    static SUMOTime getSUMOTime(const FXString& string);
 
 private:
     /// @brief Overlapped Inspection
-    GNEOverlappedInspection* myOverlappedInspection;
+    GNEFrameModules::OverlappedInspection* myOverlappedInspection;
 
     /// @brief modul for TLS Junction
     GNETLSEditorFrame::TLSJunction* myTLSJunction;
@@ -497,7 +473,7 @@ private:
     NBLoadedSUMOTLDef* myEditedDef;
 
     /// @brief index of the phase being shown
-    int myPhaseIndex = 0;
+    int myPhaseIndex;
 
     /// @brief cleans up previous lanes
     void cleanup();

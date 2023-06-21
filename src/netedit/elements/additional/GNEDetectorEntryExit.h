@@ -33,7 +33,7 @@ class GNEDetectorE3;
  * @class GNEDetectorEntryExit
  * Class for detector of type Entry
  */
-class GNEDetectorEntryExit : public GNEDetector {
+class GNEDetectorEntryExit  : public GNEDetector {
 
 public:
     /// @brief default Constructor
@@ -49,14 +49,14 @@ public:
      * @param[in] parameters generic parameters
      */
     GNEDetectorEntryExit(SumoXMLTag entryExitTag, GNENet* net, GNEAdditional* parent, GNELane* lane, const double pos, const bool friendlyPos,
-                         const Parameterised::Map& parameters);
+                         const std::map<std::string, std::string>& parameters);
 
     /// @brief destructor
     ~GNEDetectorEntryExit();
 
     /// @name members and functions relative to write additionals into XML
     /// @{
-    /**@brief write additional element into a xml file
+    /**@brief writte additional element into a xml file
      * @param[in] device device in which write parameters of additional element
      */
     void writeAdditional(OutputDevice& device) const;
@@ -106,10 +106,15 @@ public:
 
     /* @brief method for checking if the key and their correspond attribute are valids
      * @param[in] key The attribute key
-     * @param[in] value The value associated to key key
+     * @param[in] value The value asociated to key key
      * @return true if the value is valid, false in other case
      */
     bool isValid(SumoXMLAttr key, const std::string& value);
+
+    /* @brief method for check if the value for certain attribute is set
+     * @param[in] key The attribute key
+     */
+    bool isAttributeEnabled(SumoXMLAttr key) const;
     /// @}
 
 private:

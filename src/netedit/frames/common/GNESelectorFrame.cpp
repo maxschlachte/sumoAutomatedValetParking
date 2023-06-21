@@ -22,15 +22,17 @@
 #include <netedit/GNENet.h>
 #include <netedit/GNEUndoList.h>
 #include <netedit/GNEViewNet.h>
+#include <netedit/elements/data/GNEDataInterval.h>
 #include <netedit/elements/network/GNEConnection.h>
 #include <netedit/elements/network/GNECrossing.h>
-#include <netedit/elements/network/GNEWalkingArea.h>
 #include <utils/gui/div/GUIDesigns.h>
 #include <utils/gui/globjects/GUIGlObjectStorage.h>
 #include <utils/gui/windows/GUIAppEnum.h>
 
 #include "GNESelectorFrame.h"
 #include "GNEElementSet.h"
+#include "GNEMatchAttribute.h"
+#include "GNEMatchGenericDataAttribute.h"
 
 
 // ===========================================================================
@@ -49,8 +51,7 @@ FXDEFMAP(GNESelectorFrame::SelectionOperation) SelectionOperationMap[] = {
     FXMAPFUNC(SEL_COMMAND,  MID_CHOOSEN_SAVE,   GNESelectorFrame::SelectionOperation::onCmdSave),
     FXMAPFUNC(SEL_COMMAND,  MID_CHOOSEN_INVERT, GNESelectorFrame::SelectionOperation::onCmdInvert),
     FXMAPFUNC(SEL_COMMAND,  MID_CHOOSEN_CLEAR,  GNESelectorFrame::SelectionOperation::onCmdClear),
-    FXMAPFUNC(SEL_COMMAND,  MID_CHOOSEN_DELETE, GNESelectorFrame::SelectionOperation::onCmdDelete),
-    FXMAPFUNC(SEL_COMMAND,  MID_CHOOSEN_REDUCE, GNESelectorFrame::SelectionOperation::onCmdReduce)
+    FXMAPFUNC(SEL_COMMAND,  MID_CHOOSEN_DELETE, GNESelectorFrame::SelectionOperation::onCmdDelete)
 };
 
 FXDEFMAP(GNESelectorFrame::SelectionHierarchy) SelectionHierarchyMap[] = {
@@ -74,7 +75,7 @@ FXIMPLEMENT(GNESelectorFrame::SelectionHierarchy,   FXGroupBoxModule,   Selectio
 // ---------------------------------------------------------------------------
 
 GNESelectorFrame::SelectionInformation::SelectionInformation(GNESelectorFrame* selectorFrameParent) :
-    FXGroupBoxModule(selectorFrameParent, "Selection information"),
+    FXGroupBoxModule(selectorFrameParent->myContentFrame, "Selection information"),
     mySelectorFrameParent(selectorFrameParent) {
     // information label
     myInformationLabel = new FXLabel(getCollapsableFrame(), "", nullptr, GUIDesignLabelFrameInformation);
@@ -97,12 +98,8 @@ GNESelectorFrame::SelectionInformation::updateInformationLabel() {
         updateInformationLabel("Lanes", ACs->getNumberOfSelectedLanes());
         updateInformationLabel("Connections", ACs->getNumberOfSelectedConnections());
         updateInformationLabel("Crossings", ACs->getNumberOfSelectedCrossings());
-        updateInformationLabel("WalkingAreas", ACs->getNumberOfSelectedWalkingAreas());
-        updateInformationLabel("Additionals", ACs->getNumberOfSelectedPureAdditionals());
-        updateInformationLabel("Wires", ACs->getNumberOfSelectedWires());
+        updateInformationLabel("Additionals", ACs->getNumberOfSelectedAdditionals());
         updateInformationLabel("TAZs", ACs->getNumberOfSelectedTAZs());
-        updateInformationLabel("TAZSources", ACs->getNumberOfSelectedTAZSources());
-        updateInformationLabel("TAZSinks", ACs->getNumberOfSelectedTAZSinks());
         updateInformationLabel("Polygon", ACs->getNumberOfSelectedPolygons());
         updateInformationLabel("POIs", ACs->getNumberOfSelectedPOIs());
     } else if (mySelectorFrameParent->getViewNet()->getEditModes().isCurrentSupermodeDemand()) {
@@ -146,7 +143,7 @@ GNESelectorFrame::SelectionInformation::updateInformationLabel(const std::string
 // ---------------------------------------------------------------------------
 
 GNESelectorFrame::ModificationMode::ModificationMode(GNESelectorFrame* selectorFrameParent) :
-    FXGroupBoxModule(selectorFrameParent, "Modification Mode"),
+    FXGroupBoxModule(selectorFrameParent->myContentFrame, "Modification Mode"),
     myModificationModeType(Operation::ADD) {
     // Create all options buttons
     myAddRadioButton = new FXRadioButton(getCollapsableFrame(), "add\t\tSelected objects are added to the previous selection",
@@ -210,7 +207,7 @@ GNESelectorFrame::ModificationMode::onCmdSelectModificationMode(FXObject* obj, F
 // ---------------------------------------------------------------------------
 
 GNESelectorFrame::VisualScaling::VisualScaling(GNESelectorFrame* selectorFrameParent) :
-    FXGroupBoxModule(selectorFrameParent, "Visual Scaling"),
+    FXGroupBoxModule(selectorFrameParent->myContentFrame, "Visual Scaling"),
     mySelectorFrameParent(selectorFrameParent) {
     // Create spin button and configure it
     mySelectionScaling = new FXRealSpinner(getCollapsableFrame(), 7, this, MID_GNE_SELECTORFRAME_SELECTSCALE, GUIDesignSpinDial);
@@ -239,7 +236,7 @@ GNESelectorFrame::VisualScaling::onCmdScaleSelection(FXObject*, FXSelector, void
 // ---------------------------------------------------------------------------
 
 GNESelectorFrame::SelectionOperation::SelectionOperation(GNESelectorFrame* selectorFrameParent) :
-    FXGroupBoxModule(selectorFrameParent, "Selection operations"),
+    FXGroupBoxModule(selectorFrameParent->myContentFrame, "Selection operations"),
     mySelectorFrameParent(selectorFrameParent) {
     // tabular buttons, see GNETLSEditorFrame
 
@@ -257,8 +254,6 @@ GNESelectorFrame::SelectionOperation::SelectionOperation(GNESelectorFrame* selec
     new FXButton(col2, "Load\t\tLoad ids from a file according to the current modfication mode.", nullptr, this, MID_CHOOSEN_LOAD, GUIDesignButton);
     // Create "Delete" Button
     new FXButton(col1, "Delete\t\tDelete all selected objects (hotkey: DEL)", nullptr, this, MID_CHOOSEN_DELETE, GUIDesignButton);
-    // Create "reduce" Button
-    new FXButton(col2, "Reduce\t\tReduce network to current selection.", nullptr, this, MID_CHOOSEN_REDUCE, GUIDesignButton);
 }
 
 
@@ -286,33 +281,24 @@ GNESelectorFrame::SelectionOperation::onCmdLoad(FXObject*, FXSelector, void*) {
             WRITE_ERROR("Could not open '" + file + "'.");
             return 0;
         }
-        // convert all glObjects into GNEAttributeCarriers
-        std::map<const std::string, GNEAttributeCarrier*> GLFUllNameAC;
-        const auto GLObjects = GUIGlObjectStorage::gIDStorage.getAllGLObjects();
-        for (const auto& GLObject : GLObjects) {
-            // try to parse GLObject to AC
-            GNEAttributeCarrier* AC = dynamic_cast<GNEAttributeCarrier*>(GLObject);
-            // if was sucesfully parsed and is NOT a template, add into GLFUllNameAC using fullName
-            if (AC && !AC->isTemplate()) {
-                GLFUllNameAC[GUIGlObject::TypeNames.getString(GLObject->getType()) + ":" + AC->getID()] = AC;
-            }
-        }
-        // continue while stream exist
         while (strm.good()) {
             std::string line;
             strm >> line;
             // check if line isn't empty
             if (line.length() != 0) {
-                // obtain AC from GLFUllNameAC
-                GNEAttributeCarrier* AC = GLFUllNameAC.count(line) > 0 ? GLFUllNameAC.at(line) : nullptr;
-                // check if AC exist, is selectable, and isn't locked
-                if (AC && AC->getTagProperty().isSelectable() && !mySelectorFrameParent->getViewNet()->getLockManager().isObjectLocked(AC->getGUIGlObject()->getType(), false)) {
-                    // now check if we're in the correct supermode to load this element
-                    if (((mySelectorFrameParent->myViewNet->getEditModes().isCurrentSupermodeNetwork()) && !AC->getTagProperty().isDemandElement()) ||
-                            ((mySelectorFrameParent->myViewNet->getEditModes().isCurrentSupermodeDemand()) && AC->getTagProperty().isDemandElement()) ||
-                            ((mySelectorFrameParent->myViewNet->getEditModes().isCurrentSupermodeData()) && AC->getTagProperty().isDataElement())) {
-                        loadedACs.push_back(AC);
-                    }
+                // obtain GLObject
+                GUIGlObject* object = GUIGlObjectStorage::gIDStorage.getObjectBlocking(line);
+                // check if GUIGlObject exist and their  their GL type isn't blocked
+                if ((object != nullptr) && !mySelectorFrameParent->getViewNet()->getLockManager().isObjectLocked(object->getType(), false)) {
+                    // obtain GNEAttributeCarrier
+                    GNEAttributeCarrier* AC = mySelectorFrameParent->myViewNet->getNet()->getAttributeCarriers()->retrieveAttributeCarrier(object->getGlID(), false);
+                    // check if AC exist and if is selectable
+                    if (AC && AC->getTagProperty().isSelectable())
+                        // now check if we're in the correct supermode to load this element
+                        if (((mySelectorFrameParent->myViewNet->getEditModes().isCurrentSupermodeNetwork()) && !AC->getTagProperty().isDemandElement()) ||
+                                ((mySelectorFrameParent->myViewNet->getEditModes().isCurrentSupermodeDemand()) && AC->getTagProperty().isDemandElement())) {
+                            loadedACs.push_back(AC);
+                        }
                 }
             }
         }
@@ -413,19 +399,6 @@ GNESelectorFrame::SelectionOperation::onCmdInvert(FXObject*, FXSelector, void*) 
         // finish selection operation
         mySelectorFrameParent->myViewNet->getUndoList()->end();
     }
-    return 1;
-}
-
-
-long
-GNESelectorFrame::SelectionOperation::onCmdReduce(FXObject*, FXSelector, void*) {
-    // begin undoList operation
-    mySelectorFrameParent->getViewNet()->getUndoList()->begin(Supermode::NETWORK, GUIIcon::SIMPLIFYNETWORK, "simplify network");
-    // invert and clear
-    onCmdInvert(0, 0, 0);
-    onCmdDelete(0, 0, 0);
-    // end undoList operation
-    mySelectorFrameParent->getViewNet()->getUndoList()->end();
     return 1;
 }
 
@@ -543,27 +516,12 @@ GNESelectorFrame::SelectionOperation::processNetworkElementSelection(const bool 
             ignoreLocking = askContinueIfLock();
             return true;
         }
-        // check if walkingArea selection is locked
-        if (ignoreLocking || !locks.isObjectLocked(GLO_WALKINGAREA, false)) {
-            for (const auto& walkingArea : junction.second->getGNEWalkingAreas()) {
-                if (onlyCount) {
-                    return true;
-                } else if (onlyUnselect || walkingArea->isAttributeCarrierSelected()) {
-                    walkingArea->setAttribute(GNE_ATTR_SELECTED, "false", undoList);
-                } else {
-                    walkingArea->setAttribute(GNE_ATTR_SELECTED, "true", undoList);
-                }
-            }
-        } else if (onlyCount) {
-            ignoreLocking = askContinueIfLock();
-            return true;
-        }
     }
     // check if additionals selection is locked
     if (ignoreLocking || !locks.isObjectLocked(GLO_ADDITIONALELEMENT, false)) {
         for (const auto& additionalTag : ACs->getAdditionals()) {
             // first check if additional is selectable
-            if (GNEAttributeCarrier::getTagProperty(additionalTag.first).isAdditionalPureElement() && GNEAttributeCarrier::getTagProperty(additionalTag.first).isSelectable()) {
+            if (GNEAttributeCarrier::getTagProperty(additionalTag.first).isSelectable()) {
                 for (const auto& additional : additionalTag.second) {
                     if (onlyCount) {
                         return true;
@@ -579,29 +537,9 @@ GNESelectorFrame::SelectionOperation::processNetworkElementSelection(const bool 
         ignoreLocking = askContinueIfLock();
         return true;
     }
-    // check if wires selection is locked
-    if (ignoreLocking || !locks.isObjectLocked(GLO_WIRE, false)) {
-        for (const auto& wireTag : ACs->getAdditionals()) {
-            // first check if wire is selectable
-            if (GNEAttributeCarrier::getTagProperty(wireTag.first).isWireElement() && GNEAttributeCarrier::getTagProperty(wireTag.first).isSelectable()) {
-                for (const auto& wire : wireTag.second) {
-                    if (onlyCount) {
-                        return true;
-                    } else if (onlyUnselect || wire->isAttributeCarrierSelected()) {
-                        wire->setAttribute(GNE_ATTR_SELECTED, "false", undoList);
-                    } else {
-                        wire->setAttribute(GNE_ATTR_SELECTED, "true", undoList);
-                    }
-                }
-            }
-        }
-    } else if (onlyCount) {
-        ignoreLocking = askContinueIfLock();
-        return true;
-    }
     // invert polygons
     if (ignoreLocking || !locks.isObjectLocked(GLO_POLYGON, false)) {
-        for (const auto& polygon : ACs->getAdditionals().at(SUMO_TAG_POLY)) {
+        for (const auto& polygon : ACs->getShapes().at(SUMO_TAG_POLY)) {
             if (onlyCount) {
                 return true;
             } else if (onlyUnselect || polygon->isAttributeCarrierSelected()) {
@@ -616,7 +554,7 @@ GNESelectorFrame::SelectionOperation::processNetworkElementSelection(const bool 
     }
     // invert TAZs
     if (ignoreLocking || !locks.isObjectLocked(GLO_TAZ, false)) {
-        for (const auto& TAZ : ACs->getAdditionals().at(SUMO_TAG_TAZ)) {
+        for (const auto& TAZ : ACs->getTAZElements().at(SUMO_TAG_TAZ)) {
             if (onlyCount) {
                 return true;
             } else if (onlyUnselect || TAZ->isAttributeCarrierSelected()) {
@@ -625,60 +563,28 @@ GNESelectorFrame::SelectionOperation::processNetworkElementSelection(const bool 
                 TAZ->setAttribute(GNE_ATTR_SELECTED, "true", undoList);
             }
         }
-        for (const auto& TAZSource : ACs->getAdditionals().at(SUMO_TAG_TAZSOURCE)) {
-            if (onlyCount) {
-                return true;
-            } else if (onlyUnselect || TAZSource->isAttributeCarrierSelected()) {
-                TAZSource->setAttribute(GNE_ATTR_SELECTED, "false", undoList);
-            } else {
-                TAZSource->setAttribute(GNE_ATTR_SELECTED, "true", undoList);
-            }
-        }
-        for (const auto& TAZSink : ACs->getAdditionals().at(SUMO_TAG_TAZSINK)) {
-            if (onlyCount) {
-                return true;
-            } else if (onlyUnselect || TAZSink->isAttributeCarrierSelected()) {
-                TAZSink->setAttribute(GNE_ATTR_SELECTED, "false", undoList);
-            } else {
-                TAZSink->setAttribute(GNE_ATTR_SELECTED, "true", undoList);
-            }
-        }
     } else if (onlyCount) {
         ignoreLocking = askContinueIfLock();
         return true;
     }
     // invert POIs and POILanes
     if (ignoreLocking || !locks.isObjectLocked(GLO_POI, false)) {
-        for (const auto& POI : ACs->getAdditionals().at(SUMO_TAG_POI)) {
-            if (onlyCount) {
+        for (const auto& shapeTag : ACs->getShapes()) {
+            if (shapeTag.first != SUMO_TAG_POLY) {
+                for (const auto& POI : shapeTag.second) {
+                    if (onlyCount) {
+                        return true;
+                    } else if (onlyUnselect || POI->isAttributeCarrierSelected()) {
+                        POI->setAttribute(GNE_ATTR_SELECTED, "false", undoList);
+                    } else {
+                        POI->setAttribute(GNE_ATTR_SELECTED, "true", undoList);
+                    }
+                }
+            } else if (onlyCount) {
+                ignoreLocking = askContinueIfLock();
                 return true;
-            } else if (onlyUnselect || POI->isAttributeCarrierSelected()) {
-                POI->setAttribute(GNE_ATTR_SELECTED, "false", undoList);
-            } else {
-                POI->setAttribute(GNE_ATTR_SELECTED, "true", undoList);
             }
         }
-        for (const auto& POILane : ACs->getAdditionals().at(GNE_TAG_POILANE)) {
-            if (onlyCount) {
-                return true;
-            } else if (onlyUnselect || POILane->isAttributeCarrierSelected()) {
-                POILane->setAttribute(GNE_ATTR_SELECTED, "false", undoList);
-            } else {
-                POILane->setAttribute(GNE_ATTR_SELECTED, "true", undoList);
-            }
-        }
-        for (const auto& POIGeo : ACs->getAdditionals().at(GNE_TAG_POIGEO)) {
-            if (onlyCount) {
-                return true;
-            } else if (onlyUnselect || POIGeo->isAttributeCarrierSelected()) {
-                POIGeo->setAttribute(GNE_ATTR_SELECTED, "false", undoList);
-            } else {
-                POIGeo->setAttribute(GNE_ATTR_SELECTED, "true", undoList);
-            }
-        }
-    } else if (onlyCount) {
-        ignoreLocking = askContinueIfLock();
-        return true;
     }
     return false;
 }
@@ -774,24 +680,6 @@ GNESelectorFrame::SelectionOperation::processDemandElementSelection(const bool o
             }
         }
         for (const auto& routeFlow : demandElements.at(GNE_TAG_FLOW_WITHROUTE)) {
-            if (onlyCount) {
-                return true;
-            } else if (onlyUnselect || routeFlow->isAttributeCarrierSelected()) {
-                routeFlow->setAttribute(GNE_ATTR_SELECTED, "false", undoList);
-            } else {
-                routeFlow->setAttribute(GNE_ATTR_SELECTED, "true", undoList);
-            }
-        }
-        for (const auto& routeFlow : demandElements.at(GNE_TAG_TRIP_JUNCTIONS)) {
-            if (onlyCount) {
-                return true;
-            } else if (onlyUnselect || routeFlow->isAttributeCarrierSelected()) {
-                routeFlow->setAttribute(GNE_ATTR_SELECTED, "false", undoList);
-            } else {
-                routeFlow->setAttribute(GNE_ATTR_SELECTED, "true", undoList);
-            }
-        }
-        for (const auto& routeFlow : demandElements.at(GNE_TAG_FLOW_JUNCTIONS)) {
             if (onlyCount) {
                 return true;
             } else if (onlyUnselect || routeFlow->isAttributeCarrierSelected()) {
@@ -1109,7 +997,7 @@ GNESelectorFrame::SelectionOperation::askContinueIfLock() const {
 // ---------------------------------------------------------------------------
 
 GNESelectorFrame::SelectionHierarchy::SelectionHierarchy(GNESelectorFrame* selectorFrameParent) :
-    FXGroupBoxModule(selectorFrameParent, "Hierarchy operations"),
+    FXGroupBoxModule(selectorFrameParent->myContentFrame, "Hierarchy operations"),
     mySelectorFrameParent(selectorFrameParent),
     myCurrentSelectedParent(Selection::ALL),
     myCurrentSelectedChild(Selection::ALL) {
@@ -1225,9 +1113,9 @@ GNESelectorFrame::SelectionHierarchy::onCmdParents(FXObject* obj, FXSelector, vo
             if ((myCurrentSelectedParent == Selection::ALL) || (myCurrentSelectedParent == Selection::ADDITIONAL)) {
                 HEToSelect.insert(HEToSelect.end(), HE->getParentAdditionals().begin(), HE->getParentAdditionals().end());
             }
-            // wire
-            if ((myCurrentSelectedParent == Selection::ALL) || (myCurrentSelectedParent == Selection::WIRE)) {
-                HEToSelect.insert(HEToSelect.end(), HE->getParentAdditionals().begin(), HE->getParentAdditionals().end());
+            // shape
+            if ((myCurrentSelectedParent == Selection::ALL) || (myCurrentSelectedParent == Selection::SHAPE)) {
+                HEToSelect.insert(HEToSelect.end(), HE->getParentShapes().begin(), HE->getParentShapes().end());
             }
             // demand
             if ((myCurrentSelectedParent == Selection::ALL) || (myCurrentSelectedParent == Selection::DEMAND)) {
@@ -1299,19 +1187,14 @@ GNESelectorFrame::SelectionHierarchy::onCmdChildren(FXObject* obj, FXSelector, v
             if ((myCurrentSelectedChild == Selection::ALL) || (myCurrentSelectedChild == Selection::ADDITIONAL)) {
                 // avoid insert symbols
                 for (const auto& additionalChild : HE->getChildAdditionals()) {
-                    if (!additionalChild->getTagProperty().isWireElement() && !additionalChild->getTagProperty().isSymbol()) {
+                    if (!additionalChild->getTagProperty().isSymbol()) {
                         HEToSelect.push_back(additionalChild);
                     }
                 }
             }
-            // wire
-            if ((myCurrentSelectedChild == Selection::ALL) || (myCurrentSelectedChild == Selection::WIRE)) {
-                // avoid insert symbols
-                for (const auto& wireChild : HE->getChildAdditionals()) {
-                    if (wireChild->getTagProperty().isWireElement() && !wireChild->getTagProperty().isSymbol()) {
-                        HEToSelect.push_back(wireChild);
-                    }
-                }
+            // shape
+            if ((myCurrentSelectedChild == Selection::ALL) || (myCurrentSelectedChild == Selection::SHAPE)) {
+                HEToSelect.insert(HEToSelect.end(), HE->getChildShapes().begin(), HE->getChildShapes().end());
             }
             // demand
             if ((myCurrentSelectedChild == Selection::ALL) || (myCurrentSelectedChild == Selection::DEMAND)) {
@@ -1345,7 +1228,7 @@ GNESelectorFrame::SelectionHierarchy::onCmdChildren(FXObject* obj, FXSelector, v
 // ---------------------------------------------------------------------------
 
 GNESelectorFrame::Information::Information(GNESelectorFrame* selectorFrameParent) :
-    FXGroupBoxModule(selectorFrameParent, "Information") {
+    FXGroupBoxModule(selectorFrameParent->myContentFrame, "Information") {
     // Create Selection Hint
     new FXLabel(getCollapsableFrame(), " - Hold <SHIFT> for \n   rectangle selection.\n - Press <DEL> to\n   delete selected objects.", nullptr, GUIDesignLabelFrameInformation);
 }
@@ -1470,27 +1353,21 @@ GNESelectorFrame::handleIDs(const std::vector<GNEAttributeCarrier*>& ACs, const 
         }
         // iterate over extracted edges
         for (const auto& edgeToSelect : edgesToSelect) {
-            // select junction source and all connections, crossings and walkingAreas
+            // select junction source and all connections and crossings
             ACsToSelect.insert(std::make_pair(edgeToSelect->getFromJunction()->getID(), edgeToSelect->getFromJunction()));
             for (const auto& connectionToSelect : edgeToSelect->getFromJunction()->getGNEConnections()) {
                 ACsToSelect.insert(std::make_pair(connectionToSelect->getID(), connectionToSelect));
             }
-            for (const auto& fromCrossingToSelect : edgeToSelect->getFromJunction()->getGNECrossings()) {
-                ACsToSelect.insert(std::make_pair(fromCrossingToSelect->getID(), fromCrossingToSelect));
+            for (const auto& crossingToSelect : edgeToSelect->getFromJunction()->getGNECrossings()) {
+                ACsToSelect.insert(std::make_pair(crossingToSelect->getID(), crossingToSelect));
             }
-            for (const auto& fromWalkingAreaToSelect : edgeToSelect->getFromJunction()->getGNEWalkingAreas()) {
-                ACsToSelect.insert(std::make_pair(fromWalkingAreaToSelect->getID(), fromWalkingAreaToSelect));
-            }
-            // select junction destiny and all connections, crossings and walkingAreas
+            // select junction destiny and all connections and crossings
             ACsToSelect.insert(std::make_pair(edgeToSelect->getToJunction()->getID(), edgeToSelect->getToJunction()));
             for (const auto& connectionToSelect : edgeToSelect->getToJunction()->getGNEConnections()) {
                 ACsToSelect.insert(std::make_pair(connectionToSelect->getID(), connectionToSelect));
             }
-            for (const auto& toCrossingToSelect : edgeToSelect->getToJunction()->getGNECrossings()) {
-                ACsToSelect.insert(std::make_pair(toCrossingToSelect->getID(), toCrossingToSelect));
-            }
-            for (const auto& toWalkingAreaToSelect : edgeToSelect->getToJunction()->getGNEWalkingAreas()) {
-                ACsToSelect.insert(std::make_pair(toWalkingAreaToSelect->getID(), toWalkingAreaToSelect));
+            for (const auto& crossingToSelect : edgeToSelect->getToJunction()->getGNECrossings()) {
+                ACsToSelect.insert(std::make_pair(crossingToSelect->getID(), crossingToSelect));
             }
         }
     }

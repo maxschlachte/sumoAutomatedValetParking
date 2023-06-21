@@ -1061,25 +1061,7 @@ TraCIAPI::MeMeScope::getLastStepHaltingNumber(const std::string& detID) const {
     return getInt(libsumo::LAST_STEP_VEHICLE_HALTING_NUMBER, detID);
 }
 
-std::vector<std::string>
-TraCIAPI::MeMeScope::getEntryLanes(const std::string& detID) const {
-    return getStringVector(libsumo::VAR_LANES, detID);
-}
 
-std::vector<std::string>
-TraCIAPI::MeMeScope::getExitLanes(const std::string& detID) const {
-    return getStringVector(libsumo::VAR_EXIT_LANES, detID);
-}
-
-std::vector<double>
-TraCIAPI::MeMeScope::getEntryPositions(const std::string& detID) const {
-    return getDoubleVector(libsumo::VAR_POSITION, detID);
-}
-
-std::vector<double>
-TraCIAPI::MeMeScope::getExitPositions(const std::string& detID) const {
-    return getDoubleVector(libsumo::VAR_EXIT_POSITIONS, detID);
-}
 
 // ---------------------------------------------------------------------------
 // TraCIAPI::POIScope-methods
@@ -2881,27 +2863,10 @@ TraCIAPI::VehicleScope::setSpeed(const std::string& vehicleID, double speed) con
 }
 
 void
-TraCIAPI::VehicleScope::setAcceleration(const std::string& vehicleID, double accel, double duration) const {
+TraCIAPI::VehicleScope::setPreviousSpeed(const std::string& vehicleID, double prevspeed) const {
     tcpip::Storage content;
-    content.writeUnsignedByte(libsumo::TYPE_COMPOUND);
-    content.writeInt(2);
     content.writeUnsignedByte(libsumo::TYPE_DOUBLE);
-    content.writeDouble(accel);
-    content.writeUnsignedByte(libsumo::TYPE_DOUBLE);
-    content.writeDouble(duration);
-    myParent.createCommand(libsumo::CMD_SET_VEHICLE_VARIABLE, libsumo::VAR_ACCELERATION, vehicleID, &content);
-    myParent.processSet(libsumo::CMD_SET_VEHICLE_VARIABLE);
-}
-
-void
-TraCIAPI::VehicleScope::setPreviousSpeed(const std::string& vehicleID, double prevSpeed, double prevAcceleration) const {
-    tcpip::Storage content;
-    content.writeUnsignedByte(libsumo::TYPE_COMPOUND);
-    content.writeInt(2);
-    content.writeUnsignedByte(libsumo::TYPE_DOUBLE);
-    content.writeDouble(prevSpeed);
-    content.writeUnsignedByte(libsumo::TYPE_DOUBLE);
-    content.writeDouble(prevAcceleration);
+    content.writeDouble(prevspeed);
     myParent.createCommand(libsumo::CMD_SET_VEHICLE_VARIABLE, libsumo::VAR_PREV_SPEED, vehicleID, &content);
     myParent.processSet(libsumo::CMD_SET_VEHICLE_VARIABLE);
 }
@@ -3654,20 +3619,6 @@ TraCIAPI::TraCIScopeWrapper::getStringVector(int var, const std::string& id, tcp
         const int size = myParent.myInput.readInt();
         for (int i = 0; i < size; ++i) {
             r.push_back(myParent.myInput.readString());
-        }
-    }
-    return r;
-}
-
-
-std::vector<double>
-TraCIAPI::TraCIScopeWrapper::getDoubleVector(int var, const std::string& id, tcpip::Storage* add) const {
-    std::vector<double> r;
-    myParent.createCommand(myCmdGetID, var, id, add);
-    if (myParent.processGet(myCmdGetID, libsumo::TYPE_DOUBLELIST)) {
-        const int size = myParent.myInput.readInt();
-        for (int i = 0; i < size; ++i) {
-            r.push_back(myParent.myInput.readDouble());
         }
     }
     return r;

@@ -27,7 +27,6 @@
 #include <utils/common/StdDefs.h>
 #include <utils/geom/GeomHelper.h>
 #include <utils/common/SUMOVehicleClass.h>
-#include "EnergyParams.h"
 #include "PollutantsInterface.h"
 
 
@@ -94,15 +93,14 @@ public:
      * @return The amount emitted by the given emission class when moving with the given velocity and acceleration [mg/s or ml/s]
      */
     inline double compute(const SUMOEmissionClass c, const PollutantsInterface::EmissionType e, const double v, const double a, const double slope, const EnergyParams* param) const {
-        if (e == PollutantsInterface::ELEC || (param != nullptr && param->isEngineOff())) {
-            return 0.;
-        }
-        if (v > ZERO_SPEED_ACCURACY && a < getCoastingDecel(c, v, a, slope, param)) {
+        UNUSED_PARAMETER(slope);
+        UNUSED_PARAMETER(param);
+        if (a < 0. || e == PollutantsInterface::ELEC) {
             return 0.;
         }
         const int index = (c & ~PollutantsInterface::HEAVY_BIT) - HBEFA3_BASE;
         double scale = 3.6;
-        if (e == PollutantsInterface::FUEL && myVolumetricFuel) {
+        if (e == PollutantsInterface::FUEL) {
             if (getFuel(c) == "Diesel") {
                 scale *= 836.;
             } else {
@@ -110,7 +108,7 @@ public:
             }
         }
         const double* f = myFunctionParameter[index][e];
-        return MAX2((f[0] + f[1] * a * v + f[2] * a * a * v + f[3] * v + f[4] * v * v + f[5] * v * v * v) / scale, 0.);
+        return (double) MAX2((f[0] + f[1] * a * v + f[2] * a * a * v + f[3] * v + f[4] * v * v + f[5] * v * v * v) / scale, 0.);
     }
 
 

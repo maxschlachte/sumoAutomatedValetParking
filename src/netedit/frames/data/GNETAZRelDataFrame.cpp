@@ -21,68 +21,24 @@
 
 #include <netedit/elements/data/GNEDataHandler.h>
 #include <netedit/elements/data/GNEDataInterval.h>
-#include <netedit/elements/additional/GNETAZ.h>
+#include <netedit/elements/additional/GNETAZElement.h>
 #include <netedit/GNEViewNet.h>
 #include <utils/gui/div/GUIDesigns.h>
-#include <utils/gui/windows/GUIAppEnum.h>
 
 #include "GNETAZRelDataFrame.h"
 
 
 // ===========================================================================
-// FOX callback mapping
-// ===========================================================================
-
-FXDEFMAP(GNETAZRelDataFrame::ConfirmTAZRelation) ConfirmTAZRelationMap[] = {
-    FXMAPFUNC(SEL_COMMAND, MID_GNE_CREATE, GNETAZRelDataFrame::ConfirmTAZRelation::onCmdConfirmTAZRelation),
-    FXMAPFUNC(SEL_UPDATE,  MID_GNE_CREATE, GNETAZRelDataFrame::ConfirmTAZRelation::onUpdConfirmTAZRelation)
-};
-
-// Object implementation
-FXIMPLEMENT(GNETAZRelDataFrame::ConfirmTAZRelation, FXGroupBoxModule, ConfirmTAZRelationMap, ARRAYNUMBER(ConfirmTAZRelationMap))
-
-// ===========================================================================
 // method definitions
 // ===========================================================================
 
-// ---------------------------------------------------------------------------
-// GNETAZRelDataFrame::ConfirmTAZRelation - methods
-// ---------------------------------------------------------------------------
-
-GNETAZRelDataFrame::ConfirmTAZRelation::ConfirmTAZRelation(GNETAZRelDataFrame* TAZRelDataFrame) :
-    FXGroupBoxModule(TAZRelDataFrame, "Confirm TAZRelation"),
-    myTAZRelDataFrame(TAZRelDataFrame) {
-    myConfirmTAZButton = new FXButton(getCollapsableFrame(), "Create TAZRelation\t\tClick fromTaz and toTaz (confirm hotkey <ENTER>)", GUIIconSubSys::getIcon(GUIIcon::TAZRELDATA), this, MID_GNE_CREATE, GUIDesignButton);
-    myConfirmTAZButton->disable();
-}
-
-
-GNETAZRelDataFrame::ConfirmTAZRelation::~ConfirmTAZRelation() {}
-
-
-long
-GNETAZRelDataFrame::ConfirmTAZRelation::onCmdConfirmTAZRelation(FXObject*, FXSelector, void*) {
-    myTAZRelDataFrame->buildTAZRelationData();
-    return 1;
-}
-
-
-long
-GNETAZRelDataFrame::ConfirmTAZRelation::onUpdConfirmTAZRelation(FXObject*, FXSelector, void*) {
-    if (myTAZRelDataFrame->myFirstTAZ && myTAZRelDataFrame->mySecondTAZ) {
-        myConfirmTAZButton->enable();
-    } else {
-        myConfirmTAZButton->disable();
-    }
-    return 1;
-}
 
 // ---------------------------------------------------------------------------
 // GNETAZRelDataFrame::TAZRelLegend - methods
 // ---------------------------------------------------------------------------
 
 GNETAZRelDataFrame::Legend::Legend(GNETAZRelDataFrame* TAZRelDataFrame) :
-    FXGroupBoxModule(TAZRelDataFrame, "Information"),
+    FXGroupBoxModule(TAZRelDataFrame->myContentFrame, "Information"),
     myFromTAZLabel(nullptr),
     myToTAZLabel(nullptr) {
     // create from TAZ label
@@ -98,7 +54,7 @@ GNETAZRelDataFrame::Legend::~Legend() {}
 
 
 void
-GNETAZRelDataFrame::Legend::setLabels(const GNETAZ* fromTAZ, const GNETAZ* toTAZ) {
+GNETAZRelDataFrame::Legend::setLabels(const GNETAZElement* fromTAZ, const GNETAZElement* toTAZ) {
     // from TAZ
     if (fromTAZ) {
         myFromTAZLabel->setText(("From TAZ: " + fromTAZ->getID()).c_str());
@@ -118,9 +74,10 @@ GNETAZRelDataFrame::Legend::setLabels(const GNETAZ* fromTAZ, const GNETAZ* toTAZ
 // ------------------------------------------------------------------------
 
 GNETAZRelDataFrame::GNETAZRelDataFrame(FXHorizontalFrame* horizontalFrameParent, GNEViewNet* viewNet) :
-    GNEGenericDataFrame(horizontalFrameParent, viewNet, SUMO_TAG_TAZREL, false) {
-    // create confirm TAZ Relation
-    myConfirmTAZRelation = new ConfirmTAZRelation(this);
+    GNEGenericDataFrame(horizontalFrameParent, viewNet, SUMO_TAG_TAZREL, false),
+    myFirstTAZ(nullptr),
+    mySecondTAZ(nullptr),
+    myLegend(nullptr) {
     // create legend
     myLegend = new Legend(this);
 }
@@ -136,15 +93,13 @@ GNETAZRelDataFrame::setTAZ(const GNEViewNetHelper::ObjectsUnderCursor& objectsUn
         if (mySecondTAZ) {
             // both already defined
             return false;
-        } else if (objectsUnderCursor.getTAZFront()) {
-            mySecondTAZ = objectsUnderCursor.getTAZFront();
+        } else {
+            mySecondTAZ = objectsUnderCursor.getTAZElementFront();
             myLegend->setLabels(myFirstTAZ, mySecondTAZ);
             return true;
-        } else {
-            return false;
         }
-    } else if (objectsUnderCursor.getTAZFront()) {
-        myFirstTAZ = objectsUnderCursor.getTAZFront();
+    } else if (objectsUnderCursor.getTAZElementFront()) {
+        myFirstTAZ = objectsUnderCursor.getTAZElementFront();
         myLegend->setLabels(myFirstTAZ, mySecondTAZ);
         return true;
     } else {
@@ -163,7 +118,7 @@ GNETAZRelDataFrame::buildTAZRelationData() {
             WRITE_WARNING("There is already a " + toString(SUMO_TAG_TAZREL) + " defined in TAZ'" + myFirstTAZ->getID() + "'.");
         } else if ((myFirstTAZ != mySecondTAZ) && myIntervalSelector->getDataInterval()->TAZRelExists(myFirstTAZ, mySecondTAZ)) {
             WRITE_WARNING("There is already a " + toString(SUMO_TAG_TAZREL) + " defined between TAZ'" + myFirstTAZ->getID() + "' and '" + mySecondTAZ->getID() + "'.");
-        } else if (myGenericDataAttributes->areAttributesValid()) {
+        } else {
             // declare data handler
             GNEDataHandler dataHandler(myViewNet->getNet(), "", true);
             // build data interval object and fill it
@@ -185,13 +140,13 @@ GNETAZRelDataFrame::buildTAZRelationData() {
 }
 
 
-GNEAdditional*
+GNETAZElement*
 GNETAZRelDataFrame::getFirstTAZ() const {
     return myFirstTAZ;
 }
 
 
-GNEAdditional*
+GNETAZElement*
 GNETAZRelDataFrame::getSecondTAZ() const {
     return mySecondTAZ;
 }

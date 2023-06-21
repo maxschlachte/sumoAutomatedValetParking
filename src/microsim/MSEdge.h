@@ -176,9 +176,6 @@ public:
     /// @brief return total number of vehicles on this edges lanes or segments
     int getVehicleNumber() const;
 
-    /// @brief whether this edge has no vehicles
-    bool isEmpty() const;
-
     /// @brief return vehicles on this edges lanes or segments
     std::vector<const SUMOVehicle*> getVehicles() const;
 
@@ -198,7 +195,7 @@ public:
      *
      * @return This edge's persons.
      */
-    inline const std::set<MSTransportable*, ComparatorNumericalIdLess>& getPersons() const {
+    inline const std::set<MSTransportable*>& getPersons() const {
         return myPersons;
     }
 
@@ -336,7 +333,7 @@ public:
     /**@brief Sets the crossed edge ids for a crossing edge
      *
      */
-    void setCrossingEdges(const std::vector<std::string>& crossingEdges)        {
+    void setCrossingEdges(const std::vector<std::string>& crossingEdges)		{
         myCrossingEdges.clear();
         myCrossingEdges.insert(myCrossingEdges.begin(), crossingEdges.begin(), crossingEdges.end());
     }
@@ -358,8 +355,6 @@ public:
      * @param[in] edge The edge to add
      */
     void addSuccessor(MSEdge* edge, const MSEdge* via = nullptr);
-
-    void resetTAZ(MSJunction* junction);
 
     /** @brief Returns the number of edges that may be reached from this edge
      * @return The number of following edges
@@ -471,9 +466,6 @@ public:
         }
     }
 
-    double getTimePenalty() const {
-        return myTimePenalty;
-    }
 
     /** @brief Returns the travel time for the given edge
      *
@@ -579,11 +571,11 @@ public:
 
 
     /// @todo extension: inner junctions are not filled
-    const MSEdge* getInternalFollowingEdge(const MSEdge* followerAfterInternal, SUMOVehicleClass vClass) const;
+    const MSEdge* getInternalFollowingEdge(const MSEdge* followerAfterInternal) const;
 
 
     /// @brief returns the length of all internal edges on the junction until reaching the non-internal edge followerAfterInternal.
-    double getInternalFollowingLengthTo(const MSEdge* followerAfterInternal, SUMOVehicleClass vClass) const;
+    double getInternalFollowingLengthTo(const MSEdge* followerAfterInternal) const;
 
     /// @brief if this edge is an internal edge, return its first normal predecessor, otherwise the edge itself
     const MSEdge* getNormalBefore() const;
@@ -626,7 +618,7 @@ public:
         return mySublaneSides;
     }
 
-    void rebuildAllowedLanes(const bool onInit = false);
+    void rebuildAllowedLanes();
 
     void rebuildAllowedTargets(const bool updateVehicles = true);
 
@@ -665,11 +657,6 @@ public:
      */
     void setMaxSpeed(double val) const;
 
-    /** @brief Sets a new friction coefficient COF for all lanes [*later to be (used by TraCI and MSCalibrator)*]
-    * @param[in] val the new coefficient in [0..1]
-    */
-    void setFrictionCoefficient(double val) const;
-
     /** @brief Returns the maximum speed the vehicle may use on this edge
      *
      * @caution Only the first lane is considered
@@ -678,9 +665,22 @@ public:
     double getVehicleMaxSpeed(const SUMOTrafficObject* const veh) const;
 
 
-    virtual void addTransportable(MSTransportable* t) const;
+    virtual void addPerson(MSTransportable* p) const;
 
-    virtual void removeTransportable(MSTransportable* t) const;
+    virtual void removePerson(MSTransportable* p) const;
+
+    /// @brief Add a container to myContainers
+    virtual void addContainer(MSTransportable* container) const {
+        myContainers.insert(container);
+    }
+
+    /// @brief Remove container from myContainers
+    virtual void removeContainer(MSTransportable* container) const {
+        std::set<MSTransportable*>::iterator i = myContainers.find(container);
+        if (i != myContainers.end()) {
+            myContainers.erase(i);
+        }
+    }
 
     inline bool isRoundabout() const {
         return myAmRoundabout;
@@ -711,9 +711,6 @@ public:
 
     /// @brief get the mean speed
     double getMeanSpeed() const;
-
-    /// @brief get the mean friction over the lanes
-    double getMeanFriction() const;
 
     /// @brief get the mean speed of all bicycles on this edge
     double getMeanSpeedBike() const;
@@ -749,9 +746,6 @@ public:
      */
     SUMOVehicle* getWaitingVehicle(MSTransportable* transportable, const double position) const;
 
-    /** @brief Remove all transportables before quick-loading state */
-    void clearState();
-
     /// @brief update meso segment parameters
     void updateMesoType();
 
@@ -760,11 +754,11 @@ public:
         returns false. */
     static bool dictionary(const std::string& id, MSEdge* edge);
 
-    /** @brief Returns the MSEdge associated to the key id if it exists, otherwise returns nullptr. */
+    /** @brief Returns the MSEdge associated to the key id if exists, otherwise returns 0. */
     static MSEdge* dictionary(const std::string& id);
 
-    /** @brief Returns the MSEdge associated to the key id giving a hint with a numerical id. */
-    static MSEdge* dictionaryHint(const std::string& id, const int startIdx);
+    /// @brief Returns the number of edges
+    static int dictSize();
 
     /// @brief Returns all edges with a numerical id
     static const MSEdgeVector& getAllEdges();
@@ -896,10 +890,10 @@ protected:
     MSJunction* myToJunction;
 
     /// @brief Persons on the edge for drawing and pushbutton
-    mutable std::set<MSTransportable*, ComparatorNumericalIdLess> myPersons;
+    mutable std::set<MSTransportable*> myPersons;
 
     /// @brief Containers on the edge
-    mutable std::set<MSTransportable*, ComparatorNumericalIdLess> myContainers;
+    mutable std::set<MSTransportable*> myContainers;
 
     /// @name Storages for allowed lanes (depending on vehicle classes)
     /// @{

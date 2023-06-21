@@ -51,7 +51,7 @@ GNEChange_GenericData::~GNEChange_GenericData() {
     myGenericData->decRef("GNEChange_GenericData");
     if (myGenericData->unreferenced()) {
         // show extra information for tests
-        WRITE_DEBUG("Deleting unreferenced " + myGenericData->getTagStr());
+        WRITE_DEBUG("Deleting unreferenced " + myGenericData->getTagStr() + " '" + myGenericData->getID() + "'");
         // check that generic data don't exist
         if (myGenericData->getNet()->getAttributeCarriers()->dataSetExist(myDataSetParent) &&
                 myDataSetParent->dataIntervalChildrenExist(myDataIntervalParent) &&

@@ -87,7 +87,7 @@ public:
      * @see MSMoveReminder::notifyEnter
      * @see MSMoveReminder::Notification
      */
-    bool notifyEnter(SUMOTrafficObject& veh, MSMoveReminder::Notification reason, const MSLane* enteredLane = 0) override;
+    bool notifyEnter(SUMOTrafficObject& veh, MSMoveReminder::Notification reason, const MSLane* enteredLane = 0);
     /// @}
 
 
@@ -107,7 +107,8 @@ public:
      * @see MSDetectorFileOutput::writeXMLOutput
      * @exception IOError If an error on writing occurs (!!! not yet implemented)
      */
-    void writeXMLOutput(OutputDevice& dev, SUMOTime startTime, SUMOTime stopTime) override;
+    void writeXMLOutput(OutputDevice& dev,
+                        SUMOTime startTime, SUMOTime stopTime);
 
 
     /** @brief Opens the XML-output using "detector" as root element
@@ -117,7 +118,7 @@ public:
      * @todo What happens with the additional information if several detectors use the same output?
      * @exception IOError If an error on writing occurs (!!! not yet implemented)
      */
-    void writeXMLDetectorProlog(OutputDevice& dev) const override;
+    void writeXMLDetectorProlog(OutputDevice& dev) const;
     /// @}
 
     /* @brief sample a route from the routeDistribution
@@ -129,20 +130,12 @@ public:
         return myEdge;
     }
 
-    void clearState(SUMOTime step) override;
-
 private:
-    void initDistributions();
-
-private:
-    std::string myDistID;
-    std::string myLastID;
-
     /// @brief The previous distribution of routes (probability->route)
-    RandomDistributor<const MSRoute*>* myLastRouteDistribution;
+    std::pair<std::string, RandomDistributor<const MSRoute*>*> myLastRouteDistribution;
 
     /// @brief The current distribution of routes (probability->route)
-    RandomDistributor<const MSRoute*>* myCurrentRouteDistribution;
+    std::pair<std::string, RandomDistributor<const MSRoute*>*> myCurrentRouteDistribution;
 
     /// @brief the edge of this route probe
     const MSEdge* myEdge;

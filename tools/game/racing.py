@@ -26,7 +26,6 @@ import os
 import sys
 import threading
 import math
-import argparse
 
 if sys.version_info.major == 3:
     import queue as Queue
@@ -235,18 +234,7 @@ def main(sumocfg="racing/racing.sumocfg", egoID="ego"):
     root.mainloop()
 
 
-# Argument parser
-parser = argparse.ArgumentParser()
-parser.add_argument('--sumocfg', default="racing/racing.sumocfg", help=".sumocfg file path", required=False)
-parser.add_argument('--ego', default="ego", help="vehicle ego id", required=False)
-parser.add_argument('--mouse', default="no",
-                    help="mouse features' toggle switch - possible choices are y and n (default).", required=False)
-args = parser.parse_args()
-
-if len(sys.argv) < 4:
-    # Disabling mouse control unless explicitly mentioned
-    if args.mouse != 'yes':
-        autopy = None
-    main(args.sumocfg, args.ego)
+if len(sys.argv) < 3:
+    main(*sys.argv[1:])
 else:
-    print("racing.py --sumocfg=<sumocfg> [--ego=<egoID>] [--mouse=<yes/no>]")
+    print("racing.py <sumocfg> [<egoID>]")

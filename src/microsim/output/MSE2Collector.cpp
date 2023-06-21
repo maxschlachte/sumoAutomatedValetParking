@@ -67,11 +67,9 @@
 MSE2Collector::MSE2Collector(const std::string& id,
                              DetectorUsage usage, MSLane* lane, double startPos, double endPos, double length,
                              SUMOTime haltingTimeThreshold, double haltingSpeedThreshold, double jamDistThreshold,
-                             const std::string& vTypes,
-                             const std::string& nextEdges,
-                             int detectPersons) :
+                             const std::string& vTypes, int detectPersons) :
     MSMoveReminder(id, lane, false),
-    MSDetectorFileOutput(id, vTypes, nextEdges, detectPersons),
+    MSDetectorFileOutput(id, vTypes, detectPersons),
     myUsage(usage),
     myJamHaltingSpeedThreshold(haltingSpeedThreshold),
     myJamHaltingTimeThreshold(haltingTimeThreshold),
@@ -87,8 +85,7 @@ MSE2Collector::MSE2Collector(const std::string& id,
     myCurrentMaxJamLengthInMeters(0),
     myCurrentJamLengthInMeters(0),
     myCurrentJamLengthInVehicles(0),
-    myCurrentHaltingsNumber(0),
-    myOverrideVehNumber(-1) {
+    myCurrentHaltingsNumber(0) {
     reset();
 
 #ifdef DEBUG_E2_CONSTRUCTOR
@@ -165,11 +162,9 @@ MSE2Collector::MSE2Collector(const std::string& id,
 MSE2Collector::MSE2Collector(const std::string& id,
                              DetectorUsage usage, std::vector<MSLane*> lanes, double startPos, double endPos,
                              SUMOTime haltingTimeThreshold, double haltingSpeedThreshold, double jamDistThreshold,
-                             const std::string& vTypes,
-                             const std::string& nextEdges,
-                             int detectPersons) :
+                             const std::string& vTypes, int detectPersons) :
     MSMoveReminder(id, lanes[lanes.size() - 1], false), // assure that lanes.size() > 0 at caller side!!!
-    MSDetectorFileOutput(id, vTypes, nextEdges, detectPersons),
+    MSDetectorFileOutput(id, vTypes, detectPersons),
     myUsage(usage),
     myFirstLane(lanes[0]),
     myLastLane(lanes[lanes.size() - 1]),
@@ -188,8 +183,7 @@ MSE2Collector::MSE2Collector(const std::string& id,
     myCurrentJamNo(0),
     myCurrentJamLengthInMeters(0),
     myCurrentJamLengthInVehicles(0),
-    myCurrentHaltingsNumber(0),
-    myOverrideVehNumber(-1) {
+    myCurrentHaltingsNumber(0) {
     reset();
 
     for (std::vector<MSLane*>::const_iterator i = lanes.begin(); i != lanes.end(); ++i) {
@@ -325,7 +319,7 @@ MSE2Collector::recalculateDetectorLength() {
 
 MSE2Collector::~MSE2Collector() {
     // clear move notifications
-    clearState(SUMOTime_MAX);
+    clearState();
 }
 
 
@@ -631,15 +625,7 @@ MSE2Collector::notifyMove(SUMOTrafficObject& veh, double oldPos,
     ScopedLocker<> lock(myNotificationMutex, MSGlobals::gNumSimThreads > 1);
 #endif
     VehicleInfoMap::iterator vi = myVehicleInfos.find(veh.getID());
-    if (vi == myVehicleInfos.end()) {
-        const std::string objectType = veh.isPerson() ? "Person" : "Vehicle";
-        if (myNextEdges.size() > 0) {
-            WRITE_WARNING(objectType + " '" + veh.getID() + "' appeared inside detector '" + getID() + "' after previously being filtered out. time=" + time2string(SIMSTEP) + ".");
-        } else {
-            WRITE_WARNING(objectType + " '" + veh.getID() + "' suddenly appeared inside detector '" + getID() + "'. time=" + time2string(SIMSTEP) + ".");
-        }
-        return false;
-    }
+    assert(vi != myVehicleInfos.end()); // all vehicles calling notifyMove() should have called notifyEnter() before
 
     const std::string& vehID = veh.getID();
     VehicleInfo& vehInfo = *(vi->second);
@@ -1473,21 +1459,12 @@ MSE2Collector::reset() {
 int
 MSE2Collector::getCurrentVehicleNumber() const {
     int result = 0;
-    if (myOverrideVehNumber >= 0) {
-        result = myOverrideVehNumber;
-    } else {
-        for (VehicleInfoMap::const_iterator it = myVehicleInfos.begin(); it != myVehicleInfos.end(); it++) {
-            if (it->second->onDetector) {
-                result++;
-            }
+    for (VehicleInfoMap::const_iterator it = myVehicleInfos.begin(); it != myVehicleInfos.end(); it++) {
+        if (it->second->onDetector) {
+            result++;
         }
     }
     return result;
-}
-
-void
-MSE2Collector::overrideVehicleNumber(int num) {
-    myOverrideVehNumber = num;
 }
 
 
@@ -1584,7 +1561,7 @@ MSE2Collector::getEstimateQueueLength() const {
 
 
 void
-MSE2Collector::clearState(SUMOTime /* step */) {
+MSE2Collector::clearState() {
     for (std::vector<MoveNotificationInfo*>::iterator j = myMoveNotifications.begin(); j != myMoveNotifications.end(); ++j) {
         delete *j;
     }

@@ -58,7 +58,6 @@ class GUIVehicle;
 class GUIVehicleControl;
 class MSVehicleControl;
 class GUIMEVehicleControl;
-class Command;
 
 
 // ===========================================================================
@@ -136,7 +135,7 @@ public:
      */
     Boundary getCenteringBoundary() const override;
 
-    /// @brief return exaggeration associated with this GLObject
+    /// @brief return exaggeration asociated with this GLObject
     double getExaggeration(const GUIVisualizationSettings& s) const override;
 
     /** @brief Draws the object
@@ -345,9 +344,6 @@ public:
 
     /// @brief update view after simulation.loadState
     void updateGUI() const override;
-
-    /// @brief register custom hotkey action
-    void addHotkey(int key, Command* press, Command* release = nullptr);
 
 private:
     /// @brief Initialises the tl-logic map and wrappers

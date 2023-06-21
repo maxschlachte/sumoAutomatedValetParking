@@ -143,16 +143,15 @@ MSPModel_Striping::MSPModel_Striping(const OptionsCont& oc, MSNet* net) :
 
 MSPModel_Striping::~MSPModel_Striping() {
     clearState();
-    myWalkingAreaPaths.clear(); // need to recompute when lane pointers change
-    myWalkingAreaFoes.clear();
-    myMinNextLengths.clear();
 }
 
 void
 MSPModel_Striping::clearState() {
     myActiveLanes.clear();
     myNumActivePedestrians = 0;
-    myAmActive = false;
+    myWalkingAreaPaths.clear(); // need to recompute when lane pointers change
+    myWalkingAreaFoes.clear();
+    myMinNextLengths.clear();
 }
 
 MSTransportableStateAdapter*
@@ -206,7 +205,7 @@ MSPModel_Striping::loadState(MSTransportable* transportable, MSStageMoving* stag
     MSPerson* person = static_cast<MSPerson*>(transportable);
     MSNet* net = MSNet::getInstance();
     if (!myAmActive) {
-        net->getBeginOfTimestepEvents()->addEvent(new MovePedestrians(this), SIMSTEP);
+        net->getBeginOfTimestepEvents()->addEvent(new MovePedestrians(this), net->getCurrentTimeStep() + DELTA_T);
         myAmActive = true;
     }
     PState* ped = new PState(person, stage, &in);
@@ -280,7 +279,7 @@ MSPModel_Striping::usingInternalLanes() {
 
 bool
 MSPModel_Striping::usingInternalLanesStatic() {
-    return MSGlobals::gUsingInternalLanes && MSNet::getInstance()->hasInternalLinks() && MSNet::getInstance()->hasPedestrianNetwork();
+    return MSGlobals::gUsingInternalLanes && MSNet::getInstance()->hasInternalLinks();
 }
 
 PersonDist
@@ -663,7 +662,7 @@ MSPModel_Striping::getNextLane(const PState& ped, const MSLane* currentLane, con
                 if DEBUGCOND(ped) {
                     std::cout << SIMTIME << " no next lane found for " << currentLane->getID() << " dir=" << ped.myDir << "\n";
                 }
-                if (usingInternalLanesStatic() && currentLane->getLinkCont().size() > 0) {
+                if (usingInternalLanesStatic() && currentLane->getLinkCont().size() > 0 && MSNet::getInstance()->hasPedestrianNetwork()) {
                     WRITE_WARNING("Person '" + ped.myPerson->getID() + "' could not find route across junction '" + junction->getID()
                                   + "' from edge '" + currentEdge->getID()
                                   + "' to edge '" + nextRouteEdge->getID() + "', time=" +
@@ -1597,7 +1596,7 @@ MSPModel_Striping::PState::PState(MSPerson* person, MSStageMoving* stage, std::i
 
         if (wapLaneFrom != "null") {
             MSLane* from = MSLane::dictionary(wapLaneFrom);
-            MSLane* to = MSLane::dictionary(wapLaneTo);
+            MSLane* to = MSLane::dictionary(wapLaneFrom);
             if (from == nullptr) {
                 throw ProcessError("Unknown walkingAreaPath origin lane '" + wapLaneFrom + "' when loading walk for person '" + myPerson->getID() + "' from state.");
             }
@@ -1608,7 +1607,7 @@ MSPModel_Striping::PState::PState(MSPerson* person, MSStageMoving* stage, std::i
             if (pathIt != myWalkingAreaPaths.end()) {
                 myWalkingAreaPath = &pathIt->second;
             } else {
-                throw ProcessError("Unknown walkingAreaPath from lane '" + wapLaneFrom + "' to lane '" + wapLaneTo + "' when loading walk for person '" + myPerson->getID() + "' from state.");
+                throw ProcessError("Unknown walkingAreaPath from lane '" + wapLaneFrom + "' to lane '" + wapLaneFrom + "' wawhen loading walk for person '" + myPerson->getID() + "' from state.");
             }
         }
     }
@@ -1721,10 +1720,7 @@ MSPModel_Striping::PState::otherStripe() const {
 double
 MSPModel_Striping::PState::distToLaneEnd() const {
     if (myStage->getNextRouteEdge() == nullptr) {
-        return myDir * (myStage->getArrivalPos() - myRelX) - POSITION_EPS - (
-                   (myWaitingTime > DELTA_T && (myStage->getDestinationStop() == nullptr ||
-                                                myStage->getDestinationStop()->getWaitingCapacity() > myStage->getDestinationStop()->getNumWaitingPersons()))
-                   ? getMinGap() : 0);
+        return myDir * (myStage->getArrivalPos() - myRelX) - POSITION_EPS;
     } else {
         const double length = myWalkingAreaPath == nullptr ? myLane->getLength() : myWalkingAreaPath->length;
         return myDir == FORWARD ? length - myRelX : myRelX;
@@ -1772,8 +1768,6 @@ MSPModel_Striping::PState::moveToNextLane(SUMOTime currentTime) {
             assert(!arrived);
             assert(myDir != UNDEFINED_DIRECTION);
             myNLI = getNextLane(*this, myLane, oldLane);
-            // reminders must be called after updated myNLI (to ensure that getNextEdgePtr returns the correct edge)
-            myStage->activateEntryReminders(myPerson);
             assert(myNLI.lane != oldLane); // do not turn around
             if DEBUGCOND(*this) {
                 std::cout << "    nextLane=" << (myNLI.lane == nullptr ? "NULL" : myNLI.lane->getID()) << "\n";
@@ -1996,7 +1990,7 @@ MSPModel_Striping::PState::walk(const Obstacles& obs, SUMOTime currentTime) {
             }
             xSpeed = vMax / 4;
         }
-    } else if (myAmJammed && stripe(myRelY) >= 0 && stripe(myRelY) <= sMax && xDist >= MIN_STARTUP_DIST)  {
+    } else if (stripe(myRelY) >= 0 && stripe(myRelY) <= sMax)  {
         myAmJammed = false;
     }
     // dawdling
@@ -2190,46 +2184,6 @@ MSPModel_Striping::PState::getNextEdge(const MSStageMoving&) const {
     return myNLI.lane == nullptr ? nullptr : &myNLI.lane->getEdge();
 }
 
-
-void
-MSPModel_Striping::PState::moveTo(MSPerson* p, MSLane* lane, double lanePos, double lanePosLat, SUMOTime t) {
-    ConstMSEdgeVector newEdges; // keep route
-    int routeOffset = 0;
-    bool laneOnRoute = false;
-    const MSJunction* laneOnJunction = lane->isNormal() ? nullptr : lane->getEdge().getToJunction();
-    for (const MSEdge* edge : myStage->getRoute()) {
-        if (edge == &lane->getEdge()
-                || edge->getToJunction() == laneOnJunction
-                || edge->getFromJunction() == laneOnJunction) {
-            laneOnRoute = true;
-            break;
-        }
-        routeOffset++;
-    }
-    if (!laneOnRoute) {
-        throw ProcessError("Lane '" + lane->getID() + "' is not on the route of person '" + getID() + "'.");
-    }
-    Position pos = lane->geometryPositionAtOffset(lanePos, lanePosLat);
-    if (lane->getEdge().isWalkingArea() && (myWalkingAreaPath == nullptr || myWalkingAreaPath->lane != lane)) {
-        // entered new walkingarea. Determine path to guess position
-        const MSEdge* prevEdge = myStage->getRoute()[routeOffset];
-        const MSEdge* nextEdge = routeOffset + 1 < (int)myStage->getRoute().size() ? myStage->getRoute()[routeOffset + 1] : nullptr;
-        const WalkingAreaPath* guessed = guessPath(&lane->getEdge(), prevEdge, nextEdge);
-        const double maxPos = guessed->shape.length() - NUMERICAL_EPS;
-        if (lanePos > maxPos + POSITION_EPS || lanePos < -POSITION_EPS) {
-            throw ProcessError("Lane position " + toString(lanePos) + " cannot be mapped onto walkingarea '" + lane->getID()
-                               + "' (fromLane='" + guessed->from->getID()
-                               + "' toLane='" + guessed->to->getID() + "') for person '" + getID() + "' time=" + time2string(t) + ".");
-        }
-        // give some slack
-        lanePos = MIN2(maxPos, MAX2(NUMERICAL_EPS, lanePos));
-        pos = guessed->shape.positionAtOffset(lanePos, lanePosLat);
-    }
-    const double angle = GeomHelper::naviDegree(p->getPosition().angleTo2D(pos));
-    moveToXY(p, pos, lane, lanePos, lanePosLat, angle, routeOffset, newEdges, t);
-}
-
-
 void
 MSPModel_Striping::PState::moveToXY(MSPerson* p, Position pos, MSLane* lane, double lanePos,
                                     double lanePosLat, double angle, int routeOffset,
@@ -2300,9 +2254,7 @@ MSPModel_Striping::PState::moveToXY(MSPerson* p, Position pos, MSLane* lane, dou
             // walkingarea. Use pos instead
             const Position relPos = myWalkingAreaPath->shape.transformToVectorCoordinates(pos);
             if (relPos == Position::INVALID) {
-                WRITE_WARNING("Could not map position " + toString(pos) + " onto lane '" + myLane->getID()
-                              + "' (fromLane='" + myWalkingAreaPath->from->getID()
-                              + "' toLane='" + myWalkingAreaPath->to->getID() + "') for person '" + getID() + "' time=" + time2string(t) + ".");
+                WRITE_WARNING("Could not map position " + toString(pos) + " onto lane '" + myLane->getID() + "'");
                 myRemoteXYPos = pos;
             } else {
                 myRelX = relPos.x();
@@ -2340,7 +2292,6 @@ MSPModel_Striping::PState::moveToXY(MSPerson* p, Position pos, MSLane* lane, dou
             // assume that we will eventually move back onto the sidewalk if
             // there is one
             myNLI = getNextLane(*this, sidewalk == nullptr ? myLane : sidewalk, nullptr);
-            myStage->activateEntryReminders(myPerson);
 #ifdef DEBUG_MOVETOXY
             std::cout << " myNLI=" << Named::getIDSecure(myNLI.lane) << " link=" << (myNLI.link == nullptr ? "NULL" : myNLI.link->getDescription()) << " dir=" << myNLI.dir << "\n";
 #endif

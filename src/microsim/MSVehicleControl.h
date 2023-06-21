@@ -97,8 +97,7 @@ public:
      */
     virtual SUMOVehicle* buildVehicle(SUMOVehicleParameter* defs, const MSRoute* route,
                                       MSVehicleType* type,
-                                      const bool ignoreStopErrors, const bool fromRouteFile = true,
-                                      bool addRouteStops = true);
+                                      const bool ignoreStopErrors, const bool fromRouteFile = true);
     /// @}
 
 
@@ -544,7 +543,7 @@ private:
     bool isPendingRemoval(SUMOVehicle* veh);
 
 protected:
-    void initVehicle(MSBaseVehicle* built, const bool ignoreStopErrors, bool addRouteStops);
+    void initVehicle(MSBaseVehicle* built, const bool ignoreStopErrors);
 
 private:
     /// @name Vehicle statistics (always accessible)

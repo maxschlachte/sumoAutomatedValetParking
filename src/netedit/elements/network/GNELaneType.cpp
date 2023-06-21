@@ -34,13 +34,13 @@
 // ===========================================================================
 
 GNELaneType::GNELaneType(GNEEdgeType* edgeTypeParent) :
-    GNENetworkElement(edgeTypeParent->getNet(), "", GLO_LANE, SUMO_TAG_LANETYPE, {}, {}, {}, {}, {}, {}),
+    GNENetworkElement(edgeTypeParent->getNet(), "", GLO_LANE, SUMO_TAG_LANETYPE, {}, {}, {}, {}, {}, {}, {}, {}),
 myEdgeTypeParent(edgeTypeParent) {
 }
 
 
 GNELaneType::GNELaneType(GNEEdgeType* edgeTypeParent, const NBTypeCont::LaneTypeDefinition& laneType) :
-    GNENetworkElement(edgeTypeParent->getNet(), "", GLO_LANE, SUMO_TAG_LANETYPE, {}, {}, {}, {}, {}, {}),
+    GNENetworkElement(edgeTypeParent->getNet(), "", GLO_LANE, SUMO_TAG_LANETYPE, {}, {}, {}, {}, {}, {}, {}, {}),
 NBTypeCont::LaneTypeDefinition(laneType),
 myEdgeTypeParent(edgeTypeParent) {
 }
@@ -118,12 +118,6 @@ GNELaneType::drawGL(const GUIVisualizationSettings& /*s*/) const {
 }
 
 
-void
-GNELaneType::updateGLObject() {
-    updateGeometry();
-}
-
-
 std::string
 GNELaneType::getAttribute(SumoXMLAttr key) const {
     switch (key) {
@@ -152,12 +146,6 @@ GNELaneType::getAttribute(SumoXMLAttr key) const {
                 return getVehicleClassNames(invertPermissions(permissions));
             }
         case SUMO_ATTR_WIDTH:
-            if (attrs.count(key) == 0) {
-                return "";
-            } else {
-                return toString(width);
-            }
-        case SUMO_ATTR_FRICTION:
             if (attrs.count(key) == 0) {
                 return "";
             } else {
@@ -197,7 +185,19 @@ GNELaneType::isValid(SumoXMLAttr key, const std::string& value) {
 }
 
 
-const Parameterised::Map&
+bool
+GNELaneType::isAttributeEnabled(SumoXMLAttr /*key*/) const {
+    return true;
+}
+
+
+bool
+GNELaneType::isAttributeComputed(SumoXMLAttr /*key*/) const {
+    return false;
+}
+
+
+const std::map<std::string, std::string>&
 GNELaneType::getACParametersMap() const {
     return getParametersMap();
 }

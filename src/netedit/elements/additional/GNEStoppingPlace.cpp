@@ -17,17 +17,17 @@
 ///
 // A abstract class to define common parameters of lane area in which vehicles can halt (GNE version)
 /****************************************************************************/
-#include <config.h>
-
 #include <foreign/fontstash/fontstash.h>
 #include <netedit/GNENet.h>
 #include <netedit/GNEUndoList.h>
 #include <netedit/GNEViewNet.h>
 #include <netedit/GNEViewParent.h>
+#include <netedit/changes/GNEChange_Attribute.h>
 #include <netedit/frames/common/GNEMoveFrame.h>
 #include <utils/gui/div/GLHelper.h>
 #include <utils/gui/globjects/GLIncludes.h>
 #include <utils/options/OptionsCont.h>
+#include <utils/vehicle/SUMORouteHandler.h>
 
 #include "GNEStoppingPlace.h"
 #include "GNEAdditionalHandler.h"
@@ -47,10 +47,10 @@ const double GNEStoppingPlace::myCircleInText = 1.6;
 
 GNEStoppingPlace::GNEStoppingPlace(const std::string& id, GNENet* net, GUIGlObjectType type, SumoXMLTag tag,
                                    GNELane* lane, const double startPos, const double endPos, const std::string& name,
-                                   bool friendlyPosition, const Parameterised::Map& parameters) :
+                                   bool friendlyPosition, const std::map<std::string, std::string>& parameters) :
     GNEAdditional(id, net, type, tag, name,
-{}, {}, {lane}, {}, {}, {}),
-Parameterised(parameters),
+{}, {}, {lane}, {}, {}, {}, {}, {},
+parameters),
 myStartPosition(startPos),
 myEndPosition(endPos),
 myFriendlyPosition(friendlyPosition) {
@@ -105,7 +105,7 @@ GNEStoppingPlace::getMoveOperation() {
 
 bool
 GNEStoppingPlace::isAdditionalValid() const {
-    return GNEAdditionalHandler::checkLaneDoublePosition(getAttributeDouble(SUMO_ATTR_STARTPOS), getAttributeDouble(SUMO_ATTR_ENDPOS),
+    return GNEAdditionalHandler::checkDoublePositionOverLane(getAttributeDouble(SUMO_ATTR_STARTPOS), getAttributeDouble(SUMO_ATTR_ENDPOS),
             getParentLanes().front()->getParentEdge()->getNBEdge()->getFinalLength(), myFriendlyPosition);
 }
 
@@ -150,8 +150,8 @@ GNEStoppingPlace::fixAdditionalProblem() {
     // calculate start and end positions
     double startPos = getAttributeDouble(SUMO_ATTR_STARTPOS);
     double endPos = getAttributeDouble(SUMO_ATTR_ENDPOS);
-    // fix start and end positions using fixLaneDoublePosition
-    GNEAdditionalHandler::fixLaneDoublePosition(startPos, endPos, getParentLanes().front()->getParentEdge()->getNBEdge()->getFinalLength());
+    // fix start and end positions using fixStoppingPlacePosition
+    GNEAdditionalHandler::fixDoublePositionOverLane(startPos, endPos, getParentLanes().front()->getParentEdge()->getNBEdge()->getFinalLength());
     // set new start and end positions
     setAttribute(SUMO_ATTR_STARTPOS, toString(startPos), myNet->getViewNet()->getUndoList());
     setAttribute(SUMO_ATTR_ENDPOS, toString(endPos), myNet->getViewNet()->getUndoList());
@@ -166,17 +166,25 @@ GNEStoppingPlace::getPositionInView() const {
 
 void
 GNEStoppingPlace::updateCenteringBoundary(const bool /*updateGrid*/) {
-    if (!isTemplate()) {
-        // update geometry
-        updateGeometry();
-        // add shape boundary
-        myAdditionalBoundary = myAdditionalGeometry.getShape().getBoxBoundary();
-        // grow with "width"
-        if (myTagProperty.hasAttribute(SUMO_ATTR_WIDTH)) {
-            myAdditionalBoundary.grow(getAttributeDouble(SUMO_ATTR_WIDTH));
+    if (isTemplate()) {
+        return;
+    }
+    // update geometry
+    updateGeometry();
+    // add shape boundary
+    myAdditionalBoundary = myAdditionalGeometry.getShape().getBoxBoundary();
+    // grow with "width"
+    if (myTagProperty.hasAttribute(SUMO_ATTR_WIDTH)) {
+        // we cannot use "getAttributeDouble(...)"
+        myAdditionalBoundary.grow(parse<double>(getAttribute(SUMO_ATTR_WIDTH)));
+    }
+    // grow
+    myAdditionalBoundary.grow(10);
+    // add parking spaces
+    for (const auto& parkingSpace : getChildAdditionals()) {
+        if (parkingSpace->getTagProperty().getTag() == SUMO_TAG_PARKING_SPACE) {
+            myAdditionalBoundary.add(parkingSpace->getCenteringBoundary());
         }
-        // grow
-        myAdditionalBoundary.grow(10);
     }
 }
 
@@ -270,9 +278,10 @@ GNEStoppingPlace::getAttributeDouble(SumoXMLAttr key) const {
 }
 
 
-const Parameterised::Map&
-GNEStoppingPlace::getACParametersMap() const {
-    return getParametersMap();
+bool
+GNEStoppingPlace::isAttributeEnabled(SumoXMLAttr /*key*/) const {
+    // all stopping place attributes are always enabled
+    return true;
 }
 
 

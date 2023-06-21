@@ -46,7 +46,7 @@ MSStageTranship::MSStageTranship(const std::vector<const MSEdge*>& route,
                                  MSStoppingPlace* toStop,
                                  double speed,
                                  double departPos, double arrivalPos) :
-    MSStageMoving(route, "", toStop, speed, departPos, arrivalPos, 0., -1, MSStageType::TRANSHIP) {
+    MSStageMoving(route, toStop, speed, departPos, arrivalPos, 0., -1, MSStageType::TRANSHIP) {
     myDepartPos = SUMOVehicleParameter::interpretEdgePos(
                       departPos, myRoute.front()->getLength(), SUMO_ATTR_DEPARTPOS,
                       "container getting transhipped from " + myRoute.front()->getID());
@@ -76,10 +76,10 @@ MSStageTranship::proceed(MSNet* net, MSTransportable* transportable, SUMOTime no
     myDepartPos = previous->getEdgePos(now);
     if (transportable->isPerson()) {
         myState = net->getPersonControl().getNonInteractingModel()->add(transportable, this, now);
-        (*myRouteStep)->addTransportable(transportable);
+        (*myRouteStep)->addPerson(transportable);
     } else {
         myState = net->getContainerControl().getNonInteractingModel()->add(transportable, this, now);
-        (*myRouteStep)->addTransportable(transportable);
+        (*myRouteStep)->addContainer(transportable);
     }
 }
 
@@ -121,7 +121,7 @@ MSStageTranship::routeOutput(const bool /*isPerson*/, OutputDevice& os, const bo
     }
     os.writeAttr(SUMO_ATTR_SPEED, mySpeed);
     if (withRouteLength) {
-        os.writeAttr("routeLength", mySpeed * STEPS2TIME(myArrived - myDeparted));
+        os.writeAttr("routeLength", mySpeed * (myArrived - myDeparted));
     }
     if (OptionsCont::getOptions().getBool("vehroute-output.exit-times")) {
         os.writeAttr(SUMO_ATTR_STARTED, myDeparted >= 0 ? time2string(myDeparted) : "-1");
@@ -133,7 +133,11 @@ MSStageTranship::routeOutput(const bool /*isPerson*/, OutputDevice& os, const bo
 
 bool
 MSStageTranship::moveToNextEdge(MSTransportable* transportable, SUMOTime currentTime, int /*prevDir*/, MSEdge* /* nextInternal */) {
-    getEdge()->removeTransportable(transportable);
+    if (transportable->isPerson()) {
+        getEdge()->removePerson(transportable);
+    } else {
+        getEdge()->removeContainer(transportable);
+    }
     // transship does a direct move so we are already at our destination
     if (myDestinationStop != nullptr) {
         myDestinationStop->addTransportable(transportable);    //jakob

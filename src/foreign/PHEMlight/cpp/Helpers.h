@@ -20,8 +20,10 @@
 ///
 //
 /****************************************************************************/
-#pragma once
-#include <config.h>
+
+
+#ifndef PHEMlightHELPERS
+#define PHEMlightHELPERS
 
 #include <string>
 
@@ -92,3 +94,6 @@ namespace PHEMlightdll {
 
     };
 }
+
+
+#endif	//#ifndef PHEMlightHELPERS

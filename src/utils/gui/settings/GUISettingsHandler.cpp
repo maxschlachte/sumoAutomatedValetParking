@@ -42,10 +42,9 @@
 // ===========================================================================
 GUISettingsHandler::GUISettingsHandler(const std::string& content, bool isFile, bool netedit) :
     SUMOSAXHandler(content),
-    mySettings("TEMPORARY_NAME", netedit),
+    mySettings(netedit),
     myDelay(-1), myLookFrom(-1, -1, -1), myLookAt(-1, -1, -1),
     myRotation(0),
-    myZoom(-1),
     myCurrentColorer(SUMO_TAG_NOTHING),
     myCurrentScheme(nullptr),
     myJamSoundTime(-1) {
@@ -80,20 +79,14 @@ GUISettingsHandler::myStartElement(int element, const SUMOSAXAttributes& attrs) 
             myViewType = attrs.getOpt<std::string>(SUMO_ATTR_TYPE, nullptr, ok, "default");
             myViewType = StringUtils::to_lower_case(myViewType);
             break;
-        case SUMO_TAG_VIEWSETTINGS_3D:
-            mySettings.show3DTLSLinkMarkers = StringUtils::toBool(attrs.getStringSecure("show3DTLSLinkMarkers", toString(mySettings.show3DTLSLinkMarkers)));
-            mySettings.show3DTLSDomes = StringUtils::toBool(attrs.getStringSecure("show3DTLSDomes", toString(mySettings.show3DTLSDomes)));
-            mySettings.generate3DTLSModels = StringUtils::toBool(attrs.getStringSecure("generate3DTLSModels", toString(mySettings.generate3DTLSModels)));
-            break;
         case SUMO_TAG_DELAY:
             myDelay = attrs.getOpt<double>(SUMO_ATTR_VALUE, nullptr, ok, myDelay);
             break;
         case SUMO_TAG_VIEWPORT: {
             const double x = attrs.getOpt<double>(SUMO_ATTR_X, nullptr, ok, myLookFrom.x());
             const double y = attrs.getOpt<double>(SUMO_ATTR_Y, nullptr, ok, myLookFrom.y());
-            const double z = attrs.getOpt<double>(SUMO_ATTR_Z, nullptr, ok, myLookFrom.z());
+            const double z = attrs.getOpt<double>(SUMO_ATTR_ZOOM, nullptr, ok, myLookFrom.z());
             myLookFrom.set(x, y, z);
-            myZoom = attrs.getOpt<double>(SUMO_ATTR_ZOOM, nullptr, ok, myZoom);
             const double cx = attrs.getOpt<double>(SUMO_ATTR_CENTER_X, nullptr, ok, myLookAt.x());
             const double cy = attrs.getOpt<double>(SUMO_ATTR_CENTER_Y, nullptr, ok, myLookAt.y());
             const double cz = attrs.getOpt<double>(SUMO_ATTR_CENTER_Z, nullptr, ok, myLookAt.z());
@@ -112,7 +105,7 @@ GUISettingsHandler::myStartElement(int element, const SUMOSAXAttributes& attrs) 
         case SUMO_TAG_VIEWSETTINGS_SCHEME: {
             mySettings.name = attrs.getOpt<std::string>(SUMO_ATTR_NAME, nullptr, ok, mySettings.name);
             if (gSchemeStorage.contains(mySettings.name)) {
-                mySettings.copy(gSchemeStorage.get(mySettings.name));
+                mySettings = gSchemeStorage.get(mySettings.name);
             }
         }
         break;
@@ -122,7 +115,6 @@ GUISettingsHandler::myStartElement(int element, const SUMOSAXAttributes& attrs) 
             mySettings.drawBoundaries = StringUtils::toBool(attrs.getStringSecure("drawBoundaries", toString(mySettings.drawBoundaries)));
             mySettings.forceDrawForRectangleSelection = StringUtils::toBool(attrs.getStringSecure("forceDrawRectangleSelection", toString(mySettings.forceDrawForRectangleSelection)));
             mySettings.forceDrawForPositionSelection = StringUtils::toBool(attrs.getStringSecure("forceDrawPositionSelection", toString(mySettings.forceDrawForPositionSelection)));
-            mySettings.geometryIndices = parseTextSettings("geometryIndices", attrs, mySettings.geometryIndices);
             break;
         case SUMO_TAG_VIEWSETTINGS_BACKGROUND:
             mySettings.backgroundColor = RGBColor::parseColorReporting(attrs.getStringSecure("backgroundColor", toString(mySettings.backgroundColor)), "background", nullptr, true, ok);
@@ -225,18 +217,14 @@ GUISettingsHandler::myStartElement(int element, const SUMOSAXAttributes& attrs) 
                 if (myCurrentScheme->isFixed()) {
                     myCurrentScheme->setColor(attrs.getStringSecure(SUMO_ATTR_NAME, ""), color);
                 } else {
-                    myCurrentScheme->addColor(color,
-                                              attrs.getOpt<double>(SUMO_ATTR_THRESHOLD, nullptr, ok, std::numeric_limits<double>::max()),
-                                              attrs.getStringSecure(SUMO_ATTR_NAME, ""));
+                    myCurrentScheme->addColor(color, attrs.getOpt<double>(SUMO_ATTR_THRESHOLD, nullptr, ok, std::numeric_limits<double>::max()));
                 }
             } else if (myCurrentScaleScheme != nullptr) {
                 double scale = attrs.get<double>(SUMO_ATTR_COLOR, nullptr, ok);
                 if (myCurrentScaleScheme->isFixed()) {
                     myCurrentScaleScheme->setColor(attrs.getStringSecure(SUMO_ATTR_NAME, ""), scale);
                 } else {
-                    myCurrentScaleScheme->addColor(scale,
-                                                   attrs.getOpt<double>(SUMO_ATTR_THRESHOLD, nullptr, ok, std::numeric_limits<double>::max()),
-                                                   attrs.getStringSecure(SUMO_ATTR_NAME, ""));
+                    myCurrentScaleScheme->addColor(scale, attrs.getOpt<double>(SUMO_ATTR_THRESHOLD, nullptr, ok, std::numeric_limits<double>::max()));
                 }
             }
             break;
@@ -322,7 +310,6 @@ GUISettingsHandler::myStartElement(int element, const SUMOSAXAttributes& attrs) 
             mySettings.colorSettings.selectedVehicleColor = parseColor(attrs, "selectedVehicleColor", mySettings.colorSettings.selectedVehicleColor);
             mySettings.colorSettings.selectionColor = parseColor(attrs, "selectionColor", mySettings.colorSettings.selectionColor);
             mySettings.colorSettings.stopColor = parseColor(attrs, "stopColor", mySettings.colorSettings.stopColor);
-            mySettings.colorSettings.waypointColor = parseColor(attrs, "waypointColor", mySettings.colorSettings.waypointColor);
             mySettings.colorSettings.stopContainerColor = parseColor(attrs, "stopContainerColor", mySettings.colorSettings.stopContainerColor);
             mySettings.colorSettings.stopPersonColor = parseColor(attrs, "stopPersonColor", mySettings.colorSettings.stopPersonColor);
             mySettings.colorSettings.trainStopColor = parseColor(attrs, "trainStopColor", mySettings.colorSettings.trainStopColor);
@@ -364,7 +351,7 @@ GUISettingsHandler::myStartElement(int element, const SUMOSAXAttributes& attrs) 
         case SUMO_TAG_VIEWSETTINGS_DECAL: {
             GUISUMOAbstractView::Decal d;
             if (attrs.hasAttribute(SUMO_ATTR_FILE)) {
-                d.filename = StringUtils::substituteEnvironment(attrs.get<std::string>(SUMO_ATTR_FILE, nullptr, ok));
+                d.filename = attrs.get<std::string>(SUMO_ATTR_FILE, nullptr, ok);
             } else {
                 d.filename = attrs.getStringSecure("filename", d.filename);
                 WRITE_WARNING("The 'filename' attribute is deprecated for decals. Please use 'file'.");
@@ -481,10 +468,9 @@ GUISettingsHandler::addSettings(GUISUMOAbstractView* view) const {
 
 void
 GUISettingsHandler::applyViewport(GUISUMOAbstractView* view) const {
-    if (myLookFrom.z() > 0 || myZoom > 0) {
+    if (myLookFrom.z() > 0) {
         // z value stores zoom so we must convert first
-        double z = (view->is3DView()) ? myLookFrom.z() : view->getChanger().zoom2ZPos(myZoom);
-        Position lookFrom(myLookFrom.x(), myLookFrom.y(), z);
+        Position lookFrom(myLookFrom.x(), myLookFrom.y(), view->getChanger().zoom2ZPos(myLookFrom.z()));
         view->setViewportFromToRot(lookFrom, myLookAt, myRotation);
     }
 }

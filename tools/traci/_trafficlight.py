@@ -96,7 +96,7 @@ def _readLogics(result):
 
 
 class Constraint:
-    def __init__(self, signalId, tripId, foeId, foeSignal, limit, type, mustWait, active=True):
+    def __init__(self, signalId, tripId, foeId, foeSignal, limit, type, mustWait):
         self.signalId = signalId
         self.tripId = tripId
         self.foeId = foeId
@@ -104,12 +104,10 @@ class Constraint:
         self.limit = limit
         self.type = type
         self.mustWait = mustWait
-        self.active = active
 
     def __repr__(self):
-        return ("Constraint(signalId=%s tripId=%s, foeId=%s, foeSignal=%s, limit=%s, type=%s, mustWait=%s, active=%s)" %
-                (self.signalId, self.tripId, self.foeId, self.foeSignal,
-                 self.limit, self.type, self.mustWait, self.active))
+        return ("Constraint(signalId=%s tripId=%s, foeId=%s, foeSignal=%s, limit=%s, type=%s, mustWait=%s)" %
+                (self.signalId, self.tripId, self.foeId, self.foeSignal, self.limit, self.type, self.mustWait))
 
 
 def _readLinks(result):
@@ -142,8 +140,7 @@ def _readConstraints(result):
         limit = result.readTypedInt()
         type = result.readTypedInt()
         mustWait = bool(result.readTypedByte())
-        active = bool(result.readTypedByte())
-        constraints.append(Constraint(signalId, tripId, foeId, foeSignal, limit, type, mustWait, active))
+        constraints.append(Constraint(signalId, tripId, foeId, foeSignal, limit, type, mustWait))
     return constraints
 
 
@@ -216,7 +213,7 @@ class TrafficLightDomain(Domain):
         return self._getUniversal(tc.TL_CURRENT_PHASE, tlsID)
 
     def getPhaseName(self, tlsID):
-        """getPhaseName(string) -> string
+        """getPhase(string) -> string
         Returns the name of the current phase.
         """
         return self._getUniversal(tc.VAR_NAME, tlsID)
@@ -238,7 +235,7 @@ class TrafficLightDomain(Domain):
         return self._getUniversal(tc.TL_PHASE_DURATION, tlsID)
 
     def getServedPersonCount(self, tlsID, index):
-        """getServedPersonCount(string, int) -> int
+        """getPhase(string, int) -> int
         Returns the number of persons that would be served in the given phase
         """
         return self._getUniversal(tc.VAR_PERSON_NUMBER, tlsID, "i", index)
@@ -315,7 +312,7 @@ class TrafficLightDomain(Domain):
         self._setCmd(tc.TL_PHASE_INDEX, tlsID, "i", index)
 
     def setPhaseName(self, tlsID, name):
-        """setPhaseName(string, string) -> None
+        """setPhase(string, string) -> None
 
         Sets the name of the current phase within the current program
         """

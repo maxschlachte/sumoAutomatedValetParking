@@ -14,7 +14,6 @@
 /// @file    NEMAController.cpp
 /// @author  Tianxin Li
 /// @author  Qichao Wang
-/// @author  Max Schrader
 /// @date    August 2020
 ///
 // An actuated NEMA-phase-compliant traffic light logic
@@ -25,31 +24,29 @@
 #include <utility>
 #include <vector>
 #include <bitset>
-#include <sstream>
-#include <iostream>
-#include <utils/common/FileHelpers.h>
-#include <utils/common/StringUtils.h>
-#include <utils/common/StringTokenizer.h>
 #include <microsim/MSEventControl.h>
+#include <microsim/output/MSDetectorControl.h>
+#include <microsim/output/MSInductLoop.h>
 #include <microsim/MSGlobals.h>
 #include <microsim/MSNet.h>
+#include "MSTrafficLightLogic.h"
+#include "NEMAController.h"
 #include <microsim/MSLane.h>
 #include <microsim/MSEdge.h>
-#include <microsim/output/MSDetectorControl.h>
-#include <microsim/output/MSE2Collector.h>
-#include <microsim/output/MSInductLoop.h>
 #include <netload/NLDetectorBuilder.h>
-#include "NEMAController.h"
-
-
+#include <utils/common/StringUtils.h>
+#include <utils/common/StringTokenizer.h>
+#include "microsim/output/MSE2Collector.h"
+#include <sstream>
+#include <iostream>
 // ===========================================================================
 // parameter defaults definitions
 // ===========================================================================
+
+
 #define INVALID_POSITION std::numeric_limits<double>::max() // tl added
 
 // #define DEBUG_NEMA
-// #define FUZZ_TESTING
-// #define DEBUG_NEMA_SWITCH
 
 // ===========================================================================
 // method definitions
@@ -58,43 +55,176 @@ NEMALogic::NEMALogic(MSTLLogicControl& tlcontrol,
                      const std::string& id, const std::string& programID,
                      const SUMOTime _offset,
                      const Phases& phases,
-                     int step, SUMOTime delay,
+                     int /*step*/, SUMOTime /*delay*/,
                      const std::map<std::string, std::string>& parameter,
                      const std::string& basePath) :
-    MSSimpleTrafficLightLogic(tlcontrol, id, programID, _offset, TrafficLightType::NEMA, phases, step, delay, parameter),
+    MSSimpleTrafficLightLogic(tlcontrol, id, programID, _offset, TrafficLightType::NEMA, phases, 0, phases.front()->minDuration + SIMSTEP, parameter),
     myPhase(phases[0]->duration, phases[0]->getState()) {
     myDetectorLength = StringUtils::toDouble(getParameter("detector-length", "20"));
     myDetectorLengthLeftTurnLane = StringUtils::toDouble(getParameter("detector-length-leftTurnLane", "20"));
-    myCycleLength = TIME2STEPS(StringUtils::toDouble(getParameter("total-cycle-length", getParameter("cycle-length", getParameter(toString(SUMO_ATTR_CYCLETIME), "60")))));
+    myCycleLength = (StringUtils::toDouble(getParameter("total-cycle-length", getParameter("cycle-length", getParameter(toString(SUMO_ATTR_CYCLETIME), "60")))));
     myNextCycleLength = myCycleLength;
-    myDefaultCycleTime = myCycleLength;
+    myDefaultCycleTime = TIME2STEPS(myCycleLength);
     myShowDetectors = StringUtils::toBool(getParameter("show-detectors", toString(OptionsCont::getOptions().getBool("tls.actuated.show-detectors"))));
     myFile = FileHelpers::checkForRelativity(getParameter("file", "NUL"), basePath);
     myFreq = TIME2STEPS(StringUtils::toDouble(getParameter("freq", "300")));
     myVehicleTypes = getParameter("vTypes", "");
-    myControllerType = parseControllerType(getParameter("controllerType", "TS2"));
-    ignoreErrors = StringUtils::toBool(getParameter("ignore-errors", "false"));
-    // This should be extended in the future.
-    myNumberRings = 2;
+    ring1 = getParameter("ring1", "");
+    ring2 = getParameter("ring2", "");
+
+    std::vector<int> VecMinRecall = readParaFromString(getParameter("minRecall", "1,2,3,4,5,6,7,8"));
+    for (int i = 0; i < (int)VecMinRecall.size(); i++) {
+        minRecalls[VecMinRecall[i] - 1] = true;
+        recall[VecMinRecall[i] - 1] = true;
+    }
+
+    std::vector<int> VecMaxRecall = readParaFromString(getParameter("maxRecall", ""));
+    for (int i = 0; i < (int)VecMaxRecall.size(); i++) {
+        maxRecalls[VecMaxRecall[i] - 1] = true;
+        recall[VecMaxRecall[i] - 1] = true;
+    }
+
+#ifdef DEBUG_NEMA
+    std::cout << "minRecall: ";
+    for (int i = 0; i < 8; i++) {
+        std::cout << minRecalls[i] << '\t';
+    }
+    std::cout << std::endl;
+
+    std::cout << "maxRecall: ";
+    for (int i = 0; i < 8; i++) {
+        std::cout << maxRecalls[i] << '\t';
+    }
+    std::cout << std::endl;
+#endif
+    barriers = getParameter("barrierPhases", "");
+    coordinates = getParameter("coordinatePhases", getParameter("barrier2Phases", ""));
+    fixForceOff = StringUtils::toBool(getParameter("fixForceOff", "false"));
+    offset = STEPS2TIME(_offset);
+    myNextOffset = offset;
+    whetherOutputState = StringUtils::toBool(getParameter("whetherOutputState", "false"));
+    coordinateMode = StringUtils::toBool(getParameter("coordinate-mode", "false"));
+    greenTransfer = StringUtils::toBool(getParameter("greenTransfer", "true"));
+
+    //missing parameter error
+    error_handle_not_set(ring1, "ring1");
+    error_handle_not_set(ring2, "ring2");
+    error_handle_not_set(barriers, "barrierPhases");
+    error_handle_not_set(coordinates, "barrier2Phases or coordinatePhases");
+
+    //print to check
+#ifdef DEBUG_NEMA
+    std::cout << "JunctionID = " << myID << std::endl;
+    std::cout << "All parameters after calling constructor are: " << std::endl;
+    std::cout << "myDetectorLength = " << myDetectorLength << std::endl;
+    std::cout << "cycleLength = " << myCycleLength << std::endl;
+    std::cout << "ring1 = " << ring1 << std::endl;
+    std::cout << "ring2 = " << ring2 << std::endl;
+    std::cout << "barriers = " << barriers << std::endl;
+    std::cout << "coordinates = " << coordinates << std::endl;
+    std::cout << "offset = " << offset << std::endl;
+    std::cout << "whetherOutputState = " << whetherOutputState << std::endl;
+    std::cout << "myShowDetectors = " << myShowDetectors << std::endl;
+    std::cout << "coordinateMode = " << coordinateMode << std::endl;
+    std::cout << "fixForceOff = " << fixForceOff << std::endl;
+    std::cout << "greenTransfer = " << greenTransfer << std::endl;
+    std::cout << "You reach the end of constructor" << std::endl;
+    std::cout << "****************************************\n";
+#endif
+
+    // construct the phaseDetectorMapping. In the future this could hold more parameters, such as lock in time or delay
+    for (auto p : readParaFromString(ring1)) {
+        // #TODO clean up this string mess
+        std::string cps = "crossPhaseSwitching:";
+        int crossPhase = StringUtils::toInt(getParameter(cps.append(std::to_string(p)), "0"));
+        phase2DetectorMap[p] = phaseDetectorInfo(crossPhase);
+    }
+    for (auto p : readParaFromString(ring2)) {
+        std::string cps = "crossPhaseSwitching:";
+        int crossPhase = StringUtils::toInt(getParameter(cps.append(std::to_string(p)), "0"));
+        phase2DetectorMap[p] = phaseDetectorInfo(crossPhase);
+    }
+    // Construct the Cross Mapping
+    for (auto const& phaseDetectInfo : phase2DetectorMap) {
+        if (phaseDetectInfo.second.cpdSource > 0) {
+            phase2DetectorMap.find(phaseDetectInfo.second.cpdSource) -> second.cpdTarget = phaseDetectInfo.first;
+        }
+    }
+
 }
 
-NEMALogic::~NEMALogic() {
-    // delete the phase objects
-    for (auto p : myPhaseObjs) {
-        delete p;
-    }
-}
+NEMALogic::~NEMALogic() { }
 
 void
-NEMALogic::constructTimingAndPhaseDefs(std::string& barriers, std::string& coordinates, std::string& ring1, std::string& ring2) {
+NEMALogic::init(NLDetectorBuilder& nb) {
+    //init the base path for output state
+    outputStateFilePath = outputStateFilePath + "/" + myID + "_state_output";
+    // std::cout << "outputStaetFilePath = " << outputStateFilePath << std::endl;
+    //init cycleRefPoint
+    cycleRefPoint = 0;
 
-    // read in the barrier and coordinated phases from the XML
-    std::vector<int> barrierPhases = readParaFromString(barriers);
-    std::vector<int> coordinatePhases = readParaFromString(coordinates);
+    //init outputStateFile
+    if (whetherOutputState) {
+        outputStateFile.open(outputStateFilePath);
+        outputStateFile << "Output state changes:\n";
+        outputStateFile.close();
+    }
+    //init phaseStartTime and phaseExpectedDuration
+    int phaseNumber = 8;
+    for (int i = 0; i < phaseNumber; i++) {
+        phaseStartTime[i] = 0;
+        phaseExpectedDuration[i] = 0;
+    }
 
-    // create a {{}, {}} vector of phases
+    //print to check
+    //init minGreen, maxGreen, vehExt, red, and yellow
+    for (MSPhaseDefinition* phase : myPhases) {
+        int NEMAPhase = string2int(phase->getName());
+        int i = NEMAPhase - 1;
+        // std::string indexFromName = phase->getName();
+        // std::stringstream ss(indexFromName);
+        // int NEMAPhase = 0;
+        // ss << NEMAPhase;
+#ifdef DEBUG_NEMA
+        std::cout << "NEMAIndex = " << NEMAPhase << ": ";
+#endif
+        minGreen[i] = STEPS2TIME(phase->minDuration);
+        maxGreen[i] = STEPS2TIME(phase->maxDuration);
+        nextMaxGreen[i] = maxGreen[i];
+        vehExt[i] = STEPS2TIME(phase->vehext);
+        yellowTime[i] = STEPS2TIME(phase->yellow);
+        redTime[i] = STEPS2TIME(phase->red);
+        //map state G index to laneIDs
+        std::string state = phase->getState();
+        std::set<std::string> laneIDs = getLaneIDsFromNEMAState(state);
+        std::vector<std::string> laneIDs_vector;
+        for (std::string laneID : laneIDs) {
+            laneIDs_vector.push_back(laneID);
+        }
+        phase2ControllerLanesMap[NEMAPhase] = laneIDs_vector;
+#ifdef DEBUG_NEMA
+        std::cout << "minGreen = " << minGreen[i] << "; maxGreen = " << maxGreen[i] << "; vehext = " << vehExt[i] << "; yellow = " << yellowTime[i] << "; redTime = " << redTime[i] << std::endl;
+#endif
+    }
+
+
+#ifdef DEBUG_NEMA
+    //print to check the phase2ControllerLanesMap
+    for (auto item : phase2ControllerLanesMap) {
+        std::cout << "NEMA phase index = " << item.first << " have lanes: ";
+        for (auto id : item.second) {
+            std::cout << id << " ";
+        }
+        std::cout << std::endl;
+    }
+#endif
+
+
+    //init rings
     rings.push_back(readParaFromString(ring1));
     rings.push_back(readParaFromString(ring2));
+
+
 
 #ifdef DEBUG_NEMA
     //print to check
@@ -112,273 +242,137 @@ NEMALogic::constructTimingAndPhaseDefs(std::string& barriers, std::string& coord
     }
 #endif
 
-    // load the recalls, if they exist
-    std::vector<int> VecMinRecall = readParaFromString(getParameter("minRecall", "1,2,3,4,5,6,7,8"));
-    std::vector<int> VecMaxRecall = readParaFromString(getParameter("maxRecall", ""));
+    //init barriers
+    barrierPhaseIndecies = readParaFromString(barriers);
+    coordinatePhaseIndecies = readParaFromString(coordinates);
+
+    //init the active index for rings and barriers
+    activeRing1Index = 0;
+    activeRing2Index = 0;
+    activeRing1Phase = 0;
+    activeRing2Phase = 0;
+
+    for (int i = 0; (int)rings[0].size(); i++) {
+        if (rings[0][i] != 0) {
+#ifdef DEBUG_NEMA
+            std::cout << "rings[0][" << i << "] = " << rings[0][i] << std::endl;
+#endif
+            activeRing1Index = i;
+            activeRing1Phase = rings[0][activeRing1Index];
+            break;
+        }
+    }
+    for (int i = 0; (int)rings[1].size(); i++) {
+        if (rings[1][i] != 0) {
+#ifdef DEBUG_NEMA
+            std::cout << "rings[1][" << i << "] = " << rings[1][i] << std::endl;
+#endif
+            activeRing2Index = i;
+            activeRing2Phase = rings[1][activeRing2Index];
+            break;
+        }
+    }
+    int initialIndexRing [2] = { activeRing1Index, activeRing2Index};
+    // calculate force offs
+    for (int ringNumber = 0; ringNumber < 2; ringNumber++) {
+        int length = (int)rings[ringNumber].size();
+        int aPhaseNumber = rings[ringNumber][initialIndexRing[ringNumber]];
+        int aPhaseIndex = aPhaseNumber - 1;
+        int nPhaseIndex = aPhaseIndex; //next phase
+        int nPhaseNumber = aPhaseNumber;
+        forceOffs[aPhaseNumber - 1] = maxGreen[aPhaseNumber - 1];
 
 #ifdef DEBUG_NEMA
-    std::cout << "minRecall: ";
-    for (int i = 0; i < 8; i++) {
-        std::cout << vectorContainsPhase(VecMinRecall, i + 1) << '\t';
-    }
-    std::cout << std::endl;
-
-    std::cout << "maxRecall: ";
-    for (int i = 0; i < 8; i++) {
-        std::cout << vectorContainsPhase(VecMaxRecall, i + 1) << '\t';
-    }
-    std::cout << std::endl;
+        std::cout << "Phase  " << aPhaseNumber << ": force off " << forceOffs[aPhaseNumber - 1] << std::endl;
 #endif
+        for (int i = initialIndexRing[ringNumber] + 1; i < length; i++) {
+            nPhaseNumber = rings[ringNumber][i];
+            nPhaseIndex = nPhaseNumber - 1;
+            // std::cout <<" ring "<<ringNumber <<" i: "<<i<< " phase: "<<nPhaseNumber<< std::endl;
+            if (nPhaseNumber != 0) {
+                forceOffs[nPhaseIndex] = forceOffs[aPhaseIndex] + maxGreen[nPhaseIndex] + yellowTime[aPhaseIndex] + redTime[aPhaseIndex];
+                aPhaseNumber = nPhaseNumber;
+                aPhaseIndex = nPhaseIndex;
 
-    // loop through the rings and construct NEMAPhases.
-    // This relies on the phase being in order in the rings parameter in the configuration file
-    int ringNum = 0;
-    int lastPhaseIter = 0;
-    int phaseIter = 0;
-    for (const auto& r : rings) {
-        int ringIter = 0;
-        lastPhaseIter = phaseIter;
-        phaseIter = 0;
-        for (const auto& p : r) {
-            if (p != 0) {
-                // find the phase definition matching the phase integer
-                MSPhaseDefinition* tempPhase = nullptr;
-                for (const auto& pDef : myPhases) {
-                    if (string2int(pDef->getName()) == p) {
-                        tempPhase = pDef;
-                        break;
-                    }
-                }
-                // there must be a matching MSPhaseDefinition
-                if (tempPhase == nullptr) {
-                    throw ProcessError("At traffic signal '" + myID + "' program '" + myProgramID + "' no phase named '" + toString(p) + "' was found");
-                }
-
-                // create lane specific objects
-                std::string state = tempPhase->getState();
-
-                // check that all phases have the same length. myPhaseStrLen is initially set to -1.
-                if (myPhaseStrLen < 0) {
-                    myPhaseStrLen = (int)state.size();
-                } else if (myPhaseStrLen != (int)state.size()) {
-                    throw ProcessError("At NEMA tlLogic '" + getID() + "', different sizes of NEMA phase states. Please check the NEMA XML");
-                }
-
-                // get the lane-based info
-                StringVector laneIDs;
-                IntVector controlledStateIndexes;
-                getLaneInfoFromNEMAState(state, laneIDs, controlledStateIndexes);
-
-                std::vector<std::string> laneIDs_vector;
-                for (std::string laneID : laneIDs) {
-                    laneIDs_vector.push_back(laneID);
-                    myLanePhaseMap[laneID] = p;
-                }
-                phase2ControllerLanesMap[p] = laneIDs_vector;
-
-                // Create the Phase Object
-                // find if it is at a barrier
-                bool barrierPhase = vectorContainsPhase(barrierPhases, p) || vectorContainsPhase(coordinatePhases, p);
-                // is it a coordinate phase
-                bool coordinatePhase = vectorContainsPhase(coordinatePhases, p) && coordinateMode;
-                // is there a minimum or max recall
-                bool minRecall = vectorContainsPhase(VecMinRecall, p);
-                bool maxRecall = vectorContainsPhase(VecMaxRecall, p);
-                // A phase can "green rest" only if it has a recall and no other phases on that ring do OR if NO phases have a recall (unique case)
-                bool phaseGreenRest = ((VecMaxRecall.size() + VecMinRecall.size()) < 1);
-                if (!phaseGreenRest) {
-                    bool recallActive = minRecall || maxRecall;
-                    if (recallActive) {
-                        for (const auto& pO : r) {
-                            if (pO != p) {
-                                if (vectorContainsPhase(VecMinRecall, pO)
-                                        || vectorContainsPhase(VecMaxRecall, pO)) {
-                                    recallActive = false;
-                                    break;
-                                }
-                            }
-                        }
-                        // only set the green rest to true if I am the only phase on my ring with a recall
-                        phaseGreenRest = recallActive;
-                    }
-                }
-                // could add per-phase fixforceoff here
-                // barrierNum is either 0 or 1, depending on mainline side or sidestreet
-                int barrierNum = ringIter / 2;
-
-                // now ready to create the phase
-                myPhaseObjs.push_back(
-                    new NEMAPhase(p, barrierPhase, phaseGreenRest, coordinatePhase, minRecall, maxRecall, fixForceOff, barrierNum, ringNum, controlledStateIndexes, tempPhase)
-                );
-
-                // Add a reference to the sequetionaly prior phase
-                if (phaseIter > 0) {
-                    myPhaseObjs.back()->setSequentialPriorPhase(myPhaseObjs[lastPhaseIter + (phaseIter - 1)]);
-                }
-                phaseIter++;
-            }
-            ringIter++;
-        }
-        // Set the first to point to the last, wrapping around the ring.
-        myPhaseObjs[lastPhaseIter]->setSequentialPriorPhase(myPhaseObjs[lastPhaseIter + phaseIter - 1]);
-        // index the ring counter
-        ringNum++;
-    }
-
-    //TODO: set the default phases. This could also be set using dual entry in future
-    for (int i = 0; i < 2; i++) {
-        // create the coordinate phase ptr
-        coordinatePhaseObjs[i] = getPhaseObj(coordinatePhases[i], i);
-        defaultBarrierPhases[i][coordinatePhaseObjs[i]->barrierNum] = coordinatePhaseObjs[i];
-        // create the other barrier phase ptr
-        PhasePtr b = getPhaseObj(barrierPhases[i], i);
-        defaultBarrierPhases[i][b->barrierNum] = b;
-        // the barrier 1 and barrier 0 default phase must not have the same barrier number
-        if (b->barrierNum == coordinatePhaseObjs[i]->barrierNum) {
-            throw ProcessError("At traffic signal " + myID + " the barrier and coordinated phases " +
-                               std::to_string(b->phaseName) + ", " + std::to_string(coordinatePhaseObjs[i]->barrierNum) +
-                               " are located on the same side of a barrier." +
-                               " Please check your configuration file");
-        }
-    }
-
-    // Create the PhaseDetectorInfo for each of the phases (needs knowledge of other phases to create)
-    IntVector latchingDetectors = readParaFromString(getParameter("latchingDetectors", ""));
-    std::vector<std::pair<int, int>> cp;
-    for (auto& p : myPhaseObjs) {
-        std::string cps = "crossPhaseSwitching:";
-        int crossPhase = StringUtils::toInt(getParameter(cps.append(std::to_string(p->phaseName)), "0"));
-        if (crossPhase > 0) {
-            cp.push_back({ p->phaseName, crossPhase });
-        }
-    }
-
-    // Knowing the cross phase info, we can add that to the phase
-    for (auto& p : myPhaseObjs) {
-        bool latching = vectorContainsPhase(latchingDetectors, p->phaseName);
-        int cpTarget = 0;
-        int cpSource = 0;
-        for (auto& cp_pair : cp) {
-            if (cp_pair.first == p->phaseName || cp_pair.second == p->phaseName) {
-                cpTarget = cp_pair.first;
-                cpSource = cp_pair.second;
+#ifdef DEBUG_NEMA
+                std::cout << "- Phase " << aPhaseNumber << ": force off " << forceOffs[aPhaseIndex] << std::endl;
+#endif
             }
         }
-        p->init(this, cpTarget, cpSource, latching);
     }
 
-    // Calculate Force offs Based on Timing
-    calculateForceOffs();
-
-    if (coordinateMode) {
-        // Calculate the Initial Phases in coordinated operation only.
-        // Otherwise they have already been calculated above
-        calculateInitialPhases();
-    } else {
-        // Fall back being the barrier 0 default phases
-        // NEMAPhase* defaultP[2] = {defaultBarrierPhases[0][0], defaultBarrierPhases[1][0]};
-        NEMAPhase* defaultP[2] = { getPhasesByRing(0).front(), getPhasesByRing(1).front() };
-        defaultP[0]->forceEnter(this);
-        defaultP[1]->forceEnter(this);
+    // calculate initial phases based on in cycle clock
+    for (int ringNumber = 0; ringNumber < 2; ringNumber++) {
+        int length = (int)rings[ringNumber].size();
+        for (int i = initialIndexRing[ringNumber]; i < length; i++) {
+            int aPhaseIndex = rings[ringNumber][i] - 1;
+            if (aPhaseIndex != -1) {
+                phaseCutOffs[aPhaseIndex] = forceOffs[aPhaseIndex] - minGreen[aPhaseIndex];
+#ifdef DEBUG_NEMA
+                std::cout << "Phase " << aPhaseIndex + 1 << " cut off is " << phaseCutOffs[aPhaseIndex] << std::endl;
+#endif
+            }
+        }
     }
+
+    // find the current in cycle time
+    SUMOTime now = MSNet::getInstance()->getCurrentTimeStep();
+    double currentTimeInSecond = STEPS2TIME(now);
+    double currentInCycleTime = ModeCycle(currentTimeInSecond - cycleRefPoint - offset, myCycleLength);
+
+    // find the initial phases
+    for (int ringNumber = 0; ringNumber < 2; ringNumber++) {
+        int length = (int)rings[ringNumber].size();
+        int aPhaseIndex = -1;
+        bool found = false;
+        for (int i = initialIndexRing[ringNumber]; i < length; i++) {
+            aPhaseIndex = rings[ringNumber][i] - 1;
+            if (aPhaseIndex != -1) {
+                if (currentInCycleTime < phaseCutOffs[aPhaseIndex]) {
+#ifdef DEBUG_NEMA
+                    std::cout << "current in cycle time=" << currentInCycleTime << " phase: " << aPhaseIndex << std::endl;
+#endif
+                    found = true;
+                    break;
+                }
+            }
+        }
+        if (!found) {
+            aPhaseIndex = rings[ringNumber][initialIndexRing[ringNumber]] - 1; // if the break didn't get triggered, go back to the beginning.
+        }
+#ifdef DEBUG_NEMA
+        std::cout << "current in cycle time=" << currentInCycleTime << " ring " << ringNumber << " aphase: " << aPhaseIndex + 1 << std::endl;
+#endif
+        if (ringNumber == 0) {
+            activeRing1Index = aPhaseIndex;
+            activeRing1Phase = activeRing1Index + 1;
+        } else {
+            activeRing2Index = aPhaseIndex;
+            activeRing2Phase = activeRing2Index + 1;
+        }
+    }
+
 
 
 #ifdef DEBUG_NEMA
     //print to check the rings and barriers active phase
-    std::cout << "After init, active ring1 phase is " << myActivePhaseObjs[0]->phaseName << std::endl;
-    std::cout << "After init, active ring2 phase is " << myActivePhaseObjs[1]->phaseName << std::endl;
+    std::cout << "After init, active ring1 phase is " << activeRing1Phase << std::endl;
+    std::cout << "After init, active ring2 phase is " << activeRing2Phase << std::endl;
 
 
     //print to check the phase definition is correct
     std::cout << "Print to check NEMA phase definitions\n";
-    for (auto& p : myPhaseObjs) {
-        std::cout << "index = " << p->phaseName << "; ";
-        std::cout << "minDur = " << std::to_string(p->minDuration) << "; ";
-        std::cout << "maxDur = " << std::to_string(p->maxDuration) << "; ";
-        std::cout << "vehext = " << std::to_string(p->vehExt) << "; ";
-        std::cout << "yellow = " << std::to_string(p->yellow) << "; ";
-        std::cout << "red = " << std::to_string(p->red) << "; ";
-        std::cout << "state = " << std::to_string((int)p->getCurrentState()) << std::endl;
+    for (auto p : myPhases) {
+        std::cout << "index = " << p->getName() << "; ";
+        std::cout << "duration (useless) = " << time2string(p->duration) << "; ";
+        std::cout << "minDur = " << time2string(p->minDuration) << "; ";
+        std::cout << "maxDur = " << time2string(p->maxDuration) << "; ";
+        std::cout << "vehext = " << time2string(p->vehext) << "; ";
+        std::cout << "yellow = " << time2string(p->yellow) << "; ";
+        std::cout << "red = " << time2string(p->red) << "; ";
+        std::cout << "state = " << p->getState() << std::endl;
     }
 #endif
-
-
-#ifdef DEBUG_NEMA
-    std::cout << "After init, r1/r2 barrier phase = " << defaultBarrierPhases[0][1]->phaseName << " and " << defaultBarrierPhases[1][1]->phaseName << std::endl;
-    std::cout << "After init, r1/r2 coordinate phase = " << defaultBarrierPhases[0][0]->phaseName << " and " << defaultBarrierPhases[1][0]->phaseName << std::endl;
-#endif
-
-
-#ifdef DEBUG_NEMA
-    std::cout << "R1State = " << myActivePhaseObjs[0]->phaseName << " and its state = " << std::to_string((int)myActivePhaseObjs[0]->getCurrentState()) << std::endl;
-    std::cout << "R2State = " << myActivePhaseObjs[1]->phaseName << " and its state = " << std::to_string((int)myActivePhaseObjs[0]->getCurrentState()) << std::endl;
-#endif
-
-    // Set the initial light state
-    myPhase.setState(composeLightString());
-    myPhase.setName(toString(myActivePhaseObjs[0]->phaseName) + "+" + toString(myActivePhaseObjs[1]->phaseName));
-    setTrafficLightSignals(SIMSTEP);
-    myStep = 0;
-
-    //validating timing
-    validate_timing();
-}
-
-bool
-NEMALogic::vectorContainsPhase(std::vector<int> v, int phaseNum) {
-    if (std::find(v.begin(), v.end(), phaseNum) != v.end()) {
-        return true;
-    }
-    return false;
-}
-
-void
-NEMALogic::init(NLDetectorBuilder& nb) {
-
-    // TODO: Create a parameter for this
-    cycleRefPoint = TIME2STEPS(0);
-
-    std::string barriers = getParameter("barrierPhases", "");
-    std::string coordinates = getParameter("coordinatePhases", getParameter("barrier2Phases", ""));
-    std::string ring1 = getParameter("ring1", "");
-    std::string ring2 = getParameter("ring2", "");
-
-    fixForceOff = StringUtils::toBool(getParameter("fixForceOff", "false"));
-    offset = myOffset;
-    myNextOffset = myOffset;
-    whetherOutputState = StringUtils::toBool(getParameter("whetherOutputState", "false"));
-    coordinateMode = StringUtils::toBool(getParameter("coordinate-mode", "false"));
-
-    // set the queued traci changes to false
-    queuedTraciChanges = false;
-
-    //missing parameter error
-    error_handle_not_set(ring1, "ring1");
-    error_handle_not_set(ring2, "ring2");
-    error_handle_not_set(barriers, "barrierPhases");
-    error_handle_not_set(coordinates, "barrier2Phases or coordinatePhases");
-
-    //print to check
-#ifdef DEBUG_NEMA
-    std::cout << "JunctionID = " << myID << std::endl;
-    std::cout << "All parameters after calling constructor are: " << std::endl;
-    std::cout << "myDetectorLength = " << myDetectorLength << std::endl;
-    std::cout << "cycleLength = " << STEPS2TIME(myCycleLength) << std::endl;
-    std::cout << "ring1 = " << ring1 << std::endl;
-    std::cout << "ring2 = " << ring2 << std::endl;
-    std::cout << "barriers = " << barriers << std::endl;
-    std::cout << "coordinates = " << coordinates << std::endl;
-    std::cout << "offset = " << offset << std::endl;
-    std::cout << "cycleSecond = " << getTimeInCycle() << std::endl;
-    std::cout << "whetherOutputState = " << whetherOutputState << std::endl;
-    std::cout << "myShowDetectors = " << myShowDetectors << std::endl;
-    std::cout << "coordinateMode = " << coordinateMode << std::endl;
-    std::cout << "fixForceOff = " << fixForceOff << std::endl;
-    std::cout << "You reach the end of constructor" << std::endl;
-    std::cout << "****************************************\n";
-#endif
-    // Construct the NEMA specific timing data types and initial phases
-    constructTimingAndPhaseDefs(barriers, coordinates, ring1, ring2);
 
     //init the traffic light
     MSTrafficLightLogic::init(nb);
@@ -404,23 +398,18 @@ NEMALogic::init(NLDetectorBuilder& nb) {
                 if (customID != "") {
                     det = dynamic_cast<MSE2Collector*>(MSNet::getInstance()->getDetectorControl().getTypedDetectors(SUMO_TAG_LANE_AREA_DETECTOR).get(customID));
                     if (det == nullptr) {
-                        throw ProcessError("Unknown laneAreaDetector '" + customID + "' given as custom detector for NEMA tlLogic '" + getID() + "', program '" + getProgramID() + ".");
+                        WRITE_ERROR("Unknown laneAreaDetector '" + customID + "' given as custom detector for NEMA tlLogic '" + getID() + "', program '" + getProgramID() + ".");
+                        continue;
                     }
                     //set the detector to be visible in gui
                     det->setVisible(myShowDetectors);
                 } else {
-                    int phaseNumber = 0;
-                    if (myLanePhaseMap.find(lane->getID()) != myLanePhaseMap.end()) {
-                        phaseNumber = myLanePhaseMap.find(lane->getID())->second;
-                    }
-                    int index = lane->getIndex();
-                    std::string id = myID + "_" + myProgramID + "_D" + toString(phaseNumber) + "." + toString(index);
-                    while (MSNet::getInstance()->getDetectorControl().getTypedDetectors(SUMO_TAG_LANE_AREA_DETECTOR).get(id) != nullptr) {
-                        index++;
-                        id = myID + "_" + myProgramID + "_D" + toString(phaseNumber) + "." + toString(index);
-                    }
+                    std::string id = "TLS_" + myID + "_" + myProgramID + "_E2DetectorOnLane_" + lane->getID();
+                    // std::cout << "The detectorID = " << id << std::endl;
                     //createE2Detector() method will lead to bad detector showing in sumo-gui
                     //so it is better to use build2Detector() rather than createE2Detector()
+                    // det = nb.createE2Detector(id, DU_TL_CONTROL, lane, INVALID_POSITION, lane->getLength(), myDetectorLength, 0, 0, 0, myVehicleTypes, myShowDetectors);
+                    // MSNet::getInstance()->getDetectorControl().add(SUMO_TAG_LANE_AREA_DETECTOR, det, myFile, myFreq);
                     nb.buildE2Detector(id, //detectorID
                                        lane, //lane to build this detector
                                        INVALID_POSITION, // set the detector location by end point and length, so this one is set to invalue value so this parameter can be passed
@@ -432,16 +421,16 @@ NEMALogic::init(NLDetectorBuilder& nb) {
                                        0, // speed threshold as halting
                                        0, // minimum dist to the next standing vehicle to make this vehicle count as a participant to the jam
                                        myVehicleTypes, //vehicle types to consider, if it is empty, meaning consider all types of vehicles
-                                       "", // nextEdges (no filtering by vehicle route)
-                                       (int)PersonMode::NONE, // detector vehicles, not persons
-                                       true, // whether to give some slack on positioning
+                                       false, // detector position check. More details could be found on SUMO web
                                        myShowDetectors, // whether to show detectors in sumo-gui
-                                       nullptr, //traffic light that triggers aggregation when swithing
-                                       nullptr); // outgoing lane that associated with the traffic light
+                                       0, //traffic light that triggers aggregation when swithing
+                                       0); // outgoing lane that associated with the traffic light
 
                     //get the detector to be used in the lane detector map loading
                     det = dynamic_cast<MSE2Collector*>(MSNet::getInstance()->getDetectorControl().getTypedDetectors(SUMO_TAG_LANE_AREA_DETECTOR).get(id));
                 }
+                // print to check
+                // std::cout << "E2Detector " << det->getID() << " is built on laneID = " << lane->getID() << std::endl;
 
                 //map the detector to lane and lane to detector
                 myLaneDetectorMap[lane] = det;
@@ -451,6 +440,8 @@ NEMALogic::init(NLDetectorBuilder& nb) {
             }
         }
     }
+    //map NEMA phase to detectors
+    // std::cout << "start of NEMA phase to detector map building " << std::endl;
     for (auto item : phase2ControllerLanesMap) {
         int NEMAPhaseIndex = item.first;
         std::vector<std::string> laneIDs = item.second;
@@ -461,14 +452,67 @@ NEMALogic::init(NLDetectorBuilder& nb) {
             detector = myLaneDetectorMap[lane];
             detectors.push_back(detector);
         }
-        // have to try this on both rings, because of the case where both rings have the same phase
-        // See Basic NEMA test
-        for (int i = 0; i < 2; i++) {
-            if (vectorContainsPhase(rings[i], NEMAPhaseIndex)) {
-                getPhaseObj(NEMAPhaseIndex, i)->setDetectors(detectors);
-            }
+        phase2DetectorMap.find(NEMAPhaseIndex) -> second.detectors = detectors;
+    }
+#ifdef DEBUG_NEMA
+    // print to check phase2DetectorMap
+    std::cout << "Print to check phase2DetectorMap" << std::endl;
+    for (auto item : phase2DetectorMap) {
+        std::cout << "The NEMA phase index = " << item.first << " has detectors: \n";
+        for (auto det : item.second.detectors) {
+            std::cout << '\t' << det->getID() << std::endl;
         }
     }
+#endif
+
+    R1State = activeRing1Phase;
+    R2State = activeRing2Phase;
+
+    // set the next phase to current for initialization
+    myNextPhaseR1 = R1State;
+    myNextPhaseR2 = R2State;
+
+    // std::cout << "After init, R1State = " << R1State << std::endl;
+    // std::cout << "After init, R2State = " << R2State << std::endl;
+
+    R1RYG = GREEN;
+    R2RYG = GREEN;
+
+    wait4R1Green = false;
+    wait4R2Green = false;
+
+    r1barrier = barrierPhaseIndecies[0];
+    r2barrier = barrierPhaseIndecies[1];
+
+    r1coordinatePhase = coordinatePhaseIndecies[0];
+    r2coordinatePhase = coordinatePhaseIndecies[1];
+
+    // Create the barrier to phase mapping;
+    constructBarrierMap(0, myRingBarrierMapping[0]);
+    constructBarrierMap(1, myRingBarrierMapping[1]);
+
+
+#ifdef DEBUG_NEMA
+    std::cout << "After init, r1/r2 barrier phase = " << r1barrier << " and " << r2barrier << std::endl;
+    std::cout << "After init, r1/r2 coordinate phase = " << r1coordinatePhase << " and " << r2coordinatePhase << std::endl;
+#endif
+
+
+    currentState = "";
+    // currentR1State = myPhases[R1State - 1]->getState();
+    // currentR2State = myPhases[R2State - 1]->getState();
+    for (const MSPhaseDefinition* const p : myPhases) {
+        if (R1State == string2int(p->getName())) {
+            currentR1State = p->getState();
+        }
+        if (R2State == string2int(p->getName())) {
+            currentR2State = p->getState();
+        }
+    }
+#ifdef DEBUG_NEMA
+    std::cout << "R1State = " << R1State << " and its state = " << currentR1State << std::endl;
+    std::cout << "R2State = " << R2State << " and its state = " << currentR2State << std::endl;
+#endif
 
     //Do not delete. SUMO traffic logic check.
     //SUMO check begin
@@ -505,12 +549,12 @@ NEMALogic::init(NLDetectorBuilder& nb) {
     for (const MSPhaseDefinition* phase : myPhases) {
         const int phaseIndex = (int)myDetectorForPhase.size();
         std::set<MSE2Collector*> detectors;
-        if (phase->isActuated()) {
+        if (phase->isActuted()) {
             const std::string& state = phase->getState();
             std::set<int> greenLinks;
             std::map<MSE2Collector*, std::set<int>> detectorLinks;
 
-            for (int i = 0; i < numLinks; i++) {
+            for (int i = 0; i < numLinks; i++)  {
                 if (state[i] == LINKSTATE_TL_GREEN_MAJOR
                         || (state[i] == LINKSTATE_TL_GREEN_MINOR
                             && ((neverMajor[i]  // check1a
@@ -583,17 +627,33 @@ NEMALogic::init(NLDetectorBuilder& nb) {
             WRITE_WARNINGF("At NEMA tlLogic '%, linkIndex % has no controlling detector", getID(), toString(i));
         }
     }
+
+    std::string state1 = transitionState(currentR1State, GREEN);
+    std::string state2 = transitionState(currentR2State, GREEN);
+    myPhase.setState(combineStates(state1, state2));
+    myPhase.setName(toString(activeRing1Phase) + "+" + toString(activeRing2Phase));
+
+
+    //validating timing
+    validate_timing();
+#ifdef DEBUG_NEMA
+    //std::cout << "reach the end of init()\n";
+#endif
 }
 
 void
 NEMALogic::validate_timing() {
-    // check that the cycle length for each ring adds up to the specified cycle length
-    for (int ringIndex = 0; ringIndex < 2; ringIndex++) {
-        SUMOTime cycleLengthCalculated = 0;
-        for (auto& p : getPhasesByRing(ringIndex)) {
-            cycleLengthCalculated += (p->maxDuration + p->yellow + p->red);
+    const bool ignoreErrors = StringUtils::toBool(getParameter("ignore-errors", "false"));
+    //check cycle length
+    for (int ringIndex = 0; ringIndex <= 1; ringIndex++) {
+        int lastPhasePositionIndex = (int)rings[ringIndex].size() - 1;
+        int lastPhase = rings[ringIndex][lastPhasePositionIndex];
+        if (lastPhase == 0) { //should be enough
+            lastPhase = rings[ringIndex][lastPhasePositionIndex - 1];
         }
-        if (coordinateMode && (cycleLengthCalculated != myCycleLength)) {
+        int lastPhaseIndex = lastPhase - 1;
+        double cycleLengthCalculated = forceOffs[lastPhaseIndex] + yellowTime[lastPhaseIndex] + redTime[lastPhaseIndex];
+        if (coordinateMode && cycleLengthCalculated != myCycleLength) {
             int ringNumber = ringIndex + 1;
             const std::string error = "At NEMA tlLogic '" + getID() + "', Ring " + toString(ringNumber) + " does not add to cycle length.";
             if (ignoreErrors) {
@@ -603,27 +663,29 @@ NEMALogic::validate_timing() {
             }
         }
     }
-    // check that the barriers sum together
-    SUMOTime cycleLengths[2][2] = { {0, 0}, {0, 0} };
-    for (int ringIndex = 0; ringIndex < 2; ringIndex++) {
-        // TS2 Force Offs don't go in order, so using a different method to check cycle time
-        for (const auto p : getPhasesByRing(ringIndex)) {
-            cycleLengths[ringIndex][p->barrierNum] += p->maxDuration + p->yellow + p->red;
+    // check barriers
+    double ring1barrier1_length = forceOffs[r1barrier - 1] + yellowTime[r1barrier - 1] + redTime[r1barrier - 1];
+    double ring2barrier1_length = forceOffs[r2barrier - 1] + yellowTime[r2barrier - 1] + redTime[r2barrier - 1];
+    if (ring1barrier1_length != ring2barrier1_length) {
+        const std::string error = "At NEMA tlLogic '" + getID() + "', the phases before barrier 1 from both rings do not add up. (ring1="
+                                  + toString(ring1barrier1_length) + ", ring2=" + toString(ring2barrier1_length) + ")";
+        if (coordinateMode && !ignoreErrors) {
+            throw  ProcessError(error);
+        } else {
+            WRITE_WARNING(error);
         }
     }
-    // Write warnings if the barrers do not sum
-    for (int barrierNum = 0; barrierNum < 2; barrierNum++) {
-        if (cycleLengths[0][barrierNum] != cycleLengths[1][barrierNum]) {
-            const std::string error = "At NEMA tlLogic '" + getID() + "', the phases before barrier " + toString(barrierNum + 1) + " from both rings do not add up. (ring1="
-                                      + toString(STEPS2TIME(cycleLengths[0][barrierNum])) + ", ring2=" + toString(STEPS2TIME(cycleLengths[1][barrierNum])) + ")";
-            if (coordinateMode && !ignoreErrors) {
-                throw  ProcessError(error);
-            } else {
-                WRITE_WARNING(error);
-            }
+    double ring1barrier2_length = forceOffs[r2coordinatePhase - 1] + yellowTime[r2coordinatePhase - 1] + redTime[r2coordinatePhase - 1];
+    double ring2barrier2_length = forceOffs[r1coordinatePhase - 1] + yellowTime[r1coordinatePhase - 1] + redTime[r1coordinatePhase - 1];
+    if (ring1barrier2_length != ring2barrier2_length) {
+        const std::string error = "At NEMA tlLogic '" + getID() + "', the phases before barrier 2 from both rings do not add up. (ring1="
+                                  + toString(ring1barrier2_length) + ", ring2=" + toString(ring2barrier2_length) + ")";
+        if (coordinateMode && !ignoreErrors) {
+            throw  ProcessError(error);
+        } else {
+            WRITE_WARNING(error);
         }
     }
-
     // no offset for non coordinated
     if (!coordinateMode && offset != 0) {
         WRITE_WARNINGF("NEMA tlLogic '%' is not coordinated but an offset was set.", getID());
@@ -632,41 +694,33 @@ NEMALogic::validate_timing() {
 
 void
 NEMALogic::setNewSplits(std::vector<double> newSplits) {
-    // TODO: What is the difference between splits and max greens?
     assert(newSplits.size() == 8);
-    for (auto& p : myPhaseObjs) {
-        if (newSplits[p->phaseName - 1] > 0) {
-            // set the phase's nextMaxDuration. This will be implemented when implementTraciChanges is called
-            p->nextMaxDuration = TIME2STEPS(newSplits[p->phaseName - 1]) - p->yellow - p->red;
-        }
+    for (int i = 0; i < 8; i++) {
+        nextMaxGreen[i] = newSplits[i] - yellowTime[i] - redTime[i];
     }
 }
 
 
 void
 NEMALogic::setNewMaxGreens(std::vector<double> newMaxGreens) {
-    for (auto& p : myPhaseObjs) {
-        if (newMaxGreens[p->phaseName - 1] > 0) {
-            // set the phase's nextMaxDuration. This will be implemented when implementTraciChanges is called
-            p->nextMaxDuration = TIME2STEPS(newMaxGreens[p->phaseName - 1]);
-        }
+    for (int i = 0; i < 8; i++) {
+        nextMaxGreen[i] = newMaxGreens[i];
     }
 }
 
 
 void
 NEMALogic::setNewCycleLength(double newCycleLength) {
-    // set the controller's next cycle length. This will be implemented when implementTraciChanges is called
-    myNextCycleLength = TIME2STEPS(newCycleLength);
+    myNextCycleLength = newCycleLength;
 }
 
 
 void
 NEMALogic::setNewOffset(double newOffset) {
-    // set the controller's offset. This will be implemented when implementTraciChanges is called
-    myNextOffset = TIME2STEPS(newOffset);
+    myNextOffset = newOffset;
 }
 
+//helper methods
 
 std::vector<int> NEMALogic::readParaFromString(std::string s) {
     std::vector<int> output;
@@ -679,65 +733,547 @@ std::vector<int> NEMALogic::readParaFromString(std::string s) {
     return output;
 }
 
+std::vector<std::string> NEMALogic::string2vector(std::string s) {
+    std::vector<std::string> output;
+    std::stringstream ss(s);
+    while (ss.good()) {
+        std::string substr;
+        std::getline(ss, substr, ',');
+        output.push_back(substr);
+    }
+#ifdef DEBUG_NEMA
+    //print to check
+    for (auto i : output) {
+        std::cout << i << std::endl;
+    }
+#endif
+    return output;
+}
+
+std::string NEMALogic::combineStates(std::string state1, std::string state2) {
+    std::string output = "";
+    if (state1.size() != state2.size()) {
+        throw ProcessError("At NEMA tlLogic '" + getID() + "', different sizes of NEMA phase states. Please check the NEMA XML");
+    }
+    for (int i = 0; i < (int)state1.size(); i++) {
+        char ch1 = state1[i];
+        char ch2 = state2[i];
+
+        // check through this order. 'G' overwrite 'g'.
+        if (ch1 == 'G' || ch2 == 'G') {
+            output += 'G';
+        } else if (ch1 == 'g' || ch2 == 'g') {
+            output += 'g';
+        } else if (ch1 == 's' || ch2 == 's') {
+            output += 's';
+        } else if (ch1 == 'y' || ch2 == 'y') {
+            output += 'y';
+        } else if (ch1 == 'u' || ch2 == 'u') {
+            output += 'u';
+        } else if (ch1 == 'O' || ch2 == 'O') {
+            output += 'O';
+        } else if (ch1 == 'o' || ch2 == 'o') {
+            output += 'o';
+        } else {
+            output += 'r';
+        }
+    }
+    return output;
+}
+
+bool NEMALogic::isDetectorActivated(int phaseNumber, int depth = 0) const {
+    if (phase2DetectorMap.find(phaseNumber) == phase2DetectorMap.end()) {
+        return false;
+    } else {
+        auto const& detectInfo = phase2DetectorMap.find(phaseNumber)->second;
+        if ((phaseNumber != R1State) && (phaseNumber != R2State) && depth < 1) {
+            // If I am not the active phase & my target is an active phase, don't report when I am called for my own phase
+            if ((detectInfo.cpdTarget == R1State && R1RYG >= GREEN) || (detectInfo.cpdTarget == R2State && R2RYG >= GREEN)) {
+                return false;
+            }
+        }
+        for (auto det : detectInfo.detectors) {
+            if (det->getCurrentVehicleNumber() > 0) {
+                return true;
+            }
+        }
+        if (detectInfo.cpdSource > 0 && depth < 1) {
+            return isDetectorActivated(detectInfo.cpdSource, depth + 1);
+        }
+        return false;
+    }
+}
+
+
+std::map<std::string, double>
+NEMALogic::getDetectorStates() const {
+    std::map<std::string, double> result;
+    for (auto item : myDetectorLaneMap) {
+        result[item.first->getID()] = item.first->getCurrentVehicleNumber();
+    }
+    return result;
+}
+
+
 const MSPhaseDefinition&
 NEMALogic::getCurrentPhaseDef() const {
     return myPhase;
 }
 
-int NEMALogic::measureRingDistance(int p1, int p2, int ringNum) {
-    int length = (int)rings[ringNum].size();
-    int d = 0;
-    bool found = false;
-    // Loop around the ring and keep track of the distance from p1 to p2
-    for (int i = 0; i < (length * 2); i++) {
-        if (rings[ringNum][i % length] > 0) {
-            if (found) {
-                d++;
-                if (rings[ringNum][i % length] == p2) {
-                    break;
-                }
-            } else if (rings[ringNum][i % length] == p1) {
-                found = true;
-            }
-        }
+SUMOTime
+NEMALogic::trySwitch() {
+    const std::string newState = NEMA_control();
+    if (newState != myPhase.getState()) {
+        myPhase.setState(newState);
+        // ensure that SwitchCommand::execute notices a change
+        myStep = 1 - myStep;
     }
-    assert(d > 0);
-    return d;
+    //std::cout << SIMTIME << " " << myPhase.getState() << "\n";
+    return TIME2STEPS(TS);
 }
 
 
-SUMOTime
-NEMALogic::ModeCycle(SUMOTime a, SUMOTime b) {
-    SUMOTime c = a - b;
+std::string
+NEMALogic::NEMA_control() {
+    std::string outputState = "";
+    //controller starts
+    SUMOTime now = MSNet::getInstance()->getCurrentTimeStep();
+    double currentTimeInSecond = STEPS2TIME(now);
+
+#ifdef DEBUG_NEMA
+    //print to check
+    //I didn't use getTimeInCycle(). This is because the cycle reference point may change in the future.
+    double currentInCycleTime = ModeCycle(currentTimeInSecond - cycleRefPoint - offset, myCycleLength);
+    std::cout << "current time in cycle:\t" << currentInCycleTime << "\t" << "phases: " << R1State << '\t' << R2State << std::endl;
+#endif
+    //int R1Phase = activeRing1Phase;
+    int R1Phase = R1State;
+    int R1Index = R1Phase - 1;
+
+    double durationR1 = currentTimeInSecond - phaseStartTime[R1Index];
+    double phaseStartTimeInCycleR1 = ModeCycle(phaseStartTime[R1Index] - cycleRefPoint - offset, myCycleLength);
+    //ensure minGreen for each phase
+    if (maxRecalls[R1Index]) {
+        phaseExpectedDuration[R1Index] = maxGreen[R1Index];
+    } else {
+        phaseExpectedDuration[R1Index] = MAX2(phaseExpectedDuration[R1Index], minGreen[R1Index]);
+    }
+    if (((R1Phase != r1coordinatePhase) || (vehExt[R1Index] > 0 && !coordinateMode)) && (R1RYG == GREEN || R1RYG == GREENREST)) {
+        if (isDetectorActivated(R1Phase)) {
+            phaseExpectedDuration[R1Index] = MAX2(phaseExpectedDuration[R1Index], durationR1 + vehExt[R1Index]);
+            if (fixForceOff) {
+                phaseExpectedDuration[R1Index] = MIN2(phaseExpectedDuration[R1Index], ModeCycle(forceOffs[R1Index] - phaseStartTimeInCycleR1, myCycleLength));
+#ifdef DEBUG_NEMA
+                std::cout << "R1 phase " << R1State << " forceOff " << forceOffs[R1Index] << "\tphase start " << phaseStartTimeInCycleR1 << std::endl;
+#endif
+            } else {
+                phaseExpectedDuration[R1Index] = MIN2(phaseExpectedDuration[R1Index], maxGreen[R1Index]);
+            }
+        }
+    }
+
+    int R2Phase = R2State;
+    int R2Index = R2Phase - 1;
+    double durationR2 = currentTimeInSecond - phaseStartTime[R2Index];
+    double phaseStartTimeInCycleR2 = ModeCycle(phaseStartTime[R2Index] - cycleRefPoint - offset, myCycleLength);
+
+    if (maxRecalls[R2Index]) {
+        phaseExpectedDuration[R2Index] = maxGreen[R2Index];
+    } else {
+        phaseExpectedDuration[R2Index] = MAX2(phaseExpectedDuration[R2Index], minGreen[R2Index]);
+    }
+    if ((((R2Phase != r2coordinatePhase && R2Phase >= 5) || ((R2Phase >= 5 && vehExt[R2Index] > 0) && !coordinateMode)) && (R2RYG == GREEN || R2RYG == GREENREST))) {
+        if (isDetectorActivated(R2Phase)) {
+            phaseExpectedDuration[R2Index] = MAX2(phaseExpectedDuration[R2Index], durationR2 + vehExt[R2Index]);
+            if (fixForceOff) {
+                phaseExpectedDuration[R2Index] = MIN2(phaseExpectedDuration[R2Index], ModeCycle(forceOffs[R2Index] - phaseStartTimeInCycleR2, myCycleLength));
+#ifdef DEBUG_NEMA
+                std::cout << "R2 phase " << R1State << " forceOff " << forceOffs[R2Index] << "\tphase start " << phaseStartTimeInCycleR2 << std::endl;
+#endif
+            } else {
+                phaseExpectedDuration[R2Index] = MIN2(phaseExpectedDuration[R2Index], maxGreen[R2Index]);
+            }
+        }
+    }
+
+    bool EndCurrentPhaseR1 = false;
+    bool EndCurrentPhaseR2 = false;
+    if (durationR1 >= phaseExpectedDuration[R1Index]) {
+        EndCurrentPhaseR1 = true;
+    }
+    if (durationR2 >= phaseExpectedDuration[R2Index]) {
+        EndCurrentPhaseR2 = true;
+    }
+    // Green rest can always transition, even if it is at the barrier
+    if (EndCurrentPhaseR1 && (R1Phase == r1barrier)) {
+        if ((!EndCurrentPhaseR2  || R2RYG < GREEN) && R1RYG != GREENREST) {
+            EndCurrentPhaseR1 = false;
+        }
+    }
+    if (EndCurrentPhaseR1 && (R1Phase == r1coordinatePhase)) {
+        if ((!EndCurrentPhaseR2 || R2RYG < GREEN) && R1RYG != GREENREST) {
+            EndCurrentPhaseR1 = false;
+        }
+    }
+    if (EndCurrentPhaseR2 && (R2Phase == r2barrier)) {
+        if ((!EndCurrentPhaseR1 || R1RYG < GREEN) && R2RYG != GREENREST) {
+            EndCurrentPhaseR2 = false;
+        }
+    }
+    if (EndCurrentPhaseR2 && (R2Phase == r2coordinatePhase)) {
+        if ((!EndCurrentPhaseR1 || R1RYG < GREEN) && R2RYG != GREENREST) {
+            EndCurrentPhaseR2 = false;
+        }
+    }
+
+    // Falling Edge of Green
+    if (EndCurrentPhaseR1 && (!wait4R1Green)) {
+        phaseEndTimeR1 = currentTimeInSecond;
+        phaseExpectedDuration[R1Index] = 0;
+        wait4R1Green = true;
+    }
+    if (EndCurrentPhaseR2 && (!wait4R2Green)) {
+        phaseEndTimeR2 = currentTimeInSecond;
+        phaseExpectedDuration[R2Index] = 0;
+        wait4R2Green = true;
+    }
+
+    // Logic for Green Rest & Green Transfer
+    // This requires a detector check. It should only be entered when the lights are green
+    // This logic doesn't need to enter at all if in coordinated mode and greenTransfer is disabled
+    if (((EndCurrentPhaseR1 && R1RYG >= GREEN) || (EndCurrentPhaseR2 && R2RYG >= GREEN)) && (!coordinateMode || greenTransfer)) {
+        // Calculate the potential next phases.
+        // Have to do it here and below because the "final" traffic light check is at the end of yellow
+        int tempR1Phase;
+        int tempR2Phase;
+        // Get the next phases, with the first option being staying in the current phase
+        std::tie(tempR1Phase, tempR2Phase) = getNextPhases(R1Phase, R2Phase, wait4R1Green, wait4R2Green, true);
+        // entry point to green rest. First check detector status, then determine if this should be up next.
+        // Green rest is effectively the same as being perpetually past the minimum green timer but not changing
+        if ((tempR1Phase == R1Phase && EndCurrentPhaseR1) && (tempR2Phase == R2Phase && EndCurrentPhaseR2) && !coordinateMode) {
+            // mark that the phases are not desired to end
+            EndCurrentPhaseR1 = false;
+            EndCurrentPhaseR2 = false;
+            wait4R1Green = false;
+            wait4R2Green = false;
+            // Timing update. This logic should be checked the next step, so only add the simulation timestep.
+            // Potential that this needs to be extended in the future.
+            phaseEndTimeR1 += TS;
+            phaseEndTimeR2 += TS;
+            // setting the phase start time to current time - the minimum timer
+            // will still allow the phase to be extended with vehicle detection
+            phaseStartTime[R1Index] = currentTimeInSecond - minGreen[R1Index];
+            phaseStartTime[R2Index] = currentTimeInSecond - minGreen[R2Index];
+
+            // Set my state to Green Rest
+            R1RYG = GREENREST;
+            R2RYG = GREENREST;
+
+        } else if (tempR1Phase == R1Phase && EndCurrentPhaseR1 && greenTransfer) {
+            // This is the logic for green transfer on Ring 1
+            // Green transfer occurs when current phase should end but there isn't a better one to go to,
+            // even though the other phase might be transitioning
+            if (!EndCurrentPhaseR2 || (tempR2Phase != R2Phase)) {
+                EndCurrentPhaseR1 = false;
+                wait4R1Green = false;
+                phaseEndTimeR1 += TS;
+                if ((R1Phase == r1barrier || R1Phase == r1coordinatePhase) && R1RYG != GREENREST) {
+                    // If the "green transfer" is at the barrier, it can't actually move until the other phase is done
+                    phaseEndTimeR1 = currentTimeInSecond + phaseExpectedDuration[tempR2Phase - 1];
+                    phaseExpectedDuration[R1Index] = phaseExpectedDuration[tempR2Phase - 1];
+                }
+                R1RYG = R1RYG == GREENREST ? GREENREST : GREENTRANSFER;
+            }
+        } else if (tempR2Phase == R2Phase && EndCurrentPhaseR2 && greenTransfer) {
+            if (!EndCurrentPhaseR1 || (tempR1Phase != R1Phase)) {
+                // This is the logic for green transfer on Ring 2
+                EndCurrentPhaseR2 = false;
+                wait4R2Green = false;
+                phaseEndTimeR2 += TS;
+                if ((R2Phase == r2barrier || R2Phase == r2coordinatePhase) && R2RYG != GREENREST) {
+                    // If the "green transfer" is at the barrier, it can't actually move until the other phase is done
+                    phaseEndTimeR2 = currentTimeInSecond + phaseExpectedDuration[tempR1Phase - 1];
+                    phaseExpectedDuration[R2Index] = phaseExpectedDuration[tempR1Phase - 1];
+                }
+                R2RYG = R2RYG == GREENREST ? GREENREST : GREENTRANSFER;
+            }
+        }
+    }
+
+
+    // Calculate the next phase with knowledge of both rings
+    // Next Phase should be calculated on the falling edge of yellow
+    bool calculate = false;
+    if (wait4R1Green || wait4R2Green) {
+        if ((currentTimeInSecond - phaseEndTimeR1 >= yellowTime[R1Index]) && (R1RYG == YELLOW)) {
+            R1RYG = RED; //red
+            calculate = true;
+        }
+        if ((currentTimeInSecond - phaseEndTimeR2 >= yellowTime[R2Index]) && (R2RYG == YELLOW)) {
+            R2RYG = RED; //red
+            calculate = true;
+        }
+        if (calculate) {
+            std::tie(myNextPhaseR1, myNextPhaseR2) = getNextPhases(R1Phase, R2Phase, wait4R1Green, wait4R2Green);
+        }
+    }
+
+    //enter transtion phase for Ring1
+    if (wait4R1Green) {
+        if (currentTimeInSecond - phaseEndTimeR1 < yellowTime[R1Index]) {
+            // Not removing this if statement for clarity on the transition timing
+            R1RYG = YELLOW; //yellow
+        } else if (currentTimeInSecond - phaseEndTimeR1 < (yellowTime[R1Index] + redTime[R1Index])) {
+            R1RYG = RED; //red
+            // TODO: remove the 0.5 (it has timing issues with <1 timesteps)
+            bool toUpdate = (currentTimeInSecond - phaseEndTimeR1) < yellowTime[R1Index] + 0.5;
+            if (R1Phase == r1coordinatePhase && toUpdate) {
+                for (int i = 0; i < 8; i++) {
+                    maxGreen[i] = nextMaxGreen[i];
+                }
+                offset = myNextOffset;
+                myCycleLength = myNextCycleLength;
+            }
+        } else {
+            //next phase
+            //time 10 R1Phase = 4. Checked
+            // R1Phase = nextPhase(rings[0], R1Phase);
+            R1Phase = myNextPhaseR1;
+            //offset control not included for now
+            R1RYG = GREEN; //green
+            //update phaseStartTime
+            phaseStartTime[R1Phase - 1] = currentTimeInSecond;
+
+            R1State = R1Phase;
+            if (R1Phase == r1coordinatePhase) {
+                if (coordinateMode) {
+                    phaseExpectedDuration[R1Phase - 1] = ModeCycle(myCycleLength - (currentTimeInSecond - cycleRefPoint - offset) - yellowTime[R1Phase - 1] - redTime[R1Phase - 1], myCycleLength);
+                }
+            }
+            wait4R1Green = false;
+        }
+    }
+
+    if (wait4R2Green) {
+        if ((currentTimeInSecond - phaseEndTimeR2) < yellowTime[R2Index]) {
+            R2RYG = YELLOW;
+        } else if ((currentTimeInSecond - phaseEndTimeR2) < (yellowTime[R2Index] + redTime[R2Index])) {
+            R2RYG = RED;
+        } else {
+            R2Phase = myNextPhaseR2;
+            // R2Phase = nextPhase(rings[1], R2Phase);
+            R2RYG = GREEN;
+            //update phaseStartTime
+            phaseStartTime[R2Phase - 1] = currentTimeInSecond;
+            R2State = R2Phase;
+            if (R2Phase == r2coordinatePhase) {
+                if (coordinateMode) {
+                    phaseExpectedDuration[R2Phase - 1] = ModeCycle(myCycleLength - (currentTimeInSecond - cycleRefPoint - offset) - yellowTime[R2Phase - 1] - redTime[R2Phase - 1], myCycleLength);
+#ifdef DEBUG_NEMA
+                    std::cout << "R2 phase " << R1Phase << " is coordinated and has an expected duration of " << phaseExpectedDuration[R1Phase - 1] << std::endl;
+#endif
+                }
+
+            }
+            wait4R2Green = false;
+        }
+    }
+
+
+    std::string state1 = "";
+    for (auto p : myPhases) {
+        if (R1State == string2int(p->getName())) {
+            state1 = p->getState();
+        }
+    }
+    state1 = transitionState(state1, R1RYG);
+    currentR1State = state1;
+
+    std::string state2 = "";
+    for (auto p : myPhases) {
+        if (R2State == string2int(p->getName())) {
+            state2 = p->getState();
+        }
+    }
+    state2 = transitionState(state2, R2RYG);
+    currentR2State = state2;
+
+    outputState = combineStates(state1, state2);
+
+    if (currentState != outputState) {
+        currentState = outputState;
+        if (whetherOutputState) {
+            outputStateFile.open(outputStateFilePath, std::ios_base::app);
+            outputStateFile << currentTimeInSecond << "\t" << currentState << std::endl;
+            outputStateFile.close();
+        }
+
+    }
+    myPhase.setName(toString(R1Phase) + "+" + toString(R2Phase));
+    return outputState;
+}
+
+int NEMALogic::nextPhase(std::vector<int> ring, int currentPhase, int& distance, bool sameAllowed) {
+    int length = (int)ring.size();
+    int flag = 0;
+    int nphase = 0; // next phase
+    int i = 0; // i represents the distance
+    int matching_i = 0;
+    for (i = 0; i < length * 2; i++) {
+        if (flag == 1) {
+            if (ring[i % length] != 0) {
+                int tempPhase = ring[i % length];
+                if (recall[tempPhase - 1] || isDetectorActivated(tempPhase)) {
+                    nphase = tempPhase;
+                    break;
+                }
+
+#ifdef DEBUG_NEMA
+                else {
+                    std::cout << "phase " << tempPhase << " was skipped" << std::endl;
+                }
+#endif
+            }
+        }
+        if (ring[i % length] == currentPhase) {
+            flag = 1;
+            matching_i = i;
+        }
+    }
+    if (nphase != 0) {
+        distance = i;
+        return nphase;
+    } else {
+        // this should only occur in the subset
+        if (sameAllowed) {
+            distance = i;
+            return ring[matching_i % length];
+        } else {
+            distance = i + 1;
+            return ring[(matching_i + 1) % length];
+        }
+    }
+}
+
+
+void NEMALogic::constructBarrierMap(int ring, std::vector<std::vector<int>>& barrierMap) {
+    int flag = 0;
+    std::vector<int> barrierOne;
+    std::vector<int> barrierTwo;
+    for (int localPhase : rings[ring]) {
+        if (!flag) {
+            barrierOne.push_back(localPhase);
+            if (((localPhase == r1coordinatePhase || localPhase == r1barrier) && ring == 0) || ((localPhase == r2coordinatePhase || localPhase == r2barrier) && ring == 1)) {
+                flag = 1;
+            };
+        } else {
+            barrierTwo.push_back(localPhase);
+        }
+    };
+    barrierMap.push_back(barrierOne);
+    barrierMap.push_back(barrierTwo);
+}
+
+int NEMALogic::findBarrier(int phase, int ring) {
+    int barrier = 0;
+    for (int localPhase : myRingBarrierMapping[ring][1]) {
+        if (phase == localPhase) {
+            barrier = 1;
+            break;
+        }
+    }
+    return barrier;
+}
+
+
+std::tuple<int, int> NEMALogic::getNextPhases(int R1Phase, int R2Phase, bool toUpdateR1, bool toUpdateR2, bool stayOk) {
+    // Only 1 or both can be !toUpdate (otherwise we wouldn't be in this situation)
+    int nextR1Phase = R1Phase;
+    int nextR2Phase = R2Phase;
+    if (!toUpdateR1) {
+        int r1BarrierNum = findBarrier(R1Phase, 0);
+        int d = 0;
+        nextR2Phase = nextPhase(myRingBarrierMapping[1][r1BarrierNum], R2Phase, d, stayOk);
+        // If we aren't updating both, the search range is only the subset of values on the same side of the barrier;
+    } else if (!toUpdateR2) {
+        int r2BarrierNum = findBarrier(R2Phase, 1);
+        int d = 0;
+        nextR1Phase = nextPhase(myRingBarrierMapping[0][r2BarrierNum], R1Phase, d, stayOk);
+    } else {
+        // Both can be updated. We should take the change requiring the least distance travelled around the loop,
+        // and then recalculate the other ring if it is not in the same barrier
+        int r1Distance = 0;
+        int r2Distance = 0;
+        nextR1Phase = nextPhase(rings[0], R1Phase, r1Distance, stayOk);
+        nextR2Phase = nextPhase(rings[1], R2Phase, r2Distance, stayOk);
+        int r1Barrier = findBarrier(nextR1Phase, 0);
+        int r2Barrier = findBarrier(nextR2Phase, 1);
+        if ((r1Distance <= r2Distance) && (r1Barrier != r2Barrier)) {
+            nextR2Phase = nextPhase(myRingBarrierMapping[1][r1Barrier], R2Phase, r2Distance, stayOk);
+        } else if ((r1Distance > r2Distance) && (r1Barrier != r2Barrier)) {
+            nextR1Phase = nextPhase(myRingBarrierMapping[0][r2Barrier], R1Phase, r1Distance, stayOk);
+        };
+    };
+    return std::make_tuple(nextR1Phase, nextR2Phase);
+}
+
+//b should be the base of mode
+double NEMALogic::ModeCycle(double a, double b) {
+    double c = a - b;
     while (c >= b) {
         c = c - b;
     }
-    while (c < 0) {
+    while (c < 0) { //should be minimum green (or may be  not)
         c += b;
     }
     return c;
 }
 
+std::string NEMALogic::transitionState(std::string curState, int RYG) {
+    std::string newState = "";
+    if (RYG >= GREEN) {
+        //Green
+        newState = curState;
 
-void
-NEMALogic::getLaneInfoFromNEMAState(std::string state, StringVector& laneIDs, IntVector& stateIndex) {
-    std::set<std::string> output;
-    for (int i = 0; i < (int)state.size(); i++) {
-        char ch = state[i];
-        // if the ch is 'G', it means that the phase is controlling this lane
-        if (ch == 'G') {
-            stateIndex.push_back(i);
-            for (auto link : myLinks[i]) {
-                laneIDs.push_back(link->getLaneBefore()->getID());
+    } else if (RYG == RED) {
+        // red
+        for (char ch : curState) {
+            UNUSED_PARAMETER(ch);
+            newState += 'r';
+        }
+    } else {
+        // yellow
+        for (char ch : curState) {
+            if (ch == 'G' || ch == 'g') {
+                newState += 'y';
+            } else {
+                newState += ch;
             }
         }
     }
+    return newState;
+
+}
+
+
+std::set<std::string> NEMALogic::getLaneIDsFromNEMAState(std::string state) {
+    std::set<std::string> output;
+    const MSTrafficLightLogic::LinkVectorVector& linkV = MSNet::getInstance()->getTLSControl().get(myID).getActive()->getLinks();
+    for (int i = 0; i < (int)state.size(); i++) {
+        char ch = state[i];
+        if (ch == 'G') {
+            for (auto link : linkV[i]) {
+                output.insert(link->getLaneBefore()->getID());
+            }
+        }
+    }
+    return output;
 }
 
 bool NEMALogic::isLeftTurnLane(const MSLane* const lane) const {
     const std::vector<MSLink*> links = lane->getLinkCont();
     if (links.size() == 1 && links.front()->getDirection() == LinkDirection::LEFT) {
-        return true;
+        return true;;
     }
     return false;
 }
@@ -795,21 +1331,12 @@ const std::string
 NEMALogic::getParameter(const std::string& key, const std::string defaultValue) const {
     if (StringUtils::startsWith(key, "NEMA.")) {
         if (key == "NEMA.phaseCall") {
-            int activeCalls[8] = {0};
-            for (const auto p : myPhaseObjs) {
-                // This handles the case when the controller has multiple of the same phase call
-                if (!activeCalls[p->phaseName - 1]) {
-                    activeCalls[p->phaseName - 1] = 1 * p->lastDetectActive;
-                }
+            std::string out_str = std::to_string(isDetectorActivated(1));
+            for (int i = 2; i <= 8; i++) {
+                out_str += ",";
+                out_str += std::to_string(isDetectorActivated(i));
             }
-            std::string outStr = "";
-            for (int i = 0; i < 8; i++) {
-                outStr += std::to_string(activeCalls[i]);
-                if (i < 7) {
-                    outStr += ",";
-                }
-            }
-            return outStr;
+            return out_str;
         } else {
             throw InvalidArgument("Unsupported parameter '" + key + "' for NEMA controller '" + getID() + "'");
         }
@@ -821,14 +1348,12 @@ NEMALogic::getParameter(const std::string& key, const std::string defaultValue) 
 
 void
 NEMALogic::setParameter(const std::string& key, const std::string& value) {
-    queuedTraciChanges = true;
     if (StringUtils::startsWith(key, "NEMA.")) {
         if (key == "NEMA.splits" || key == "NEMA.maxGreens") {
             //splits="2.0 3.0 4.0 5.0 2.0 3.0 4.0 5.0"
             const std::vector<std::string>& tmp = StringTokenizer(value).getVector();
             if (tmp.size() != 8) {
-                queuedTraciChanges = false;
-                throw InvalidArgument("Parameter '" + key + "' for NEMA controller '" + getID() + "' requires 8 space or comma separated values");
+                throw InvalidArgument("Parameter '" + key + "' for NEMA controller '" + getID() + "' requires 8 space-separated values");
             }
             std::vector<double> timing;
             for (const std::string& s : tmp) {
@@ -844,7 +1369,6 @@ NEMALogic::setParameter(const std::string& key, const std::string& value) {
         } else if (key == "NEMA.offset") {
             setNewOffset(StringUtils::toDouble(value));
         } else {
-            queuedTraciChanges = false;
             throw InvalidArgument("Unsupported parameter '" + key + "' for NEMA controller '" + getID() + "'");
         }
     }
@@ -856,916 +1380,4 @@ NEMALogic::error_handle_not_set(std::string param_variable, std::string param_na
     if (param_variable == "") {
         throw InvalidArgument("Please set " + param_name + " for NEMA tlLogic '" + getID() + "'");
     }
-}
-
-void
-NEMALogic::calculateForceOffs170() {
-    SUMOTime zeroTime[2] = { TIME2STEPS(0), TIME2STEPS(0) };
-    for (int i = 0; i < 2; i++) {
-        SUMOTime runningTime = 0;
-        // loop through the phases for ring 0 and then 1
-        for (auto& p : getPhasesByRing(i)) {
-            runningTime += p->maxDuration + p->getTransitionTime(this);
-            // in 170, the cycle "starts" when the coordinated phase goes to yellow.
-            // See https://ops.fhwa.dot.gov/publications/fhwahop08024/chapter6.html
-            if (p->coordinatePhase) {
-                zeroTime[i] = runningTime;
-            }
-            p->forceOffTime = runningTime - p->getTransitionTime(this);
-            p->greatestStartTime = p->forceOffTime - p->minDuration;
-        }
-    }
-    // find the minimum offset time and then subtract from everything, modecycling where negative
-    // This sets the 0 cycle time as start of yellow on earliest ending coordinated phase
-    SUMOTime minCoordYellow = MIN2(zeroTime[0], zeroTime[1]);
-    for (auto& p : myPhaseObjs) {
-        p->forceOffTime = ModeCycle(p->forceOffTime - minCoordYellow, myCycleLength);
-        p->greatestStartTime = ModeCycle(p->greatestStartTime - minCoordYellow, myCycleLength);
-    }
-
-#ifdef DEBUG_NEMA
-    std::ios_base::fmtflags oldflags = std::cout.flags();
-    std::streamsize oldprecision = std::cout.precision();
-    for (int i = 0; i < 2; i++) {
-        std::cout << "Ring" << i + 1 << " force offs: \t";
-        for (auto& p : rings[i]) {
-            if (p > 0) {
-                PhasePtr pObj = getPhaseObj(p, i);
-                std::cout << std::fixed << std::setprecision(2) << STEPS2TIME(pObj->forceOffTime) << "\t";
-            } else {
-                std::cout << std::to_string(0) << "\t";
-            }
-        }
-        std::cout << std::endl;
-    }
-    std::cout.flags(oldflags);
-    std::cout.precision(oldprecision);
-#endif
-}
-
-void
-NEMALogic::calculateForceOffsTS2() {
-    // TS2 "0" cycle time is the start of the "first" coordinated phases.
-    // We can find this "0" point by first constructing the forceOffs in sequential order via the 170 method
-    calculateForceOffs170();
-
-    // Switch the Force Off Times to align with TS2 Cycle, which is the *start* of the earliest coordinated phase
-    // The coordinate phases will always be the defaultBarrierPhases[i][0]
-    SUMOTime minCoordTime = MIN2(coordinatePhaseObjs[0]->forceOffTime - coordinatePhaseObjs[0]->maxDuration,
-                                 coordinatePhaseObjs[1]->forceOffTime - coordinatePhaseObjs[1]->maxDuration);
-
-    // loop through all the phases and subtract this minCoordTime to move the 0 point to the start of the first coordinated phase
-    for (auto& p : myPhaseObjs) {
-        if ((p->forceOffTime - minCoordTime) >= 0) {
-            p->forceOffTime -= (minCoordTime);
-        } else {
-            p->forceOffTime = (myCycleLength + (p->forceOffTime - (minCoordTime)));
-        }
-        p->greatestStartTime = ModeCycle(p->greatestStartTime - minCoordTime, myCycleLength);
-    }
-}
-
-void
-NEMALogic::calculateInitialPhases170() {
-    // get the time in the cycle
-    SUMOTime cycleTime = ModeCycle(getTimeInCycle(), myCycleLength);
-    NEMAPhase* activePhases[2];
-    for (int i = 0; i < 2; i++) {
-        std::vector<NEMAPhase*> ringCopy = getPhasesByRing(i);
-        // sort by the minimum start time in the cycle.
-        std::sort(ringCopy.begin(), ringCopy.end(),
-        [](NEMAPhase * p, NEMAPhase * p1) {
-            return p->greatestStartTime <= p1->greatestStartTime;
-        }
-                 );
-        bool found = false;
-        // loop through the sorted phases by time and try to find the phase that should be active given the time in the cycle
-        for (auto& p : ringCopy) {
-            // This handles the wrap around. Checks if the prior phases start time should have already happened.
-            // If it should have happened and it's not to the start time of me yet, start in my phase ( will have to be in my phase longer than max time likely )
-            SUMOTime syntheticPriorStart = p->getSequentialPriorPhase()->greatestStartTime < p->greatestStartTime ?
-                                           p->getSequentialPriorPhase()->greatestStartTime : p->getSequentialPriorPhase()->greatestStartTime - myCycleLength;
-            if (cycleTime <= ModeCycle(p->greatestStartTime, myCycleLength) && cycleTime > ModeCycle(syntheticPriorStart, myCycleLength)) {
-                found = true;
-                activePhases[i] = p;
-                break;
-            }
-        }
-        if (!found) {
-#ifdef DEBUG_NEMA
-            const std::string error = "I can't find the correct phase for NEMA tlLogic '" + getID() + "' Ring " + toString(i) + " to start in.";
-            WRITE_WARNING(error);
-            WRITE_WARNING("I am starting in the coordinated phases");
-#endif
-            activePhases[0] = defaultBarrierPhases[0][0];
-            activePhases[1] = defaultBarrierPhases[1][0];
-        }
-    }
-
-    // ensure that the two found phases are on the same side of the barrier. If they aren't, just override with the default barrier phases
-    if (activePhases[0]->barrierNum != activePhases[1]->barrierNum) {
-        // give preference to whatever is on the coordinate side of the barrier, one must be if they aren't equal to each other
-        activePhases[0] = activePhases[0]->barrierNum == 0 ? activePhases[0] : defaultBarrierPhases[0][0];
-        activePhases[1] = activePhases[1]->barrierNum == 0 ? activePhases[1] : defaultBarrierPhases[1][0];
-    }
-
-    // force enter the phases and update their expected duration to last until the forceOff
-    activePhases[0]->forceEnter(this);
-    activePhases[1]->forceEnter(this);
-}
-
-void
-NEMALogic::calculateInitialPhasesTS2() {
-    // Modifications where made to 170 algorithm so that it works with both.
-    calculateInitialPhases170();
-}
-
-NEMALogic::controllerType
-NEMALogic::parseControllerType(std::string inputType) {
-    std::string cleanString;
-    for (const char& c : inputType) {
-        if (isalpha(c) || isdigit(c)) {
-            cleanString += (char)::tolower(c);
-        }
-    }
-    if (cleanString == "type170") {
-        return Type170;
-    } else if (cleanString == "ts2") {
-        return TS2;
-    } else {
-        throw InvalidArgument("Please set controllerType for NEMA tlLogic " + myID + " to either Type170 or TS2");
-    }
-}
-
-std::vector<NEMAPhase*>
-NEMALogic::getPhasesByRing(int ringNum) {
-    std::vector<NEMAPhase*> phases;
-    for (auto& p : myPhaseObjs) {
-        if (p->ringNum == ringNum) {
-            phases.push_back(p);
-        }
-    }
-    return phases;
-}
-
-void
-NEMALogic::setActivePhase(PhasePtr phase) {
-    myActivePhaseObjs[phase->ringNum] = phase;
-}
-
-std::map<std::string, double>
-NEMALogic::getDetectorStates() const {
-    std::map<std::string, double> result;
-    for (auto item : myDetectorLaneMap) {
-        result[item.first->getID()] = item.first->getCurrentVehicleNumber();
-    }
-    return result;
-}
-
-NEMALogic::PhasePtr
-NEMALogic::getOtherPhase(PhasePtr p) {
-    // return a pointer to the other active phase
-    return myActivePhaseObjs[!p->ringNum];
-}
-
-NEMAPhase*
-NEMALogic::getPhaseObj(int phaseNum, int ringNum) {
-    // This satisfies the case where there is a "duplicate" phase on both ring
-    std::vector<PhasePtr> iterRing = ringNum >= 0 ? getPhasesByRing(ringNum) : myPhaseObjs;
-    for (auto& p : iterRing) {
-        if (p->phaseName == phaseNum) {
-            return p;
-        }
-    }
-    // the phase must always be found
-    assert(0);
-    // To satisfy the compiler
-    return myPhaseObjs.front();
-}
-
-PhaseTransitionLogic*
-NEMALogic::getDefaultTransition(PhaseTransitionLogic* t, PhaseTransitionLogic* ot) {
-    NEMAPhase* p = t->getFromPhase();
-    // if the current phase is not ready to switch or a barrier cross is desired by the other transition
-    // and t fromPhase is not ready to switch, the default transition is back to myself
-    if (!p->readyToSwitch ||
-            (p->barrierNum == ot->getToPhase()->barrierNum && p->getCurrentState() >= LightState::Green)) {
-        return p->getTransition(p->phaseName);
-    }
-    // otherwise the default transition is to the default phase on whatever barrier ot wants to transition to
-    else {
-        return p->getTransition(defaultBarrierPhases[p->ringNum][ot->getToPhase()->barrierNum]->phaseName);
-    }
-}
-
-void
-NEMALogic::getNextPhases(TransitionPairs& transitions) {
-    std::vector<std::vector<PhaseTransitionLogic* >> potentialPhases;
-
-    // Get a vector of each phases' potential transitions
-    for (const auto& p : myActivePhaseObjs) {
-        potentialPhases.push_back(p->trySwitch(this));
-    }
-
-    // Loop through all combination of transitions, keeping only the valid ones and filling in the gaps where necessary
-    for (const auto& r1_t : potentialPhases[0]) {
-        for (const auto& r2_t : potentialPhases[1]) {
-            // if both transitions go to the same barrier then we are good
-            if (r1_t->getToPhase()->barrierNum == r2_t->getToPhase()->barrierNum) {
-                transitions.push_back({ r1_t, r2_t, (float)(r1_t->getDistance(r2_t) + r2_t->getDistance(r1_t)) / 2 });
-            } else {
-                // If the rings are different, add a choice where one of them is the default choice for whatever ring it is
-                // create two choices, one for each of the phase as they are on  different rings
-                if (r1_t->getFromPhase()->readyToSwitch) {
-                    // get the r2 default
-                    PhaseTransitionLogic* r2_t_temp = getDefaultTransition(r2_t, r1_t);
-                    // only add it if it does not cross a barrier!
-                    if (r2_t_temp->getToPhase()->barrierNum == r1_t->getToPhase()->barrierNum) {
-                        transitions.push_back({ r1_t, r2_t_temp, (float)(r2_t_temp->getDistance(r1_t) + r1_t->getDistance(r2_t_temp)) / 2 });
-                    }
-                }
-                if (r2_t->getFromPhase()->readyToSwitch) {
-                    // R1 default
-                    PhaseTransitionLogic* r1_t_temp = getDefaultTransition(r1_t, r2_t);
-                    // only add it if it does not cross a barrier!
-                    if (r1_t_temp->getToPhase()->barrierNum == r2_t->getToPhase()->barrierNum) {
-                        transitions.push_back({ r1_t_temp, r2_t, (float)(r2_t->getDistance(r1_t_temp) + r1_t_temp->getDistance(r2_t)) / 2 });
-                    }
-                }
-                // If the distances are <= 1, this means that this is the shortest transition possible
-                // and we can return early without considering any other options
-                if (!transitions.empty()) {
-                    if (transitions.back().distance < 1) {
-                        return;
-                    }
-                }
-            }
-        }
-    }
-}
-
-
-std::string
-NEMALogic::composeLightString() {
-    // FIX with plan to support #10742
-    std::string out(myPhaseStrLen, 'r');
-    for (int i = 0; i < myPhaseStrLen; i++) {
-        bool controlled = false;
-        std::string phaseChars = "";
-        for (auto& p : myActivePhaseObjs) {
-            phaseChars += p->getNEMAChar(i);
-            if (p->controlledIndex(i)) {
-                out[i] = p->getNEMAChar(i);
-                controlled = true;
-            }
-        }
-        // if the index wasn't a controlled one, the prior priority order still stands
-        if (!controlled) {
-            for (auto priority_char : lightHeadPriority) {
-                if (std::count(phaseChars.begin(), phaseChars.end(), priority_char)) {
-                    out[i] = priority_char;
-                    break;
-                }
-            }
-        }
-    }
-    return out;
-}
-
-
-SUMOTime
-NEMALogic::trySwitch() {
-#ifdef DEBUG_NEMA_SWITCH
-    std::cout << SIMTIME << " trySwitch tls=" << getID() << "\n";
-#endif
-    PhaseTransitionLogic* nextPhases[2] = { nullptr, nullptr };
-
-    // update the internal time. This is a must. Could have just used a reference to the tmme
-    setCurrentTime();
-
-    // Check the Detectors
-    for (auto& p : myPhaseObjs) {
-        p->checkMyDetectors();
-    }
-
-    // Update the timing parameters
-    for (const auto& p : myActivePhaseObjs) {
-        p->update(this);
-    }
-
-    // Calculate the Next Phases, but only if atleast one of them is ready to transition
-    if (myActivePhaseObjs[0]->readyToSwitch || myActivePhaseObjs[1]->readyToSwitch) {
-        TransitionPairs transitions;
-        // set the next phases by reference
-        getNextPhases(transitions);
-
-        // Sort the next phases by distance and select the closest.
-        // TODO: Is there a way to avoid this sort? The transitions are already sorted by distance prior
-        // to picking the valid ones
-        if (transitions.size() > 1) {
-            std::sort(transitions.begin(), transitions.end(),
-            [](const transitionInfo & i, const transitionInfo & j) {
-                return i.distance < j.distance;
-            });
-        }
-
-        // Set the Next Phases = to the transition with least combined distance
-        nextPhases[0] = transitions.front().p1;
-        nextPhases[1] = transitions.front().p2;
-
-        // Try the exit logic. This doesn't necessarily mean that the phase will exit,
-        // as it could go into green rest or green transfer, but this is considered an "exit"
-        for (const auto& p : myActivePhaseObjs) {
-            if (p->readyToSwitch) {
-                p->exit(this, nextPhases);
-            }
-        }
-
-        // This is the only time when something might have happened, so we update the phase strings here
-        std::string newState = composeLightString();
-        if (newState != myPhase.getState()) {
-            myPhase.setState(newState);
-            myPhase.setName(toString(myActivePhaseObjs[0]->phaseName) + "+" + toString(myActivePhaseObjs[1]->phaseName));
-            // ensure that SwitchCommand::execute notices a change
-            myStep = 1 - myStep;
-
-        }
-    }
-
-    // clear the phases' detectors
-    for (auto& p : myPhaseObjs) {
-        p->clearMyDetectors();
-    }
-
-
-#ifdef FUZZ_TESTING
-    // Basic Assertion to ensure that the Barrier is not crossed
-    assert(myActivePhaseObjs[0]->barrierNum == myActivePhaseObjs[1]->barrierNum);
-#endif
-
-    // return the simulation timestep, as this controller must be checked every simulation step
-    return DELTA_T;
-}
-
-
-void
-NEMALogic::implementTraciChanges(void) {
-    // Implement Traci Updates on the start of ring1 coordinated phase (rising edge of it turning green)
-    if (queuedTraciChanges) {
-        for (auto& p : myPhaseObjs) {
-            p->maxDuration = p->nextMaxDuration;
-        }
-        offset = myNextOffset;
-        // TODO: Do we need to redo the force offs here? I thins that we do
-        myCycleLength = myNextCycleLength;
-        // now that we have set the cycle length, offset and max duration, we need to update force off times
-        calculateForceOffs();
-        queuedTraciChanges = false;
-    }
-}
-
-
-// ===========================================================================
-// NEMAPhase Definitions
-// ===========================================================================
-NEMAPhase::NEMAPhase(int phaseName, bool isBarrier, bool isGreenRest, bool isCoordinated,
-                     bool minRecall, bool maxRecall, bool fixForceOff, int barrierNum, int ringNum,
-                     IntVector phaseStringInds,
-                     MSPhaseDefinition* phase) :
-    phaseName(phaseName),
-    isAtBarrier(isBarrier),
-    isGreenRest(isGreenRest),
-    barrierNum(barrierNum),
-    coordinatePhase(isCoordinated),
-    minRecall(minRecall),
-    maxRecall(maxRecall),
-    fixForceOff(fixForceOff),
-    ringNum(ringNum),
-    myCorePhase(phase),
-    myPhaseStringInds(phaseStringInds) {
-    // Public
-    readyToSwitch = false;
-    greenRestTimer = 0;
-    forceOffTime = 0;
-    lastDetectActive = false;
-
-    // Private
-    myInstance = this;
-    myLastPhaseInstance = nullptr;
-    sequentialPriorPhase = nullptr;
-    myLightState = LightState::Red;
-    transitionActive = false;
-
-    // Timing Parameters
-    maxGreenDynamic = myCorePhase->maxDuration;
-    myStartTime = TIME2STEPS(0.);
-    myExpectedDuration = myCorePhase->minDuration;
-    myLastEnd = TIME2STEPS(0.);
-
-    // set the phase colors
-    setMyNEMAStates();
-}
-
-NEMAPhase::~NEMAPhase() {
-    // Delete the transitions from their alloc
-    for (auto t : myTransitions) {
-        delete t;
-    }
-}
-
-void
-NEMAPhase::init(NEMALogic* controller, int crossPhaseTarget, int crossPhaseSource, bool latching) {
-    // switch the durations from steps2time
-    recalculateTiming();
-
-    for (auto p : controller->getPhasesByRing(ringNum)) {
-        // construct transitions for all potentail movements, including back to myself
-        myTransitions.push_back(new PhaseTransitionLogic(this, p));
-        myTransitions.back()->setDistance(controller->measureRingDistance(phaseName, p->phaseName, ringNum));
-    }
-
-    // sort the transitions by distance for speed later. Using plain distance here
-    std::sort(myTransitions.begin(), myTransitions.end(), [&](const PhaseTransitionLogic * i, const PhaseTransitionLogic * j) {
-        return i->distance < j->distance;
-    });
-
-    // create the phase detector info
-    myDetectorInfo = PhaseDetectorInfo(latching,
-                                       crossPhaseSource > 0 ? controller->getPhaseObj(crossPhaseSource) : nullptr,
-                                       crossPhaseTarget > 0 ? controller->getPhaseObj(crossPhaseTarget) : nullptr
-                                      );
-}
-
-void
-NEMAPhase::recalculateTiming(void) {
-    // This could be extended in the future to allow for traci manipulation
-    yellow = myCorePhase->yellow;
-    red = myCorePhase->red;
-    minDuration = myCorePhase->minDuration;
-    maxDuration = myCorePhase->maxDuration;
-    nextMaxDuration = myCorePhase->maxDuration;
-    maxGreenDynamic = myCorePhase->maxDuration;
-    vehExt = myCorePhase->vehext;
-}
-
-
-// TODO: this can be computed once.
-char
-NEMAPhase::getNEMAChar(int i) {
-    if (myLightState >= LightState::Green) {
-        return myGreenString[i];
-    } else if (myLightState <= LightState::Red) {
-        return myRedString[i];
-    } else {
-        return myYellowString[i];
-    }
-}
-
-void
-NEMAPhase::setMyNEMAStates() {
-    myGreenString = myCorePhase->getState();
-    myRedString = "";
-    myYellowString = "";
-    for (char ch : myGreenString) {
-        myRedString += 'r';
-        if (ch == 'G' || ch == 'g') {
-            myYellowString += 'y';
-        } else {
-            myYellowString += ch;
-        }
-    }
-}
-
-void
-NEMAPhase::clearMyDetectors() {
-    lastDetectActive = myDetectorInfo.detectActive;
-    // remove the active flag on the detector if the detector is not latching or if it is green
-    if ((!myDetectorInfo.latching) || (myLightState >= LightState::Green)) {
-        myDetectorInfo.detectActive = false;
-    }
-}
-
-void
-NEMAPhase::checkMyDetectors() {
-    // Check my Detectors, only necessary if it isn't currently marked as on
-    if (!myDetectorInfo.detectActive) {
-        // If I have a cross phase target and it is active and I am not, save my detector as not active
-        if (myDetectorInfo.cpdTarget != nullptr) {
-            if (myDetectorInfo.cpdTarget->getCurrentState() >= LightState::Green) {
-                if (myLightState < LightState::Green) {
-                    myDetectorInfo.detectActive = false;
-                    return;
-                }
-            }
-        }
-        // If we make it to this point, check my detector like normal.
-        for (auto& d : myDetectorInfo.detectors) {
-            if (d->getCurrentVehicleNumber() > 0) {
-                myDetectorInfo.detectActive = true;
-                return;
-            }
-        }
-        // If my detector is not active, check my cross phase
-        if ((myDetectorInfo.cpdSource != nullptr) && (myLightState >= LightState::Green)) {
-            if (myDetectorInfo.cpdSource->getCurrentState() < LightState::Green) {
-                for (auto& d : myDetectorInfo.cpdSource->getDetectors()) {
-                    if (d->getCurrentVehicleNumber() > 0) {
-                        myDetectorInfo.detectActive = true;
-                        return;
-                    }
-                }
-            }
-        }
-    }
-}
-
-void
-NEMAPhase::enter(NEMALogic* controller, NEMAPhase* lastPhase) {
-#ifdef DEBUG_NEMA_SWITCH
-    std::cout << SIMTIME << " enter tls=" << controller->getID() << " phase=" << phaseName << "\n";
-#endif
-
-    // Enter the phase
-    myStartTime = controller->getCurrentTime();
-    myLightState = LightState::Green;
-    myLastPhaseInstance = lastPhase;
-    readyToSwitch = false;
-
-    // implement the new timing parameters on the first coordinated phase to appear
-    if (phaseName == controller->coordinatePhaseObjs[ringNum]->phaseName) {
-        controller->implementTraciChanges();
-    }
-
-    // Handle Green Rest Peculiarities
-    if (!controller->coordinateMode && isGreenRest) {
-        // If the controller is in free mode and the phase is a green rest phase, then it should enter as "green rest"
-        myLightState = LightState::GreenRest;
-        // if the phase has "green rest" capabilities, set it's timer to the dynamic maxGreen
-        greenRestTimer = maxDuration * isGreenRest;
-    }
-
-    // clear the last transition decision
-    lastTransitionDecision = nullptr;
-
-    // Calculate the Max Green Time & Expected Duration here:
-    if (controller->coordinateMode) {
-        if (coordinatePhase) {
-            myExpectedDuration = controller->ModeCycle(forceOffTime - controller->getTimeInCycle(), controller->getCurrentCycleLength());
-#ifdef FUZZ_TESTING
-            assert(myExpectedDuration >= maxDuration);
-#endif
-        } else {
-            maxGreenDynamic = controller->ModeCycle(forceOffTime - controller->getTimeInCycle(), controller->getCurrentCycleLength());
-            if (!fixForceOff) {
-                maxGreenDynamic = MIN2(maxDuration, maxGreenDynamic);
-            }
-            myExpectedDuration = minDuration;
-        }
-    } else {
-        myExpectedDuration = minDuration;
-    }
-    // Implements the maxRecall functionality
-    if (maxRecall && !coordinatePhase) {
-        myExpectedDuration = maxGreenDynamic;
-    }
-    // Set the controller's active phase
-    controller->setActivePhase(this);
-}
-
-void
-NEMAPhase::exit(NEMALogic* controller, PhaseTransitionLogic* nextPhases[2]) {
-    // At the first entry to this transition, the phase will be in green
-    if (nextPhases[ringNum]->getToPhase() != this) {
-        // set the last transition decision
-        lastTransitionDecision = nextPhases[ringNum];
-        if (myLightState >= LightState::Green) {
-            // enter yellow and set that the transition is active
-            myLastEnd = controller->getCurrentTime();
-            myLightState = LightState::Yellow;
-            transitionActive = true;
-        } else {
-            if (controller->getCurrentTime() - myLastEnd >= (yellow + red)) {
-                // triggers the entry to the next target phase.
-                readyToSwitch = false;
-                transitionActive = false;
-                // Enter into the next phase, setting it to Green
-                nextPhases[ringNum]->getToPhase()->enter(controller, this);
-            } else if (controller->getCurrentTime() - myLastEnd >= yellow) {
-                // set the light to red
-                myLightState = LightState::Red;
-            }
-        }
-    } else {
-        // This is the entry to green rest or green transfer
-        NEMAPhase* otherPhase = controller->getOtherPhase(this);
-        readyToSwitch = false;
-        if ((nextPhases[!ringNum]->getToPhase() == otherPhase && otherPhase->readyToSwitch)
-                // if the other phase is already in green rest and I am in green transfer but there are no cars on the side streets,
-                // I should default to being in green rest. Side street check is done by looking at the green rest timer.
-                || (otherPhase->greenRestTimer >= otherPhase->maxDuration && otherPhase->getCurrentState() == LightState::GreenRest)) {
-            // the light state is green rest
-            myLightState = LightState::GreenRest;
-            // set the start time to be current time - the minimum timer
-            myStartTime = controller->getCurrentTime() - minDuration;
-            myExpectedDuration = minDuration;
-            // if the phase has "green rest" capabilities, set it's timer to the dynamic maxGreen
-            greenRestTimer = maxDuration * isGreenRest;
-        } else {
-            // green transfer
-            myLightState = LightState::GreenXfer;
-            if (isAtBarrier) {
-                // In green transfer, the phase will last as long as the other phase.
-                // this needs to not blindly copy, but instead be a calculation
-                myExpectedDuration = (otherPhase->myExpectedDuration + otherPhase->myStartTime) - myStartTime;
-            }
-        }
-    }
-}
-
-SUMOTime
-NEMAPhase::getTransitionTime(NEMALogic* controller) {
-    if (!transitionActive) {
-        // if a transition is not active, the transition is just yellow + red time
-        return (yellow + red);
-    }
-    // if a transition is active, then return the time left in the transition
-    return MAX2(TIME2STEPS(0), ((controller->getCurrentTime() - myLastEnd) - (yellow + red)));
-}
-
-SUMOTime
-NEMAPhase::calcVehicleExtension(SUMOTime duration) {
-    if (myExpectedDuration < maxGreenDynamic && myDetectorInfo.detectActive) {
-        // add the vehicle extension timer if the detector is active.
-        // capped by the minimum and maximum duration
-        return MIN2(MAX2(duration + vehExt, minDuration), maxGreenDynamic);
-    }
-    return myExpectedDuration;
-}
-
-void
-NEMAPhase::update(NEMALogic* controller) {
-    // If I am in a transition, the rest of the update logic does not matter
-    if (myLightState < LightState::Green) {
-        // return early
-        readyToSwitch = true;
-        return;
-    }
-
-    // Continuation Logic
-    SUMOTime duration = controller->getCurrentTime() - myStartTime;
-    // Check the vehicle extension timer as long as not in green transfer and not a coordinated phase
-    if (myLightState != LightState::GreenXfer && !coordinatePhase) {
-        myExpectedDuration = calcVehicleExtension(duration);
-    }
-    // Special Logic for Green Rest, which behaves uniquely
-    if (myLightState == LightState::GreenRest) {
-        // check all other detectors and see if anything else is active. If so,
-        // start the green rest timer countdown, which is == to the max duration of the phase
-        bool vehicleActive = false;
-        for (auto& p : controller->getPhaseObjs()) {
-            if ((p->phaseName != phaseName)
-                    && (p->phaseName != controller->getOtherPhase(this)->phaseName)
-                    && p->callActive()) {
-                greenRestTimer -= DELTA_T;
-                vehicleActive = true;
-                break;
-            }
-        }
-        // catch the rising edge of the sidestreet detection and calculate the maximum timer
-        if (vehicleActive && (greenRestTimer + DELTA_T >= maxDuration)) {
-            maxGreenDynamic = minDuration + maxDuration;
-        }
-
-        // if there are no other vehicles slide the startTime along
-        if (!vehicleActive) {
-            greenRestTimer = maxDuration;
-            if (duration >= minDuration) {
-                myStartTime = controller->getCurrentTime() - minDuration;
-                maxGreenDynamic = minDuration + maxDuration;
-                myExpectedDuration = minDuration + MAX2(TIME2STEPS(0), myExpectedDuration - duration);
-            }
-        }
-
-        // if the green rest timer is exhausted, set ready to switch
-        if (greenRestTimer < DELTA_T) {
-            readyToSwitch = true;
-            // force the counterparty to be ready to switch too. This needs to be latching....
-            NEMAPhase* otherPhase = controller->getOtherPhase(this);
-            if (otherPhase->getCurrentState() > LightState::Green) {
-                otherPhase->readyToSwitch = true;
-            }
-        }
-
-        // Special Behavior when the Green Rest Circles all the way around in coordinated mode
-        if (coordinatePhase) {
-            // This means that we have green rested until I should "start" again. Just call my entry function again.
-            if (controller->getTimeInCycle() <= ((forceOffTime - maxDuration) + DELTA_T / 2)) {
-                enter(controller, this);
-            }
-        }
-    }
-    // Check to see if a switch is desired
-    if (duration >= myExpectedDuration) {
-        readyToSwitch = true;
-    }
-}
-
-PhaseTransitionLogic*
-NEMAPhase::getTransition(int toPhase) {
-    for (auto t : myTransitions) {
-        if (t->getToPhase()->phaseName == toPhase) {
-            return t;
-        }
-    }
-    // This point should never be reached
-    assert(0);
-    // To satisfy the compiler and return value from all control paths
-    return myTransitions.front();
-}
-
-std::vector<PhaseTransitionLogic*>
-NEMAPhase::trySwitch(NEMALogic* controller) {
-    // this function returns the prefered valid transition for the phase
-    std::vector<PhaseTransitionLogic*> nextTransitions;
-    if (readyToSwitch) {
-        // only try to switch if I am ready to switch
-        for (auto& t : myTransitions) {
-            // for the transitions check if it is okay
-            if (t->okay(controller)) {
-                // if there was already a transition decision, it can be overriden but only if the new transition
-                // is on the same side of a barrier
-                if (lastTransitionDecision != nullptr) {
-                    if (t->getToPhase()->barrierNum == lastTransitionDecision->getToPhase()->barrierNum) {
-                        nextTransitions.push_back(t);
-                        break;
-                    }
-                } else {
-                    nextTransitions.push_back(t);
-                    // break once there is a valid option (they have already been sorted)
-                    break;
-                }
-            }
-        }
-    }
-    // Add in the last transition decision if it hasn't been added in yet
-    if (lastTransitionDecision != nullptr) {
-        bool found = false;
-        bool sameBarrier = false;
-        for (auto& t : nextTransitions) {
-            if (t == lastTransitionDecision) {
-                found = true;
-                break;
-            }
-            if (t->getToPhase()->barrierNum == lastTransitionDecision->getToPhase()->barrierNum) {
-                sameBarrier = true;
-                break;
-            }
-        }
-        // but only need to add it if it is not in the list AND if nothing in the list is the same barrier as it was.
-        if (!found && !sameBarrier) {
-            nextTransitions.push_back(lastTransitionDecision);
-        }
-    }
-    // Add the transition back to myself, but only in the case when no others have been added
-    if (nextTransitions.size() < 1) {
-        nextTransitions.push_back(myTransitions.back());
-    }
-
-    return nextTransitions;
-}
-
-// ===========================================================================
-// PhaseTransitionLogic Definitions
-// ===========================================================================
-PhaseTransitionLogic::PhaseTransitionLogic(
-    NEMAPhase* fromPhase, NEMAPhase* toPhase) :
-    distance(0),
-    fromPhase(fromPhase),
-    toPhase(toPhase)
-{}
-
-bool
-PhaseTransitionLogic::okay(NEMALogic* controller) {
-    // Picking the correct transition logic to use
-    // #TODO this could be a case of using function as variable and setting it at PhaseTransitionLogic
-    // creation time
-    if (fromPhase == toPhase) {
-        // for green rest or green transfer, it cannot return to itself if a transition is active
-        return fromPhase->getCurrentState() >= LightState::Green;
-    } else if (fromPhase->coordinatePhase) {
-        // if the from phase is a coordinated phase i.e. {2, 6} in a standard setup
-        return fromCoord(controller);
-    } else if (fromPhase->isAtBarrier) {
-        // if the phase is at a barrier i.e. {2, 6, 4, 8} in a standard setup
-        return fromBarrier(controller);
-    } else if (controller->coordinateMode) {
-        // typical coordinate mode transition,
-        return coordBase(controller);
-    } else {
-        // base transition logic
-        return freeBase(controller);
-    }
-}
-
-bool
-PhaseTransitionLogic::freeBase(NEMALogic* controller) {
-    // Simplest transition logic. Just check if a detector (or recall) is active on that phase and
-    bool okay = false;
-    // is a call active on the toPhase?
-    if (toPhase->callActive()) {
-        // would the transition be a barrier cross?
-        if (fromPhase->barrierNum != toPhase->barrierNum) {
-            PhasePtr otherPhase = controller->getOtherPhase(fromPhase);
-            // If it is a barrier cross, the cross is only allowed if the transition times are ==
-            if (otherPhase->readyToSwitch && otherPhase->getTransitionTime(controller) == fromPhase->getTransitionTime(controller)) {
-                okay = true;
-            }
-        } else {
-            okay = true;
-        }
-    }
-    return okay;
-}
-
-bool
-PhaseTransitionLogic::coordBase(NEMALogic* controller) {
-    if (toPhase->coordinatePhase &&
-            (controller->getOtherPhase(fromPhase)->readyToSwitch || fromPhase->barrierNum == toPhase->barrierNum)) {
-        // transitions TO the coordinated phase may always happen, as long as the other phase is okay to switch too
-        return true;
-    }
-    // first check if the free logic is upheld
-    else if (freeBase(controller)) {
-        // Then check if the "to phase" can fit, which means that there is enough time to fit the current transition + the minimum time of the next phase
-        SUMOTime transitionTime = fromPhase->getTransitionTime(controller);
-        SUMOTime timeTillForceOff = controller->ModeCycle(toPhase->forceOffTime - controller->getTimeInCycle(), controller->getCurrentCycleLength());
-        if (toPhase->minDuration + transitionTime <= timeTillForceOff) {
-            return true;
-        }
-    }
-    return false;
-}
-
-
-bool
-PhaseTransitionLogic::fromBarrier(NEMALogic* controller) {
-    if (freeBase(controller)) {
-        if (fromPhase->barrierNum == toPhase->barrierNum) {
-            // same barrier side so we are good.
-            // Check if green transfer is active. If so, we need to make sure that there are no calls on the other side of the barrier
-            if (fromPhase->getCurrentState() >= LightState::Green) {
-                for (auto& p : controller->getPhasesByRing(fromPhase->ringNum)) {
-                    if (p->barrierNum != fromPhase->barrierNum && p->callActive()) {
-                        return false;
-                    }
-                }
-            }
-            return true;
-        } else {
-            // This is now a barrier cross and we need to make sure that the other phase is also ready to transition
-            if (fromPhase->readyToSwitch && controller->getOtherPhase(fromPhase)->readyToSwitch) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-
-bool
-PhaseTransitionLogic::fromCoord(NEMALogic* controller) {
-    if (coordBase(controller)) {
-        // Determine if the other phase is also ready to switch
-        if (controller->getOtherPhase(fromPhase)->readyToSwitch) {
-            // Dr. Wang had the Type-170 code setup in a way that it could transition whenever - meaning that it didn't matter if the prior phase could fit or not
-            if (controller->isType170()) {
-                return true;
-            }
-            // If the transition is already active, then report that the movement is possible
-            if (fromPhase->isTransitionActive()) {
-                return true;
-            }
-            // now determine if there my prior phase can fit or not. We already know that I can fit.
-            NEMAPhase* priorPhase = toPhase->getSequentialPriorPhase();
-            SUMOTime timeTillForceOff = controller->ModeCycle(priorPhase->forceOffTime - controller->getTimeInCycle(), controller->getCurrentCycleLength());
-            SUMOTime transitionTime = fromPhase->getTransitionTime(controller);
-            // if the time till the force off is less than the min duration ||
-            // if it is greater than the cycle length minus the length of the coordinate phase (which the fromPhase automatically is)
-            if ((priorPhase->minDuration + transitionTime) > timeTillForceOff || timeTillForceOff > (controller->getCurrentCycleLength() - fromPhase->minDuration)) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-int
-PhaseTransitionLogic::getDistance(PhaseTransitionLogic* otherTrans) {
-    // Returns the other transitions distance in green transfer situations
-    if ((toPhase == fromPhase) && (otherTrans->toPhase->barrierNum == toPhase->barrierNum)) {
-        if (toPhase->getCurrentState() == LightState::Green || toPhase->getCurrentState() == LightState::GreenXfer) {
-            return otherTrans->distance;
-        }
-    }
-    return distance;
 }

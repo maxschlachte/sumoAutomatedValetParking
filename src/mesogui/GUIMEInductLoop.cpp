@@ -40,12 +40,10 @@
  * GUIMEInductLoop-methods
  * ----------------------------------------------------------------------- */
 GUIMEInductLoop::GUIMEInductLoop(const std::string& id, MESegment* s,
-                                 double position,
-                                 const std::string& vTypes,
-                                 const std::string& nextEdges,
+                                 double position, const std::string& vTypes,
                                  int detectPersons,
                                  bool /*show*/):
-    MEInductLoop(id, s, position, vTypes, nextEdges, detectPersons)
+    MEInductLoop(id, s, position, vTypes, detectPersons)
 {}
 
 

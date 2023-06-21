@@ -25,7 +25,7 @@ following properties:
 
 The following things currently do not work (or work differently than with the TraCI Python client):
 
-- running with [sumo-gui](sumo-gui.md) does not work on Windows and is still highly experimental on other platforms
+- running with [sumo-gui](sumo-gui.md)
 - subscriptions that require additional arguments (except for *vehicle.getLeader*)
 - stricter type checking
   - the TraCI client sometimes accepts any iterable object where Libsumo wants a list
@@ -82,7 +82,7 @@ import as above.
 using namespace libsumo;
 
 int main(int argc, char* argv[]) {
-    Simulation::load({"-c", "test.sumocfg"});
+    Simulation::load({"-n", "net.net.xml"});
     for (int i = 0; i < 5; i++) {
         Simulation::step();
     }
@@ -115,7 +115,7 @@ import org.eclipse.sumo.libsumo.StringVector;
 public class Test {
     public static void main(String[] args) {
         System.loadLibrary("libsumojni");
-        Simulation.load(new StringVector(new String[] {"-c", "test.sumocfg"}));
+        Simulation.load(new StringVector(new String[] {"-n", "net.net.xml"}));
         for (int i = 0; i < 5; i++) {
             Simulation.step();
         }

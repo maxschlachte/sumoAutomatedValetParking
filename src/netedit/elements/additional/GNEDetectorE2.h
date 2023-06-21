@@ -54,7 +54,7 @@ public:
      */
     GNEDetectorE2(const std::string& id, GNELane* lane, GNENet* net, double pos, double length, const SUMOTime freq, const std::string& trafficLight,
                   const std::string& filename, const std::vector<std::string>& vehicleTypes, const std::string& name, SUMOTime timeThreshold, double speedThreshold,
-                  double jamThreshold, bool friendlyPos, const Parameterised::Map& parameters);
+                  double jamThreshold, bool friendlyPos, const std::map<std::string, std::string>& parameters);
 
     /**@brief Constructor for Multi-Lane detectors
      * @param[in] id The storage of gl-ids to get the one for this lane representation from
@@ -75,14 +75,14 @@ public:
      */
     GNEDetectorE2(const std::string& id, std::vector<GNELane*> lanes, GNENet* net, double pos, double endPos, const SUMOTime freq, const std::string& trafficLight,
                   const std::string& filename, const std::vector<std::string>& vehicleTypes, const std::string& name, SUMOTime timeThreshold, double speedThreshold, double jamThreshold,
-                  bool friendlyPos, const Parameterised::Map& parameters);
+                  bool friendlyPos, const std::map<std::string, std::string>& parameters);
 
     /// @brief Destructor
     ~GNEDetectorE2();
 
     /// @name members and functions relative to write additionals into XML
     /// @{
-    /**@brief write additional element into a xml file
+    /**@brief writte additional element into a xml file
      * @param[in] device device in which write parameters of additional element
      */
     void writeAdditional(OutputDevice& device) const;
@@ -109,29 +109,6 @@ public:
     void drawGL(const GUIVisualizationSettings& s) const;
     /// @}
 
-    /// @name inherited from GNEPathManager::PathElement
-    /// @{
-
-    /// @brief compute pathElement
-    void computePathElement();
-
-    /**@brief Draws partial object (lane)
-     * @param[in] s The settings for the current view (may influence drawing)
-     * @param[in] lane GNELane in which draw partial
-     * @param[in] segment segment geometry
-     */
-    void drawPartialGL(const GUIVisualizationSettings& s, const GNELane* lane, const GNEPathManager::Segment* segment, const double offsetFront) const;
-
-    /**@brief Draws partial object (junction)
-     * @param[in] s The settings for the current view (may influence drawing)
-     * @param[in] fromLane from GNELane
-     * @param[in] toLane to GNELane
-     * @param[in] drawGeometry flag to enable/disable draw geometry (lines, boxLines, etc.)
-     */
-    void drawPartialGL(const GUIVisualizationSettings& s, const GNELane* fromLane, const GNELane* toLane, const GNEPathManager::Segment* segment, const double offsetFront) const;
-
-    /// @}
-
     /// @name inherited from GNEAttributeCarrier
     /// @{
     /* @brief method for getting the Attribute of an XML key
@@ -155,10 +132,15 @@ public:
 
     /* @brief method for checking if the key and their correspond attribute are valids
      * @param[in] key The attribute key
-     * @param[in] value The value associated to key key
+     * @param[in] value The value asociated to key key
      * @return true if the value is valid, false in other case
      */
     bool isValid(SumoXMLAttr key, const std::string& value);
+
+    /* @brief method for check if the value for certain attribute is set
+     * @param[in] key The attribute key
+     */
+    bool isAttributeEnabled(SumoXMLAttr key) const;
     /// @}
 
 protected:
@@ -186,6 +168,9 @@ private:
 
     /// @brief commit move shape
     void commitMoveShape(const GNEMoveResult& moveResult, GNEUndoList* undoList);
+
+    /// @brief check if lanes are consecutives
+    bool areLaneConsecutives() const;
 
     /// @brief get start position over lane that is applicable to the shape
     double getStartGeometryPositionOverLane() const;

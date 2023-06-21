@@ -39,25 +39,12 @@ from sumolib.xml import parse_fast_nested  # noqa
 from sumolib.miscutils import uMin, uMax, parseTime  # noqa
 from sumolib.options import ArgumentParser  # noqa
 
-KEYS = {
-    't': 'Time',
-    's': 'Speed',
-    'd': 'Distance',
-    'a': 'Acceleration',
-    'i': 'Angle',
-    'x': 'x-Position',
-    'y': 'y-Position',
-    'k': 'kilometrage',
-    'g': 'gap',
-}
-
 
 def getOptions(args=None):
     optParser = ArgumentParser()
     optParser.add_option("-t", "--trajectory-type", dest="ttype", default="ds",
-                         help="select two letters from [t, s, d, a, i, x, y, k, g] to plot"
-                         + " Time, Speed, Distance, Acceleration, Angle,"
-                         + " x-Position, y-Position, Kilometrage, leaderGap."
+                         help="select two letters from [t, s, d, a, i, x, y, k] to plot"
+                         + " Time, Speed, Distance, Acceleration, Angle, x-Position, y-Position, Kilometrage."
                          + " Default 'ds' plots Distance vs. Speed")
     optParser.add_option("--persons", action="store_true", default=False, help="plot person trajectories")
     optParser.add_option("-s", "--show", action="store_true", default=False, help="show plot directly")
@@ -99,7 +86,7 @@ def write_csv(data, fname):
     with open(fname, 'w') as f:
         for veh, vals in sorted(data.items()):
             f.write('"%s"\n' % veh)
-            for x in zip(*[vals[k] for k in KEYS if k in vals]):
+            for x in zip(*vals):
                 f.write(" ".join(map(str, x)) + "\n")
             f.write('\n')
 
@@ -122,16 +109,25 @@ def main(options):
     fig = plt.figure(figsize=(14, 9), dpi=100)
     fig.canvas.mpl_connect('pick_event', onpick)
 
-    xdata = None
-    ydata = None
+    xdata = 2
+    ydata = 1
+    typespec = {
+        't': ('Time', 0),
+        's': ('Speed', 1),
+        'd': ('Distance', 2),
+        'a': ('Acceleration', 3),
+        'i': ('Angle', 4),
+        'x': ('x-Position', 5),
+        'y': ('y-Position', 6),
+        'k': ('kilometrage', 7),
+    }
+
     shortFileNames = short_names(options.fcdfiles)
-    xdata = options.ttype[0]
-    ydata = options.ttype[1]
     if (len(options.ttype) == 2
-            and xdata in KEYS
-            and ydata in KEYS):
-        xLabel = KEYS[xdata]
-        yLabel = KEYS[ydata]
+            and options.ttype[0] in typespec
+            and options.ttype[1] in typespec):
+        xLabel, xdata = typespec[options.ttype[0]]
+        yLabel, ydata = typespec[options.ttype[1]]
         plt.xlabel(xLabel)
         plt.ylabel(yLabel)
         plt.title(','.join(shortFileNames) if options.label is None else options.label)
@@ -149,9 +145,7 @@ def main(options):
     attrs = ['id', 'x', 'y', 'angle', 'speed', location]
     if 'k' in options.ttype:
         attrs.append('distance')
-    if 'g' in options.ttype:
-        attrs.append('leaderGap')
-    data = defaultdict(lambda: defaultdict(list))
+    data = defaultdict(lambda: tuple(([] for i in range(len(attrs) + 1))))
     for fileIndex, fcdfile in enumerate(options.fcdfiles):
         totalVehs = 0
         filteredVehs = 0
@@ -179,28 +173,26 @@ def main(options):
             prevSpeed = speed
             prevDist = 0
             if vehID in data:
-                prevTime = data[vehID]['t'][-1]
-                prevSpeed = data[vehID]['s'][-1]
-                prevDist = data[vehID]['d'][-1]
-            data[vehID]['t'].append(time)
-            data[vehID]['s'].append(speed)
-            data[vehID]['i'].append(float(vehicle.angle))
-            data[vehID]['x'].append(float(vehicle.x))
-            data[vehID]['y'].append(float(vehicle.y))
+                prevTime = data[vehID][0][-1]
+                prevSpeed = data[vehID][1][-1]
+                prevDist = data[vehID][2][-1]
+            data[vehID][0].append(time)
+            data[vehID][1].append(speed)
+            data[vehID][4].append(float(vehicle.angle))
+            data[vehID][5].append(float(vehicle.x))
+            data[vehID][6].append(float(vehicle.y))
             if 'k' in options.ttype:
-                data[vehID]['k'].append(float(vehicle.distance))
-            if 'g' in options.ttype:
-                data[vehID]['g'].append(float(vehicle.leaderGap))
+                data[vehID][7].append(float(vehicle.distance))
             if prevTime == time:
-                data[vehID]['a'].append(0)
+                data[vehID][3].append(0)
             else:
-                data[vehID]['a'].append((speed - prevSpeed) / (time - prevTime))
+                data[vehID][3].append((speed - prevSpeed) / (time - prevTime))
 
             if options.ballistic:
                 avgSpeed = (speed + prevSpeed) / 2
             else:
                 avgSpeed = speed
-            data[vehID]['d'].append(prevDist + (time - prevTime) * avgSpeed)
+            data[vehID][2].append(prevDist + (time - prevTime) * avgSpeed)
             filteredVehs += 1
         if totalVehs == 0 or filteredVehs == 0 or options.verbose:
             print("Found %s datapoints in %s and kept %s" % (

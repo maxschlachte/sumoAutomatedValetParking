@@ -18,7 +18,6 @@
 ///
 // Tests the class NBHeightMapper
 /****************************************************************************/
-#include <config.h>
 
 #include <gtest/gtest.h>
 #include <netbuild/NBHeightMapper.h>

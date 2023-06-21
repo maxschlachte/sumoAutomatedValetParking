@@ -57,7 +57,7 @@ public:
                               const SUMOTime offset,
                               const TrafficLightType logicType,
                               const Phases& phases, int step, SUMOTime delay,
-                              const Parameterised::Map& parameters);
+                              const std::map<std::string, std::string>& parameters);
 
 
     /// @brief Destructor

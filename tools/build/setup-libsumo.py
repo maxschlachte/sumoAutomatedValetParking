@@ -27,8 +27,6 @@ import version
 
 SUMO_VERSION = version.get_pep440_version()
 package_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-data_dir = os.path.join(package_dir, 'libsumo', 'data')
-data_files = ['data' + root[len(data_dir):] + "/*" for root, _, __ in os.walk(data_dir)]
 
 
 class InstallPlatlib(install):
@@ -67,7 +65,7 @@ setup(
 
     packages=['libsumo'],
     package_dir={'': package_dir},
-    package_data={'libsumo': ['*.pyd', '*.so', '*.dylib'] + data_files},
+    package_data={'libsumo': ['*.pyd', '*.so', '*.dylib']},
     data_files=[("", glob.glob(os.path.join(os.path.dirname(package_dir), 'bin', '*.dll')))],
     install_requires=['traci>='+SUMO_VERSION],
     cmdclass={'install': InstallPlatlib},

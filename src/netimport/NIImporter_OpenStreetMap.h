@@ -74,7 +74,7 @@ protected:
     struct NIOSMNode {
         NIOSMNode(long long int _id, double _lon, double _lat)
             :
-            id(_id), lon(_lon), lat(_lat), ele(0.),
+            id(_id), lon(_lon), lat(_lat), ele(0),
             tlsControlled(false),
             railwayCrossing(false),
             railwaySignal(false),
@@ -82,7 +82,7 @@ protected:
             ptStopPosition(false), ptStopLength(0), name(""),
             permissions(SVC_IGNORING),
             positionMeters(std::numeric_limits<double>::max()),
-            node(nullptr) { }
+            node(0) { }
 
         /// @brief The node's id
         const long long int id;
@@ -377,10 +377,6 @@ protected:
             return myDuplicateNodes;
         }
 
-        void resetHierarchy() {
-            myHierarchyLevel = 0;
-        }
-
     protected:
         /// @name inherited from GenericSAXHandler
         //@{
@@ -406,14 +402,15 @@ protected:
 
 
     private:
+
         /// @brief The nodes container to fill
         std::map<long long int, NIOSMNode*>& myToFill;
 
-        /// @brief id of the currently parsed node
-        std::string myLastNodeID;
+        /// @brief ID of the currently parsed node, for reporting mainly
+        long long int myLastNodeID;
 
-        /// @brief the currently parsed node
-        NIOSMNode* myCurrentNode;
+        /// @brief Hierarchy helper for parsing a node's tags
+        bool myIsInValidNodeTag;
 
         /// @brief The current hierarchy level
         int myHierarchyLevel;
@@ -499,7 +496,10 @@ protected:
         std::map<long long int, Edge*>& myPlatformShapesMap;
 
         /// @brief The currently built edge
-        Edge* myCurrentEdge = nullptr;
+        Edge* myCurrentEdge;
+
+        /// @brief The element stack
+        std::vector<int> myParentElements;
 
         /// @brief A map of non-numeric speed descriptions to their numeric values
         std::map<std::string, double> mySpeedMap;
@@ -584,6 +584,9 @@ protected:
 
         /// @brief The currently parsed relation
         long long int myCurrentRelation;
+
+        /// @brief The element stack
+        std::vector<int> myParentElements;
 
         /// @brief whether the currently parsed relation is a restriction
         bool myIsRestriction;

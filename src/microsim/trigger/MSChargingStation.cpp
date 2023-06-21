@@ -33,7 +33,7 @@
 
 
 // ===========================================================================
-// member method definitions
+// (chs): member method definitions for charging space
 // ===========================================================================
 
 MSChargingStation::MSChargingStation(const std::string& chargingStationID, MSLane& lane, double startPos, double endPos,

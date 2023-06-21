@@ -499,10 +499,8 @@ class AttributeStore:
 
 
 def parse_args():
+    USAGE = "Usage: " + sys.argv[0] + " <source> <dest> <output-prefix>"
     optParser = ArgumentParser()
-    optParser.add_argument("source", help="original network")
-    optParser.add_argument("dest", help="modified network")
-    optParser.add_argument("outprefix", help="prefix for the diff files")
     optParser.add_option("-v", "--verbose", action="store_true",
                          default=False, help="Give more output")
     optParser.add_option("-p", "--use-prefix", action="store_true",
@@ -523,7 +521,9 @@ def parse_args():
                          help="Write shape files for created, deleted and changed elements")
     optParser.add_option("-g", "--plain-geo", action="store_true", default=False,
                          help="Write geo coordinates instead of network coordinates")
-    options = optParser.parse_args()
+    options, args = optParser.parse_known_args()
+    if len(args) != 3:
+        sys.exit(USAGE)
     if options.use_prefix and options.direct:
         optParser.error(
             "Options --use-prefix and --direct are mutually exclusive")
@@ -536,6 +536,7 @@ def parse_args():
             optParser.error(
                 "Options --write-shapes and --use-prefix are mutually exclusive")
 
+    options.source, options.dest, options.outprefix = args
     return options
 
 
@@ -622,36 +623,36 @@ def handle_children(xmlfile, handle_parsenode):
     schema = None
     version = ""
     level = 0
-    with open(xmlfile, 'rb') as in_xml:
-        xml_doc = pulldom.parse(in_xml)
-        for event, parsenode in xml_doc:
-            if event == pulldom.START_ELEMENT:
-                # print level, parsenode.getAttribute(ID_ATTR)
-                if level == 0:
-                    # since we did not expand root_open contains the closing slash
-                    root = parsenode.localName
-                    if root == "edges":
-                        schema = "edgediff_file.xsd"
-                    elif root == "tlLogics":
-                        schema = "tllogic_file.xsd"
-                    if parsenode.hasAttribute("version"):
-                        version = ' version="%s"' % parsenode.getAttribute("version")
-                    if root not in ("edges", "nodes", "connections", "tlLogics"):
-                        # do not write schema information
-                        version = None
-                if level == 1:
-                    # consumes END_ELEMENT, no level increase
-                    xml_doc.expandNode(parsenode)
-                    handle_parsenode(parsenode)
-                else:
-                    level += 1
-            elif event == pulldom.END_ELEMENT:
-                level -= 1
-        return root, schema, version
+    xml_doc = pulldom.parse(xmlfile)
+    for event, parsenode in xml_doc:
+        if event == pulldom.START_ELEMENT:
+            # print level, parsenode.getAttribute(ID_ATTR)
+            if level == 0:
+                # since we did not expand root_open contains the closing slash
+                root = parsenode.localName
+                if root == "edges":
+                    schema = "edgediff_file.xsd"
+                elif root == "tlLogics":
+                    schema = "tllogic_file.xsd"
+                if parsenode.hasAttribute("version"):
+                    version = ' version="%s"' % parsenode.getAttribute("version")
+                if root not in ("edges", "nodes", "connections", "tlLogics"):
+                    # do not write schema information
+                    version = None
+            if level == 1:
+                # consumes END_ELEMENT, no level increase
+                xml_doc.expandNode(parsenode)
+                handle_parsenode(parsenode)
+            else:
+                level += 1
+        elif event == pulldom.END_ELEMENT:
+            level -= 1
+    return root, schema, version
 
 
 # run
-def main(options):
+def main():
+    options = parse_args()
     copy_tags = options.copy.split(',') if options.copy else []
 
     selectionOutputFiles = []
@@ -702,12 +703,11 @@ def main(options):
                 os.remove(options.source + type)
                 os.remove(options.dest + type)
 
-    for f in selectionOutputFiles:
-        f.close()
+    [f.close() for f in selectionOutputFiles]
     for f in shapeOutputFiles:
         f.write("<additional>\n")
         f.close()
 
 
 if __name__ == "__main__":
-    main(parse_args())
+    main()

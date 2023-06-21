@@ -36,7 +36,6 @@
 // ===========================================================================
 class GenericSAXHandler;
 class IStreamInputSource;
-class SUMOSAXAttributes;
 
 
 // ===========================================================================
@@ -78,8 +77,6 @@ public:
     bool parseFirst(std::string systemID);
 
     bool parseNext();
-
-    bool parseSection(int element);
 
 private:
     class LocalSchemaResolver : public XERCES_CPP_NAMESPACE::EntityResolver {
@@ -125,8 +122,6 @@ private:
     std::vector<SumoXMLTag> myXMLStack;
 
     LocalSchemaResolver mySchemaResolver;
-
-    std::pair<int, SUMOSAXAttributes*> myNextSection;
 
 private:
     /// @brief invalidated copy constructor

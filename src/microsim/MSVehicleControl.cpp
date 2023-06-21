@@ -102,19 +102,19 @@ MSVehicleControl::initDefaultTypes() {
 SUMOVehicle*
 MSVehicleControl::buildVehicle(SUMOVehicleParameter* defs,
                                const MSRoute* route, MSVehicleType* type,
-                               const bool ignoreStopErrors, const bool fromRouteFile, bool addRouteStops) {
+                               const bool ignoreStopErrors, const bool fromRouteFile) {
     MSVehicle* built = new MSVehicle(defs, route, type, type->computeChosenSpeedDeviation(fromRouteFile ? MSRouteHandler::getParsingRNG() : nullptr));
-    initVehicle(built, ignoreStopErrors, addRouteStops);
+    initVehicle(built, ignoreStopErrors);
     return built;
 }
 
 
 void
-MSVehicleControl::initVehicle(MSBaseVehicle* built, const bool ignoreStopErrors, bool addRouteStops) {
+MSVehicleControl::initVehicle(MSBaseVehicle* built, const bool ignoreStopErrors) {
     myLoadedVehNo++;
     try {
         built->initDevices();
-        built->addStops(ignoreStopErrors, nullptr, addRouteStops);
+        built->addStops(ignoreStopErrors);
     } catch (ProcessError&) {
         delete built;
         throw;
@@ -246,19 +246,6 @@ MSVehicleControl::clearState(const bool reinit) {
     if (reinit) {
         initDefaultTypes();
     }
-    myLoadedVehNo = 0;
-    myRunningVehNo = 0;
-    myEndedVehNo = 0;
-    myDiscarded = 0;
-    myCollisions = 0;
-    myTeleportsCollision = 0;
-    myTeleportsJam = 0;
-    myTeleportsYield = 0;
-    myTeleportsWrongLane = 0;
-    myEmergencyStops = 0;
-    myStoppedVehicles = 0;
-    myTotalDepartureDelay = 0;
-    myTotalTravelTime = 0;
 }
 
 
@@ -269,19 +256,13 @@ MSVehicleControl::addVehicle(const std::string& id, SUMOVehicle* v) {
         // id not in myVehicleDict.
         myVehicleDict[id] = v;
         const SUMOVehicleParameter& pars = v->getParameter();
-        if (pars.departProcedure == DepartDefinition::TRIGGERED || pars.departProcedure == DepartDefinition::CONTAINER_TRIGGERED || pars.departProcedure == DepartDefinition::SPLIT) {
+        if (pars.departProcedure == DEPART_TRIGGERED || pars.departProcedure == DEPART_CONTAINER_TRIGGERED || pars.departProcedure == DEPART_SPLIT) {
             const MSEdge* const firstEdge = v->getRoute().getEdges()[0];
             if (!MSGlobals::gUseMesoSim) {
                 // position will be checked against person position later
-                static_cast<MSVehicle*>(v)->setTentativeLaneAndPosition(nullptr, v->getParameter().departPos);
+                static_cast<MSVehicle*>(v)->setTentativeLaneAndPosition(firstEdge->getLanes()[0], v->getParameter().departPos);
             }
-            if (firstEdge->isTazConnector()) {
-                for (MSEdge* out : firstEdge->getSuccessors()) {
-                    out->addWaiting(v);
-                }
-            } else {
-                firstEdge->addWaiting(v);
-            }
+            firstEdge->addWaiting(v);
             registerOneWaiting();
         }
         if (v->getVClass() != SVC_TAXI && pars.line != "" && pars.repetitionNumber < 0) {
@@ -440,7 +421,7 @@ void
 MSVehicleControl::abortWaiting() {
     for (VehicleDictType::iterator i = myVehicleDict.begin(); i != myVehicleDict.end(); ++i) {
         WRITE_WARNINGF("Vehicle '%' aborted waiting for a % that will never come.", i->first,
-                       i->second->getParameter().departProcedure == DepartDefinition::SPLIT ? "split" : "person or container")
+                       i->second->getParameter().departProcedure == DEPART_SPLIT ? "split" : "person or container")
     }
 }
 
@@ -468,7 +449,7 @@ MSVehicleControl::getVehicleMeanSpeeds() const {
         if ((veh->isOnRoad() || veh->isRemoteControlled()) && !veh->isStopped()) {
             count++;
             speedSum += veh->getSpeed();
-            relSpeedSum += veh->getEdge()->getSpeedLimit() > 0 ? veh->getSpeed() / veh->getEdge()->getSpeedLimit() : 0;
+            relSpeedSum += veh->getSpeed() / veh->getEdge()->getSpeedLimit();
         }
     }
     if (count > 0) {
@@ -505,5 +486,6 @@ MSVehicleControl::adaptIntermodalRouter(MSNet::MSIntermodalRouter& router) const
         router.getNetwork()->addSchedule(veh->getParameter(), route == nullptr ? nullptr : &route->getStops());
     }
 }
+
 
 /****************************************************************************/

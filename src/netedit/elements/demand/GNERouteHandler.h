@@ -21,8 +21,7 @@
 #include <config.h>
 
 #include <netedit/frames/GNEFrameAttributeModules.h>
-#include <netedit/frames/GNEPathCreator.h>
-#include <netedit/frames/GNEAttributesCreator.h>
+#include <netedit/frames/GNEFrameModules.h>
 #include <utils/common/SUMOVehicleClass.h>
 #include <utils/vehicle/SUMORouteHandler.h>
 #include <utils/xml/SUMOSAXAttributes.h>
@@ -57,7 +56,7 @@ public:
     GNERouteHandler(const std::string& file, GNENet* net, bool undoDemandElements = true);
 
     /// @brief Destructor
-    virtual ~GNERouteHandler();
+    ~GNERouteHandler();
 
     /// @name build functions
     /// @{
@@ -72,12 +71,12 @@ public:
     /// @brief build route
     void buildRoute(const CommonXMLStructure::SumoBaseObject* sumoBaseObject, const std::string& id, SUMOVehicleClass vClass,
                     const std::vector<std::string>& edgeIDs, const RGBColor& color, const int repeat, const SUMOTime cycleTime,
-                    const Parameterised::Map& routeParameters);
+                    const std::map<std::string, std::string>& routeParameters);
 
     /// @brief build embedded route
     void buildEmbeddedRoute(const CommonXMLStructure::SumoBaseObject* sumoBaseObject, const std::vector<std::string>& edgeIDs,
                             const RGBColor& color, const int repeat, const SUMOTime cycleTime,
-                            const Parameterised::Map& routeParameters);
+                            const std::map<std::string, std::string>& routeParameters);
 
     /// @brief build route distribution
     void buildRouteDistribution(const CommonXMLStructure::SumoBaseObject* sumoBaseObject, const std::string& id);
@@ -144,11 +143,11 @@ public:
     void buildStop(const CommonXMLStructure::SumoBaseObject* sumoBaseObject, const SUMOVehicleParameter::Stop& stopParameters);
 
     /// @brief build person plan
-    bool buildPersonPlan(SumoXMLTag tag, GNEDemandElement* personParent, GNEAttributesCreator* personPlanAttributes,
-                         GNEPathCreator* pathCreator, const bool centerAfterCreation);
+    bool buildPersonPlan(SumoXMLTag tag, GNEDemandElement* personParent, GNEFrameAttributeModules::AttributesCreator* personPlanAttributes,
+                         GNEFrameModules::PathCreator* pathCreator, const bool centerAfterCreation);
 
     /// @brief build container plan
-    bool buildContainerPlan(SumoXMLTag tag, GNEDemandElement* containerParent, GNEAttributesCreator* containerPlanAttributes, GNEPathCreator* pathCreator, const bool centerAfterCreation);
+    bool buildContainerPlan(SumoXMLTag tag, GNEDemandElement* containerParent, GNEFrameAttributeModules::AttributesCreator* containerPlanAttributes, GNEFrameModules::PathCreator* pathCreator);
 
     /// @brief check if there is already a vehicle (Vehicle, Trip, Flow or Flow) with the given ID
     static bool isVehicleIdDuplicated(GNENet* net, const std::string& id);
@@ -197,6 +196,9 @@ public:
     static void transformToContainerFlow(GNEContainer* originalContainer);
 
     /// @}
+
+    /// @brief set flow parameters
+    static void setFlowParameters(const SumoXMLAttr attribute, int& parameters);
 
 protected:
     /// @brief parse junction

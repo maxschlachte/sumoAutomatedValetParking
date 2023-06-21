@@ -82,7 +82,7 @@ public:
      * Opens a file dialog and forces the selection container to save the list
      *  of selected objects when a file was chosen.
      *
-     * If the saving failed, a message window is shown.
+     * If the saveing failed, a message window is shown.
      *
      * @todo Recheck loading/saving of selections
      */
@@ -115,11 +115,11 @@ protected:
 
 private:
     /// @brief The list that holds the ids
-    FXList* myList = nullptr;
+    FXList* myList;
 
     /// @brief The parent window
-    GUIMainWindow* myParent = nullptr;
+    GUIMainWindow* myParent;
 
     /// @brief The storage
-    GUISelectedStorage* myStorage = nullptr;
+    GUISelectedStorage* myStorage;
 };

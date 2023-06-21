@@ -131,7 +131,6 @@ MSAbstractLaneChangeModel::MSAbstractLaneChangeModel(MSVehicle& v, const LaneCha
                          // prevent lateral sliding for cars but permit for two-wheelers due to better maneuverability
                          (v.getVClass() & (SVC_BICYCLE | SVC_MOTORCYCLE | SVC_MOPED)) != 0 ? std::numeric_limits<double>::max() : 1.6)),
     mySigma(v.getVehicleType().getParameter().getLCParam(SUMO_ATTR_LCA_SIGMA, 0.0)),
-    myOvertakeRightParam(v.getVehicleType().getParameter().getLCParam(SUMO_ATTR_LCA_OVERTAKE_RIGHT, 0)),
     myHaveBlueLight(v.getDevice(typeid(MSDevice_Bluelight)) != nullptr), // see MSVehicle::initDevices
     myLastLaneChangeOffset(0),
     myAmOpposite(false),
@@ -203,11 +202,11 @@ MSAbstractLaneChangeModel::saveNeighbors(const int dir, const MSLeaderDistanceIn
 void
 MSAbstractLaneChangeModel::saveNeighbors(const int dir, const std::pair<MSVehicle* const, double>& follower, const std::pair<MSVehicle* const, double>& leader) {
     if (dir == -1) {
-        myLeftFollowers = std::make_shared<MSLeaderDistanceInfo>(follower, myVehicle.getLane()->getWidth());
-        myLeftLeaders = std::make_shared<MSLeaderDistanceInfo>(leader, myVehicle.getLane()->getWidth());
+        myLeftFollowers = std::make_shared<MSLeaderDistanceInfo>(follower, myVehicle.getLane());
+        myLeftLeaders = std::make_shared<MSLeaderDistanceInfo>(leader, myVehicle.getLane());
     } else if (dir == 1) {
-        myRightFollowers = std::make_shared<MSLeaderDistanceInfo>(follower, myVehicle.getLane()->getWidth());
-        myRightLeaders = std::make_shared<MSLeaderDistanceInfo>(leader, myVehicle.getLane()->getWidth());
+        myRightFollowers = std::make_shared<MSLeaderDistanceInfo>(follower, myVehicle.getLane());
+        myRightLeaders = std::make_shared<MSLeaderDistanceInfo>(leader, myVehicle.getLane());
     } else {
         // dir \in {-1,1} !
         assert(false);
@@ -270,13 +269,6 @@ MSAbstractLaneChangeModel::congested(const MSVehicle* const neighLeader) {
 }
 
 
-bool
-MSAbstractLaneChangeModel::avoidOvertakeRight() const {
-    return (!myAllowOvertakingRight
-            && !myVehicle.congested()
-            && myVehicle.getVehicleType().getVehicleClass() != SVC_EMERGENCY
-            && (myOvertakeRightParam == 0 || myOvertakeRightParam < RandHelper::rand(myVehicle.getRNG())));
-}
 
 bool
 MSAbstractLaneChangeModel::predInteraction(const std::pair<MSVehicle*, double>& leader) {
@@ -349,8 +341,8 @@ MSAbstractLaneChangeModel::primaryLaneChanged(MSLane* source, MSLane* target, in
         }
     } else {
         myVehicle.enterLaneAtLaneChange(target);
-        target->enteredByLaneChange(&myVehicle);
     }
+    target->enteredByLaneChange(&myVehicle);
     // Assure that the drive items are up to date (even if the following step is no actionstep for the vehicle).
     // This is necessary because the lane advance uses the target lane from the corresponding drive item.
     myVehicle.updateDriveItems();
@@ -845,7 +837,7 @@ MSAbstractLaneChangeModel::remainingTime() const {
         if (myVehicle.getVehicleType().wasSet(VTYPEPARS_MAXSPEED_LAT_SET)) {
             return TIME2STEPS((1. - myLaneChangeCompletion) * myManeuverDist / myVehicle.getVehicleType().getMaxSpeedLat());
         } else {
-            return (SUMOTime)((1. - myLaneChangeCompletion) * (double)MSGlobals::gLaneChangeDuration);
+            return (SUMOTime)((1. - myLaneChangeCompletion) * MSGlobals::gLaneChangeDuration);
         }
     }
     // Using maxSpeedLat(Factor/Standing)

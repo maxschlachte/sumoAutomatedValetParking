@@ -65,9 +65,8 @@ class NBTrafficLightLogic;
 class NBTrafficLightDefinition : public Named, public Parameterised {
 public:
 
-    static const std::string DefaultProgramID;
     static const SUMOTime UNSPECIFIED_DURATION;
-    static const int MIN_YELLOW_SECONDS;
+    static const std::string DefaultProgramID;
 
     /**
      * @enum TLColor
@@ -129,6 +128,7 @@ public:
     /// @brief Destructor
     virtual ~NBTrafficLightDefinition();
 
+
     /** @brief Computes the traffic light logic
      *
      * Does some initialisation at first, then calls myCompute to finally
@@ -138,6 +138,8 @@ public:
      * @return The built logic (may be 0)
      */
     NBTrafficLightLogic* compute(OptionsCont& oc);
+
+
 
     /// @name Access to controlled nodes
     /// @{

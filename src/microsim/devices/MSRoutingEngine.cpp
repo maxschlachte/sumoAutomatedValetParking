@@ -65,7 +65,6 @@ std::map<std::pair<const MSEdge*, const MSEdge*>, const MSRoute*> MSRoutingEngin
 double MSRoutingEngine::myPriorityFactor(0);
 double MSRoutingEngine::myMinEdgePriority(std::numeric_limits<double>::max());
 double MSRoutingEngine::myEdgePriorityRange(0);
-std::map<std::thread::id, SumoRNG*> MSRoutingEngine::myThreadRNGs;
 
 SUMOAbstractRouter<MSEdge, SUMOVehicle>::Operation MSRoutingEngine::myEffortFunc = &MSRoutingEngine::getEffort;
 #ifdef HAVE_FOX
@@ -176,17 +175,6 @@ MSRoutingEngine::getEffortBike(const MSEdge* const e, const SUMOVehicle* const v
     return e->getMinimumTravelTime(v);
 }
 
-SumoRNG*
-MSRoutingEngine::getThreadRNG() {
-    if (myThreadRNGs.size() > 0) {
-        auto it = myThreadRNGs.find(std::this_thread::get_id());
-        if (it != myThreadRNGs.end()) {
-            return it->second;
-        }
-        std::cout << " something bad happended\n";
-    }
-    return nullptr;
-}
 
 
 double
@@ -195,7 +183,7 @@ MSRoutingEngine::getEffortExtra(const MSEdge* const e, const SUMOVehicle* const 
                      ? getEffort(e, v, t)
                      : getEffortBike(e, v, t));
     if (gWeightsRandomFactor != 1.) {
-        effort *= RandHelper::rand(1., gWeightsRandomFactor, getThreadRNG());
+        effort *= RandHelper::rand(1., gWeightsRandomFactor);
     }
     if (myPriorityFactor != 0) {
         // lower priority should result in higher effort (and the edge with
@@ -228,49 +216,63 @@ MSRoutingEngine::adaptEdgeEfforts(SUMOTime currentTime) {
     }
     myCachedRoutes.clear();
     const MSEdgeVector& edges = MSNet::getInstance()->getEdgeControl().getEdges();
-    const double newWeightFactor = (double)(1. - myAdaptationWeight);
-    for (const MSEdge* const e : edges) {
-        if (e->isDelayed()) {
-            const int id = e->getNumericalID();
-            double currSpeed = e->getMeanSpeed();
-            if (MSGlobals::gWeightsSeparateTurns > 0 && e->getNumSuccessors() > 1) {
-                currSpeed = patchSpeedForTurns(e, currSpeed);
-            }
+    if (myAdaptationSteps > 0) {
+        // moving average
+        for (MSEdgeVector::const_iterator i = edges.begin(); i != edges.end(); ++i) {
+            if ((*i)->isDelayed()) {
+                const int id = (*i)->getNumericalID();
+                double currSpeed = (*i)->getMeanSpeed();
+                if (MSGlobals::gWeightsSeparateTurns > 0 && (*i)->getNumSuccessors() > 1) {
+                    currSpeed = patchSpeedForTurns(*i, currSpeed);
+                }
 #ifdef DEBUG_SEPARATE_TURNS
-            if (DEBUG_COND(e->getLanes()[0])) {
-                std::cout << SIMTIME << " edge=" << e->getID()
-                          << " meanSpeed=" << e->getMeanSpeed()
-                          << " currSpeed=" << currSpeed
-                          << " oldestSpeed=" << myPastEdgeSpeeds[id][myAdaptationStepsIndex]
-                          << " oldAvg=" << myEdgeSpeeds[id]
-                          << "\n";
-            }
+                if (DEBUG_COND((*i)->getLanes()[0])) {
+                    std::cout << SIMTIME << " edge=" << (*i)->getID()
+                              << " meanSpeed=" << (*i)->getMeanSpeed()
+                              << " currSpeed=" << currSpeed
+                              << " oldestSpeed=" << myPastEdgeSpeeds[id][myAdaptationStepsIndex]
+                              << " oldAvg=" << myEdgeSpeeds[id]
+                              << "\n";
+                }
 #endif
-            if (myAdaptationSteps > 0) {
-                // moving average
                 myEdgeSpeeds[id] += (currSpeed - myPastEdgeSpeeds[id][myAdaptationStepsIndex]) / myAdaptationSteps;
                 myPastEdgeSpeeds[id][myAdaptationStepsIndex] = currSpeed;
-                if (myBikeSpeeds) {
-                    const double currBikeSpeed = e->getMeanSpeedBike();
-                    myEdgeBikeSpeeds[id] += (currBikeSpeed - myPastEdgeBikeSpeeds[id][myAdaptationStepsIndex]) / myAdaptationSteps;
-                    myPastEdgeBikeSpeeds[id][myAdaptationStepsIndex] = currBikeSpeed;
+            }
+        }
+        if (myBikeSpeeds) {
+            for (MSEdgeVector::const_iterator i = edges.begin(); i != edges.end(); ++i) {
+                if ((*i)->isDelayed()) {
+                    const int id = (*i)->getNumericalID();
+                    const double currSpeed = (*i)->getMeanSpeedBike();
+                    myEdgeBikeSpeeds[id] += (currSpeed - myPastEdgeBikeSpeeds[id][myAdaptationStepsIndex]) / myAdaptationSteps;
+                    myPastEdgeBikeSpeeds[id][myAdaptationStepsIndex] = currSpeed;
                 }
-            } else {
-                // exponential moving average
+            }
+        }
+        myAdaptationStepsIndex = (myAdaptationStepsIndex + 1) % myAdaptationSteps;
+    } else {
+        // exponential moving average
+        const double newWeightFactor = (double)(1. - myAdaptationWeight);
+        for (MSEdgeVector::const_iterator i = edges.begin(); i != edges.end(); ++i) {
+            if ((*i)->isDelayed()) {
+                const int id = (*i)->getNumericalID();
+                const double currSpeed = (*i)->getMeanSpeed();
                 if (currSpeed != myEdgeSpeeds[id]) {
                     myEdgeSpeeds[id] = myEdgeSpeeds[id] * myAdaptationWeight + currSpeed * newWeightFactor;
                 }
-                if (myBikeSpeeds) {
-                    const double currBikeSpeed = e->getMeanSpeedBike();
-                    if (currBikeSpeed != myEdgeBikeSpeeds[id]) {
-                        myEdgeBikeSpeeds[id] = myEdgeBikeSpeeds[id] * myAdaptationWeight + currBikeSpeed * newWeightFactor;
+            }
+        }
+        if (myBikeSpeeds) {
+            for (MSEdgeVector::const_iterator i = edges.begin(); i != edges.end(); ++i) {
+                if ((*i)->isDelayed()) {
+                    const int id = (*i)->getNumericalID();
+                    const double currSpeed = (*i)->getMeanSpeedBike();
+                    if (currSpeed != myEdgeBikeSpeeds[id]) {
+                        myEdgeBikeSpeeds[id] = myEdgeBikeSpeeds[id] * myAdaptationWeight + currSpeed * newWeightFactor;
                     }
                 }
             }
         }
-    }
-    if (myAdaptationSteps > 0) {
-        myAdaptationStepsIndex = (myAdaptationStepsIndex + 1) % myAdaptationSteps;
     }
     myLastAdaptation = currentTime + DELTA_T; // because we run at the end of the time step
     if (OptionsCont::getOptions().isSet("device.rerouting.output")) {
@@ -300,9 +302,6 @@ MSRoutingEngine::patchSpeedForTurns(const MSEdge* edge, double currSpeed) {
     const double length = edge->getLength();
     double maxSpeed = 0;
     for (const auto& pair : edge->getViaSuccessors()) {
-        if (pair.second == nullptr) {
-            continue;
-        }
         TimeAndCount& tc = myEdgeTravelTimes[pair.second->getNumericalID()];
         if (tc.second > 0) {
             const double avgSpeed = length / STEPS2TIME(tc.first / tc.second);
@@ -313,9 +312,6 @@ MSRoutingEngine::patchSpeedForTurns(const MSEdge* edge, double currSpeed) {
         // perform correction
         const double correctedSpeed = MSGlobals::gWeightsSeparateTurns * maxSpeed + (1 - MSGlobals::gWeightsSeparateTurns) * currSpeed;
         for (const auto& pair : edge->getViaSuccessors()) {
-            if (pair.second == nullptr) {
-                continue;
-            }
             const int iid = pair.second->getNumericalID();
             TimeAndCount& tc = myEdgeTravelTimes[iid];
             if (tc.second > 0) {
@@ -430,14 +426,6 @@ MSRoutingEngine::initRouter(SUMOVehicle* vehicle) {
                 static_cast<MSEdgeControl::WorkerThread*>(*t)->setRouterProvider(myRouterProvider->clone());
             }
         }
-#ifndef WIN32
-        /*
-        int i = 0;
-        for (FXWorkerThread* t : threads) {
-            myThreadRNGs[(std::thread::id)t->id()] = new SumoRNG("routing_" + toString(i++));
-        }
-        */
-#endif
     }
 #endif
 #endif
@@ -507,8 +495,6 @@ MSRoutingEngine::getRouterTT(const int rngIndex, SUMOVehicleClass svc, const MSE
         router.prohibit(prohibited);
         return router;
     }
-#else
-    UNUSED_PARAMETER(rngIndex);
 #endif
 #endif
     myRouterProvider->getVehicleRouter(svc).prohibit(prohibited);

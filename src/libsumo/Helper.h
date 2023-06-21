@@ -22,10 +22,8 @@
 #include <vector>
 #include <memory>
 #include <libsumo/Subscription.h>
-#include <microsim/MSLane.h>
 #include <microsim/MSNet.h>
 #include <microsim/traffic_lights/MSTLLogicControl.h>
-#include <microsim/trigger/MSCalibrator.h>
 #include <utils/vehicle/SUMOVehicleParameter.h>
 
 
@@ -44,8 +42,61 @@ class MSVehicleType;
 
 
 // ===========================================================================
+// type definitions
+// ===========================================================================
+typedef std::map<const MSLane*, std::pair<double, double> >  LaneCoverageInfo; // also declared in MSLane.h!
+
+// ===========================================================================
 // class definitions
 // ===========================================================================
+
+class LaneStoringVisitor {
+public:
+    /// @brief Constructor
+    LaneStoringVisitor(std::set<const Named*>& objects, const PositionVector& shape,
+                       const double range, const int domain)
+        : myObjects(objects), myShape(shape), myRange(range), myDomain(domain) {}
+
+    /// @brief Destructor
+    ~LaneStoringVisitor() {}
+
+    /// @brief Adds the given object to the container
+    void add(const MSLane* const l) const;
+
+    /// @brief The container
+    std::set<const Named*>& myObjects;
+    const PositionVector& myShape;
+    const double myRange;
+    const int myDomain;
+
+private:
+    /// @brief invalidated copy constructor
+    LaneStoringVisitor(const LaneStoringVisitor& src);
+
+    /// @brief invalidated assignment operator
+    LaneStoringVisitor& operator=(const LaneStoringVisitor& src);
+};
+
+#define LANE_RTREE_QUAL RTree<MSLane*, MSLane, float, 2, LaneStoringVisitor>
+template<>
+inline float LANE_RTREE_QUAL::RectSphericalVolume(Rect* a_rect) {
+    ASSERT(a_rect);
+    const float extent0 = a_rect->m_max[0] - a_rect->m_min[0];
+    const float extent1 = a_rect->m_max[1] - a_rect->m_min[1];
+    return .78539816f * (extent0 * extent0 + extent1 * extent1);
+}
+
+template<>
+inline LANE_RTREE_QUAL::Rect LANE_RTREE_QUAL::CombineRect(Rect* a_rectA, Rect* a_rectB) {
+    ASSERT(a_rectA && a_rectB);
+    Rect newRect;
+    newRect.m_min[0] = rtree_min(a_rectA->m_min[0], a_rectB->m_min[0]);
+    newRect.m_max[0] = rtree_max(a_rectA->m_max[0], a_rectB->m_max[0]);
+    newRect.m_min[1] = rtree_min(a_rectA->m_min[1], a_rectB->m_min[1]);
+    newRect.m_max[1] = rtree_max(a_rectA->m_max[1], a_rectB->m_max[1]);
+    return newRect;
+}
+
 namespace libsumo {
 
 /**
@@ -155,20 +206,21 @@ public:
     static void setRemoteControlled(MSPerson* p, Position xyPos, MSLane* l, double pos, double posLat, double angle,
                                     int edgeOffset, ConstMSEdgeVector route, SUMOTime t);
 
-    /// @brief return number of remote-controlled entities
-    static int postProcessRemoteControl();
+    static void postProcessRemoteControl();
 
     static void cleanup();
 
-    static void registerStateListener();
+    static void registerVehicleStateListener();
 
     static const std::vector<std::string>& getVehicleStateChanges(const MSNet::VehicleState state);
 
+    static void clearVehicleStates();
+
+    static void registerTransportableStateListener();
+
     static const std::vector<std::string>& getTransportableStateChanges(const MSNet::TransportableState state);
 
-    static void clearStateChanges();
-
-    static MSCalibrator::AspiredState getCalibratorState(const MSCalibrator* c);
+    static void clearTransportableStates();
 
     /// @name functions for moveToXY
     /// @{
@@ -207,19 +259,17 @@ public:
     class SubscriptionWrapper final : public VariableWrapper {
     public:
         SubscriptionWrapper(VariableWrapper::SubscriptionHandler handler, SubscriptionResults& into, ContextSubscriptionResults& context);
-        void setContext(const std::string* const refID);
+        void setContext(const std::string& refID);
         void clear();
         bool wrapDouble(const std::string& objID, const int variable, const double value);
         bool wrapInt(const std::string& objID, const int variable, const int value);
         bool wrapString(const std::string& objID, const int variable, const std::string& value);
         bool wrapStringList(const std::string& objID, const int variable, const std::vector<std::string>& value);
-        bool wrapDoubleList(const std::string& objID, const int variable, const std::vector<double>& value);
         bool wrapPosition(const std::string& objID, const int variable, const TraCIPosition& value);
         bool wrapPositionVector(const std::string& objID, const int variable, const TraCIPositionVector& value);
         bool wrapColor(const std::string& objID, const int variable, const TraCIColor& value);
         bool wrapStringDoublePair(const std::string& objID, const int variable, const std::pair<std::string, double>& value);
         bool wrapStringPair(const std::string& objID, const int variable, const std::pair<std::string, std::string>& value);
-        void empty(const std::string& objID);
     private:
         SubscriptionResults& myResults;
         ContextSubscriptionResults& myContextResults;

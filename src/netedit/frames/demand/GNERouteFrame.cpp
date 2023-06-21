@@ -22,8 +22,10 @@
 #include <utils/gui/div/GUIDesigns.h>
 #include <utils/gui/windows/GUIAppEnum.h>
 #include <netedit/elements/demand/GNERoute.h>
+#include <netedit/changes/GNEChange_DemandElement.h>
 #include <netedit/GNEViewNet.h>
 #include <netedit/GNENet.h>
+#include <netedit/GNEUndoList.h>
 
 #include "GNERouteFrame.h"
 
@@ -49,7 +51,7 @@ FXIMPLEMENT(GNERouteFrame::RouteModeSelector,   FXGroupBoxModule,     RouteModeS
 // ---------------------------------------------------------------------------
 
 GNERouteFrame::RouteModeSelector::RouteModeSelector(GNERouteFrame* routeFrameParent) :
-    FXGroupBoxModule(routeFrameParent, "Route mode"),
+    FXGroupBoxModule(routeFrameParent->myContentFrame, "Route mode"),
     myRouteFrameParent(routeFrameParent) {
     // create route template
     myRouteTemplate = new GNERoute(routeFrameParent->getViewNet()->getNet());
@@ -193,13 +195,13 @@ GNERouteFrame::GNERouteFrame(FXHorizontalFrame* horizontalFrameParent, GNEViewNe
     myRouteModeSelector = new RouteModeSelector(this);
 
     // Create route parameters
-    myRouteAttributes = new GNEAttributesCreator(this);
+    myRouteAttributes = new GNEFrameAttributeModules::AttributesCreator(this);
 
     // create consecutive edges modul
-    myPathCreator = new GNEPathCreator(this);
+    myPathCreator = new GNEFrameModules::PathCreator(this);
 
     // create legend label
-    myPathLegend = new GNEM_PathLegend(this);
+    myPathLegend = new GNEFrameModules::PathLegend(this);
 }
 
 
@@ -242,14 +244,14 @@ GNERouteFrame::addEdgeRoute(GNEEdge* clickedEdge, const GNEViewNetHelper::MouseB
 }
 
 
-GNEPathCreator*
+GNEFrameModules::PathCreator*
 GNERouteFrame::getPathCreator() const {
     return myPathCreator;
 }
 
 
 void
-GNERouteFrame::createPath(const bool /*useLastRoute*/) {
+GNERouteFrame::createPath() {
     // check that route attributes are valid
     if (!myRouteAttributes->areValuesValid()) {
         myRouteAttributes->showWarningMessage();
@@ -283,12 +285,8 @@ GNERouteFrame::createPath(const bool /*useLastRoute*/) {
         myPathCreator->abortPathCreation();
         // refresh route attributes
         myRouteAttributes->refreshAttributesCreator();
-        // get new route
-        auto newRoute = myViewNet->getNet()->getAttributeCarriers()->retrieveDemandElement(SUMO_TAG_ROUTE, myRouteBaseObject->getStringAttribute(SUMO_ATTR_ID));
         // compute path route
-        newRoute->computePathElement();
-        // set as last created route
-        myViewNet->setLastCreatedRoute(newRoute);
+        myViewNet->getNet()->getAttributeCarriers()->retrieveDemandElement(SUMO_TAG_ROUTE, myRouteBaseObject->getStringAttribute(SUMO_ATTR_ID))->computePathElement();
     }
 }
 

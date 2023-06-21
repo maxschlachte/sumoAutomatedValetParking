@@ -21,6 +21,7 @@
 
 #include <netedit/GNENet.h>
 #include <netedit/elements/data/GNEDataSet.h>
+#include <netedit/GNEViewNet.h>
 
 #include "GNEChange_DataSet.h"
 
@@ -69,6 +70,8 @@ GNEChange_DataSet::undo() {
         // insert data set into net
         myDataSet->getNet()->getAttributeCarriers()->insertDataSet(myDataSet);
     }
+    // update toolbar
+    myDataSet->getNet()->getViewNet()->getIntervalBar().updateIntervalBar();
     // require always save elements
     myDataSet->getNet()->requireSaveDataElements(true);
 }
@@ -87,6 +90,8 @@ GNEChange_DataSet::redo() {
         // delete data set from net
         myDataSet->getNet()->getAttributeCarriers()->deleteDataSet(myDataSet);
     }
+    // update toolbar
+    myDataSet->getNet()->getViewNet()->getIntervalBar().updateIntervalBar();
     // require always save elements
     myDataSet->getNet()->requireSaveDataElements(true);
 }

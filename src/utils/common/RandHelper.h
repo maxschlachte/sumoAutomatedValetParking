@@ -28,6 +28,7 @@
 #include <sstream>
 #include <iostream>
 
+//#define DEBUG_RANDCALLS
 
 
 // ===========================================================================
@@ -95,10 +96,7 @@ private:
 //class SumoRNG : public XoShiRo256PlusPlus {
 class SumoRNG : public std::mt19937 {
 public:
-    SumoRNG(const std::string& _id) : id(_id) {}
-
     unsigned long long int count = 0;
-    std::string id;
 };
 
 
@@ -118,7 +116,22 @@ public:
     static void initRandGlobal(SumoRNG* which = nullptr);
 
     /// @brief Returns a random real number in [0, 1)
-    static double rand(SumoRNG* rng = nullptr);
+    static inline double rand(SumoRNG* rng = nullptr) {
+        if (rng == nullptr) {
+            rng = &myRandomNumberGenerator;
+        }
+        const double res = double((*rng)() / 4294967296.0);
+        rng->count++;
+#ifdef DEBUG_RANDCALLS
+        if (rng->count == myDebugIndex) {
+            std::cout << "DEBUG\n"; // for setting breakpoint
+        }
+        std::stringstream stream; // to reduce output interleaving from different threads
+        stream << " rng" << myRngId.find(rng)->second << " rand call=" << rng->count << " val=" << res << "\n";
+        std::cout << stream.str();
+#endif
+        return res;
+    }
 
     /// @brief Returns a random real number in [0, maxV)
     static inline double rand(double maxV, SumoRNG* rng = nullptr) {
@@ -189,9 +202,6 @@ public:
     /// @brief Access to a random number from a normal distribution
     static double randNorm(double mean, double variance, SumoRNG* rng = nullptr);
 
-    /// @brief Access to a random number from an exponential distribution
-    static double randExp(double rate, SumoRNG* rng = nullptr);
-
     /// @brief Returns a random element from the given vector
     template<class T>
     static inline const T&
@@ -232,5 +242,10 @@ public:
 protected:
     /// @brief the default random number generator to use
     static SumoRNG myRandomNumberGenerator;
+
+#ifdef DEBUG_RANDCALLS
+    static std::map<SumoRNG*, int> myRngId;
+    static int myDebugIndex;
+#endif
 
 };

@@ -42,8 +42,8 @@ FXIMPLEMENT(GNEInternalLane, FXDelegator, 0, 0)
 StringBijection<FXuint>::Entry GNEInternalLane::linkStateNamesValues[] = {
     { "Green-Major",    LINKSTATE_TL_GREEN_MAJOR },
     { "Green-Minor",    LINKSTATE_TL_GREEN_MINOR },
-    //{ "Yellow-Major",   LINKSTATE_TL_YELLOW_MAJOR }, (should not be used)
-    { "Yellow",   LINKSTATE_TL_YELLOW_MINOR },
+    { "Yellow-Major",   LINKSTATE_TL_YELLOW_MAJOR },
+    { "Yellow-Minor",   LINKSTATE_TL_YELLOW_MINOR },
     { "Red",            LINKSTATE_TL_RED },
     { "Red-Yellow",     LINKSTATE_TL_REDYELLOW },
     { "Stop",           LINKSTATE_STOP },
@@ -61,7 +61,7 @@ const StringBijection<FXuint> GNEInternalLane::LinkStateNames(
 GNEInternalLane::GNEInternalLane(GNETLSEditorFrame* editor, const GNEJunction* junctionParent,
                                  const std::string& id, const PositionVector& shape, int tlIndex, LinkState state) :
     GNENetworkElement(junctionParent->getNet(), id, GLO_TLLOGIC, GNE_TAG_INTERNAL_LANE,
-{}, {}, {}, {}, {}, {}),
+{}, {}, {}, {}, {}, {}, {}, {}),
 myJunctionParent(junctionParent),
 myState(state),
 myStateTarget(myState),
@@ -77,7 +77,7 @@ myPopup(nullptr) {
 
 GNEInternalLane::GNEInternalLane() :
     GNENetworkElement(nullptr, "dummyInternalLane", GLO_TLLOGIC, GNE_TAG_INTERNAL_LANE,
-{}, {}, {}, {}, {}, {}),
+{}, {}, {}, {}, {}, {}, {}, {}),
 myJunctionParent(nullptr),
 myState(0),
 myEditor(0),
@@ -160,12 +160,6 @@ GNEInternalLane::drawGL(const GUIVisualizationSettings& s) const {
 
 
 void
-GNEInternalLane::updateGLObject() {
-    updateGeometry();
-}
-
-
-void
 GNEInternalLane::setLinkState(LinkState state) {
     myState = state;
     myOrigState = state;
@@ -227,11 +221,16 @@ GNEInternalLane::updateCenteringBoundary(const bool /*updateGrid*/) {
 
 RGBColor
 GNEInternalLane::colorForLinksState(FXuint state) {
-    try {
-        return GUIVisualizationSettings::getLinkColor((LinkState)state);
-    } catch (ProcessError&) {
-        WRITE_WARNING("invalid link state='" + toString(state) + "'");
-        return RGBColor::BLACK;
+    if (state == LINKSTATE_TL_YELLOW_MINOR) {
+        // special case (default gui does not distinguish between yellow major/minor
+        return RGBColor(179, 179, 0, 255);
+    } else {
+        try {
+            return GUIVisualizationSettings::getLinkColor((LinkState)state);
+        } catch (ProcessError&) {
+            WRITE_WARNING("invalid link state='" + toString(state) + "'");
+            return RGBColor::BLACK;
+        }
     }
 }
 
@@ -260,7 +259,13 @@ GNEInternalLane::isAttributeEnabled(SumoXMLAttr key) const {
 }
 
 
-const Parameterised::Map&
+bool
+GNEInternalLane::isAttributeComputed(SumoXMLAttr /*key*/) const {
+    return false;
+}
+
+
+const std::map<std::string, std::string>&
 GNEInternalLane::getACParametersMap() const {
     throw InvalidArgument(getTagStr() + " doesn't have parameters");
 }

@@ -541,8 +541,8 @@ public:
                             addEdge(access);
                             beforeSplit->addSuccessor(access);
                             access->addSuccessor(conn);
-                        } else if (transferTaxiWalk) {
-                            addRestrictedCarExit(beforeSplit, stopConn, SVC_TAXI);
+                        } else {
+                            addRestrictedCarExit(beforeSplit, conn, SVC_TAXI);
                         }
                     }
                 }

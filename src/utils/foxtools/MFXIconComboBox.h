@@ -62,85 +62,82 @@ public:
         ID_LAST
     };
 
-    /// @brief Construct a Combo Box widget with room to display cols columns of text
-    MFXIconComboBox(FXComposite* p, FXint cols, const bool haveIcons, FXObject* tgt = NULL, FXSelector sel = 0, FXuint opts = COMBOBOX_NORMAL, FXint x = 0, FXint y = 0, FXint w = 0, FXint h = 0, FXint pl = DEFAULT_PAD, FXint pr = DEFAULT_PAD, FXint pt = DEFAULT_PAD, FXint pb = DEFAULT_PAD);
+    /// Construct a Combo Box widget with room to display cols columns of text
+    MFXIconComboBox(FXComposite* p, FXint cols, FXObject* tgt = NULL, FXSelector sel = 0, FXuint opts = COMBOBOX_NORMAL, FXint x = 0, FXint y = 0, FXint w = 0, FXint h = 0, FXint pl = DEFAULT_PAD, FXint pr = DEFAULT_PAD, FXint pt = DEFAULT_PAD, FXint pb = DEFAULT_PAD);
 
-    /// @brief Destructor
+    /// Destructor
     virtual ~MFXIconComboBox();
 
-    /// @brief Create server-side resources
+    /// Create server-side resources
     virtual void create();
 
-    /// @brief Detach server-side resources
+    /// Detach server-side resources
     virtual void detach();
 
-    /// @brief Destroy server-side resources
+    /// Destroy server-side resources
     virtual void destroy();
 
-    /// @brief Enable combo box
+    /// Enable combo box
     virtual void enable();
 
-    /// @brief Disable combo box
+    /// Disable combo box
     virtual void disable();
 
-    /// @brief Return default width
+    /// Return default width
     virtual FXint getDefaultWidth();
 
-    /// @brief Return default height
+    /// Return default height
     virtual FXint getDefaultHeight();
 
-    /// @brief Perform layout
+    /// Perform layout
     virtual void layout();
 
-    /// @brief Return true if combobox is editable
+    /// Return true if combobox is editable
     FXbool isEditable() const;
 
-    /// @brief Set editable state
+    /// Set editable state
     void setEditable(FXbool edit = TRUE);
 
-    /// @brief Get the text
+    /// Get the text
     FXString getText() const;
 
-    /// @brief Set the number of columns
+    /// Set the number of columns
     void setNumColumns(FXint cols);
 
-    /// @brief Get the number of columns
+    /// Get the number of columns
     FXint getNumColumns() const;
 
-    /// @brief Change text justification mode; default is JUSTIFY_LEFT
+    /// Change text justification mode; default is JUSTIFY_LEFT
     void setJustify(FXuint mode);
 
-    /// @brief Return text justification mode
+    /// Return text justification mode
     FXuint getJustify() const;
 
-    /// @brief Return the number of items in the list
+    /// Return the number of items in the list
     FXint getNumItems() const;
 
-    /// @brief Return the number of visible items
+    /// Return the number of visible items
     FXint getNumVisible() const;
 
-    /// @brief Set text
-    void setText(FXString text);
-
-    /// @brief Set the number of visible items in the drop down list
+    /// Set the number of visible items in the drop down list
     void setNumVisible(FXint nvis);
 
-    /// @brief Return true if current item
+    /// Return true if current item
     FXbool isItemCurrent(FXint index) const;
 
-    /// @brief Set the current item (index is zero-based)
+    /// Set the current item (index is zero-based)
     void setCurrentItem(FXint index, FXbool notify = FALSE);
 
-    /// @brief Get the current item's index
+    /// Get the current item's index
     FXint getCurrentItem() const;
 
-    /// @brief Return the item at the given index
+    /// Return the item at the given index
     FXString getItem(FXint index) const;
 
-    /// @brief Replace the item at index
+    /// Replace the item at index
     FXint setIconItem(FXint index, const FXString& text, FXIcon* icon = nullptr, FXColor bgColor = FXRGB(255, 255, 255), void* ptr = nullptr);
 
-    /// @brief Insert a new item at index
+    /// Insert a new item at index
     FXint insertIconItem(FXint index, const FXString& text, FXIcon* icon = nullptr,  FXColor bgColor = FXRGB(255, 255, 255),  void* ptr = nullptr);
 
     /// @brief append icon
@@ -149,19 +146,16 @@ public:
     /// @brief set Item
     bool setItem(const FXString& text, FXIcon* icon);
 
-    /// @brief set custom text
-    void setCustomText(const FXString text);
-
-    /// @brief Prepend an item to the list
+    /// Prepend an item to the list
     FXint prependItem(const FXString& text, void* ptr = NULL);
 
-    /// @brief Move item from oldindex to newindex
+    /// Move item from oldindex to newindex
     FXint moveItem(FXint newindex, FXint oldindex);
 
-    /// @brief Remove this item from the list
+    /// Remove this item from the list
     void removeItem(FXint index);
 
-    /// @brief Remove all items from the list
+    /// Remove all items from the list
     void clearItems();
 
     /**
@@ -185,73 +179,73 @@ public:
     */
     FXint findItemByData(const void* ptr, FXint start = -1, FXuint flags = SEARCH_FORWARD | SEARCH_WRAP) const;
 
-    /// @brief Get text for specified item
+    /// Get text for specified item
     FXString getItemText(FXint index) const;
 
-    /// @brief Set data pointer for specified item
+    /// Set data pointer for specified item
     void setItemData(FXint index, void* ptr) const;
 
-    /// @brief Get data pointer for specified item
+    /// Get data pointer for specified item
     void* getItemData(FXint index) const;
 
-    /// @brief Is the pane shown
+    /// Is the pane shown
     FXbool isPaneShown() const;
 
-    /// @brief Sort items using current sort function
+    /// Sort items using current sort function
     void sortItems();
 
-    /// @brief Set text font
+    /// Set text font
     void setFont(FXFont* fnt);
 
-    /// @brief Get text font
+    /// Get text font
     FXFont* getFont() const;
 
-    /// @brief Set the combobox style.
+    /// Set the combobox style.
     void setComboStyle(FXuint mode);
 
-    /// @brief Get the combobox style.
+    /// Get the combobox style.
     FXuint getComboStyle() const;
 
-    /// @brief Set window background color
+    /// Set window background color
     virtual void setBackColor(FXColor clr);
 
-    /// @brief Get background color
+    /// Get background color
     FXColor getBackColor() const;
 
-    /// @brief Change text color
+    /// Change text color
     void setTextColor(FXColor clr);
 
-    /// @brief Return text color
+    /// Return text color
     FXColor getTextColor() const;
 
-    /// @brief Change selected background color
+    /// Change selected background color
     void setSelBackColor(FXColor clr);
 
-    /// @brief Return selected background color
+    /// Return selected background color
     FXColor getSelBackColor() const;
 
-    /// @brief Change selected text color
+    /// Change selected text color
     void setSelTextColor(FXColor clr);
 
-    /// @brief Return selected text color
+    /// Return selected text color
     FXColor getSelTextColor() const;
 
-    /// @brief Return sort function
+    /// Return sort function
     FXListSortFunc getSortFunc() const;
 
-    /// @brief Change sort function
+    /// Change sort function
     void setSortFunc(FXListSortFunc func);
 
-    /// @brief Set the combobox help text
+    /// Set the combobox help text
     void setHelpText(const FXString& txt);
 
-    /// @brief Get the combobox help text
+    /// Get the combobox help text
     const FXString& getHelpText() const;
 
-    /// @brief Set the tool tip message for this combobox
+    /// Set the tool tip message for this combobox
     void setTipText(const FXString& txt);
 
-    /// @brief Get the tool tip message for this combobox
+    /// Get the tool tip message for this combobox
     const FXString& getTipText() const;
 
     /// @brief Commands
@@ -286,9 +280,6 @@ protected:
 
     /// @brief popup
     FXPopup* myPane = nullptr;
-
-    /// @brief check if this iconComboBox have icons
-    const bool myHaveIcons;
 
 private:
     /// @brief invalidate copy constructor

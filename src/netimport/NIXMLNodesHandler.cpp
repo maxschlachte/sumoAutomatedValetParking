@@ -178,7 +178,6 @@ NIXMLNodesHandler::processNodeType(const SUMOSAXAttributes& attrs, NBNode* node,
     }
     std::set<NBTrafficLightDefinition*> oldTLS;
     // check whether a prior node shall be modified
-    const bool isPatch = node != nullptr;
     if (node == nullptr) {
         node = new NBNode(nodeID, position, type);
         if (!nc.insert(node)) {
@@ -195,8 +194,6 @@ NIXMLNodesHandler::processNodeType(const SUMOSAXAttributes& attrs, NBNode* node,
     // process traffic light definition
     if (NBNode::isTrafficLight(type)) {
         processTrafficLightDefinitions(attrs, node, tlc);
-    } else if (isPatch && typeS != "") {
-        nc.markAsNotTLS(node);
     }
     // remove previously set tls if this node is not controlled by them
     for (std::set<NBTrafficLightDefinition*>::iterator i = oldTLS.begin(); i != oldTLS.end(); ++i) {
@@ -225,8 +222,16 @@ NIXMLNodesHandler::processNodeType(const SUMOSAXAttributes& attrs, NBNode* node,
     if (attrs.hasAttribute(SUMO_ATTR_KEEP_CLEAR)) {
         node->setKeepClear(attrs.get<bool>(SUMO_ATTR_KEEP_CLEAR, nodeID.c_str(), ok));
     }
-    node->setRightOfWay(attrs.getOpt<RightOfWay>(SUMO_ATTR_RIGHT_OF_WAY, nodeID.c_str(), ok, node->getRightOfWay()));
-    node->setFringeType(attrs.getOpt<FringeType>(SUMO_ATTR_FRINGE, nodeID.c_str(), ok, node->getFringeType()));
+
+    // set optional right-of-way hint
+    if (attrs.hasAttribute(SUMO_ATTR_RIGHT_OF_WAY)) {
+        node->setRightOfWay(attrs.getRightOfWay(ok));
+    }
+
+    // set optional fringe type
+    if (attrs.hasAttribute(SUMO_ATTR_FRINGE)) {
+        node->setFringeType(attrs.getFringeType(ok));
+    }
     // set optional name
     if (attrs.hasAttribute(SUMO_ATTR_NAME)) {
         node->setName(attrs.get<std::string>(SUMO_ATTR_NAME, nodeID.c_str(), ok));
@@ -362,7 +367,7 @@ NIXMLNodesHandler::processTrafficLightDefinitions(const SUMOSAXAttributes& attrs
         tlDefs.insert(tlDef);
     }
     // process inner edges which shall be controlled
-    const std::vector<std::string>& controlledInner = attrs.getOpt<std::vector<std::string> >(SUMO_ATTR_CONTROLLED_INNER, nullptr, ok);
+    const std::vector<std::string>& controlledInner = attrs.getOptStringVector(SUMO_ATTR_CONTROLLED_INNER, nullptr, ok);
     if (controlledInner.size() != 0) {
         for (std::set<NBTrafficLightDefinition*>::iterator it = tlDefs.begin(); it != tlDefs.end(); it++) {
             (*it)->addControlledInnerEdges(controlledInner);

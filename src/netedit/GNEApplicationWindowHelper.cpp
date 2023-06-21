@@ -89,7 +89,7 @@ GNEApplicationWindowHelper::ToolbarsGrip::buildViewParentToolbarsGrips() {
     }
     // declare toolbar grip for menu bar modes
     new FXToolBarGrip(modes, modes, FXMenuBar::ID_TOOLBARGRIP, GUIDesignToolBarGrip);
-    // build menu bar for interval
+    // build menu bar for interal
     myToolBarShellIntervalBar = new FXToolBarShell(myGNEApp, GUIDesignToolBar);
     intervalBar = new FXMenuBar(myGNEApp->getTopDock(), myToolBarShellIntervalBar, GUIDesignToolBarRaisedNext);
     // declare toolbar grip for menu bar modes
@@ -164,6 +164,17 @@ GNEApplicationWindowHelper::MenuBarFile::buildRecentFiles(FXMenuPane* fileMenu) 
 // ---------------------------------------------------------------------------
 
 GNEApplicationWindowHelper::FileMenuCommands::FileMenuCommands(GNEApplicationWindow* GNEApp) :
+    saveAdditionals(nullptr),
+    saveAdditionalsAs(nullptr),
+    reloadAdditionals(nullptr),
+    saveTLSPrograms(nullptr),
+    saveEdgeTypes(nullptr),
+    saveDemandElements(nullptr),
+    saveDemandElementsAs(nullptr),
+    reloadDemandElements(nullptr),
+    saveDataElements(nullptr),
+    saveDataElementsAs(nullptr),
+    reloadDataElements(nullptr),
     myGNEApp(GNEApp) {
 }
 
@@ -200,8 +211,8 @@ GNEApplicationWindowHelper::FileMenuCommands::buildFileMenuCommands(FXMenuPane* 
                                            "Save Plain XM&L...", "Ctrl+L", "Save plain XML representation the network.",
                                            GUIIconSubSys::getIcon(GUIIcon::SAVE), myGNEApp, MID_HOTKEY_CTRL_L_SAVEASPLAINXML);
     GUIDesigns::buildFXMenuCommandShortcut(fileMenu,
-                                           "Save &Joined Junctions...", "", "Save log of joined junctions (allows reproduction of joins).",
-                                           GUIIconSubSys::getIcon(GUIIcon::SAVE), myGNEApp, MID_GNE_SAVEJOINEDJUNCTIONS);
+                                           "Save &Joined Junctions...", "Ctrl+J", "Save log of joined junctions (allows reproduction of joins).",
+                                           GUIIconSubSys::getIcon(GUIIcon::SAVE), myGNEApp, MID_HOTKEY_CTRL_J_SAVEJOINEDJUNCTIONS);
     GUIDesigns::buildFXMenuCommandShortcut(fileMenu,
                                            "Save All Elements", "", "Save all elements (network, additional, demand and data)",
                                            GUIIconSubSys::getIcon(GUIIcon::SAVEALLELEMENTS), myGNEApp, MID_GNE_SAVEALLELEMENTS);
@@ -209,9 +220,6 @@ GNEApplicationWindowHelper::FileMenuCommands::buildFileMenuCommands(FXMenuPane* 
     GUIDesigns::buildFXMenuCommandShortcut(fileMenuTLS,
                                            "Load TLS Programs...", "Ctrl+K", "Load programs for traffic lights in the current net.",
                                            GUIIconSubSys::getIcon(GUIIcon::OPEN_TLSPROGRAMS), myGNEApp, MID_HOTKEY_CTRL_K_OPENTLSPROGRAMS);
-    reloadTLSPrograms = GUIDesigns::buildFXMenuCommandShortcut(fileMenuTLS,
-                        "Reload TLS Programs", "", "Reload TLS Programs.",
-                        GUIIconSubSys::getIcon(GUIIcon::RELOAD), myGNEApp, MID_GNE_TOOLBARFILE_RELOAD_TLSPROGRAMS);
     saveTLSPrograms = GUIDesigns::buildFXMenuCommandShortcut(fileMenuTLS,
                       "Save TLS Programs", "Ctrl+Shift+K", "Save all traffic light programs of the current net.",
                       GUIIconSubSys::getIcon(GUIIcon::SAVE), myGNEApp, MID_HOTKEY_CTRL_SHIFT_K_SAVETLS);
@@ -219,14 +227,11 @@ GNEApplicationWindowHelper::FileMenuCommands::buildFileMenuCommands(FXMenuPane* 
     GUIDesigns::buildFXMenuCommandShortcut(fileMenuTLS,
                                            "Save TLS Programs As...", "", "Save all traffic light programs of the current net to another file.",
                                            GUIIconSubSys::getIcon(GUIIcon::SAVE), myGNEApp, MID_GNE_TOOLBARFILE_SAVETLSPROGRAMS_AS);
-    TLSMenuCascade = new FXMenuCascade(fileMenu, "Traffic Lights", GUIIconSubSys::getIcon(GUIIcon::MODETLS), fileMenuTLS);
+    new FXMenuCascade(fileMenu, "Traffic Lights", GUIIconSubSys::getIcon(GUIIcon::MODETLS), fileMenuTLS);
     // create edgeTypes menu options
     GUIDesigns::buildFXMenuCommandShortcut(fileMenuEdgeTypes,
                                            "Load Edge Types...", "Ctrl+H", "Load edge types in the current net.",
                                            GUIIconSubSys::getIcon(GUIIcon::OPEN_TLSPROGRAMS), myGNEApp, MID_HOTKEY_CTRL_H_OPENEDGETYPES);
-    reloadEdgeTypes = GUIDesigns::buildFXMenuCommandShortcut(fileMenuEdgeTypes,
-                      "Reload edge types", "", "Reload edge types.",
-                      GUIIconSubSys::getIcon(GUIIcon::RELOAD), myGNEApp, MID_GNE_TOOLBARFILE_RELOAD_EDGETYPES);
     saveEdgeTypes = GUIDesigns::buildFXMenuCommandShortcut(fileMenuEdgeTypes,
                     "Save Edge Types", "Ctrl+Shift+H", "Save edge types of the current net.",
                     GUIIconSubSys::getIcon(GUIIcon::SAVE), myGNEApp, MID_HOTKEY_CTRL_SHIFT_H_SAVEEDGETYPES);
@@ -234,7 +239,7 @@ GNEApplicationWindowHelper::FileMenuCommands::buildFileMenuCommands(FXMenuPane* 
     GUIDesigns::buildFXMenuCommandShortcut(fileMenuEdgeTypes,
                                            "Save Edge Types As...", "", "Save edge types of the current net to another file.",
                                            GUIIconSubSys::getIcon(GUIIcon::SAVE), myGNEApp, MID_GNE_TOOLBARFILE_SAVEEDGETYPES_AS);
-    edgeTypesMenuCascade = new FXMenuCascade(fileMenu, "Edge Types", GUIIconSubSys::getIcon(GUIIcon::MODECREATEEDGE), fileMenuEdgeTypes);
+    new FXMenuCascade(fileMenu, "Edge Types", GUIIconSubSys::getIcon(GUIIcon::MODECREATEEDGE), fileMenuEdgeTypes);
     // create Additionals menu options
     GUIDesigns::buildFXMenuCommandShortcut(fileMenuAdditionals,
                                            "Load Additionals...", "Ctrl+A", "Load additionals and shapes.",
@@ -251,7 +256,7 @@ GNEApplicationWindowHelper::FileMenuCommands::buildFileMenuCommands(FXMenuPane* 
                         "Save Additionals As...", "", "Save additional elements to another file.",
                         GUIIconSubSys::getIcon(GUIIcon::SAVEADDITIONALELEMENTS), myGNEApp, MID_GNE_TOOLBARFILE_SAVEADDITIONALS_AS);
     saveAdditionalsAs->disable();
-    additionalMenuCascade = new FXMenuCascade(fileMenu, "Additionals and Shapes", GUIIconSubSys::getIcon(GUIIcon::MODEADDITIONAL), fileMenuAdditionals);
+    new FXMenuCascade(fileMenu, "Additionals and Shapes", GUIIconSubSys::getIcon(GUIIcon::MODEADDITIONAL), fileMenuAdditionals);
     // create DemandElements menu options
     GUIDesigns::buildFXMenuCommandShortcut(fileMenuDemandElements,
                                            "Load Demand Elements...", "Ctrl+D", "Load demand elements.",
@@ -268,7 +273,7 @@ GNEApplicationWindowHelper::FileMenuCommands::buildFileMenuCommands(FXMenuPane* 
                            "Save Demand Elements As...", "", "Save demand elements to another file.",
                            GUIIconSubSys::getIcon(GUIIcon::SAVEDEMANDELEMENTS), myGNEApp, MID_GNE_TOOLBARFILE_SAVEDEMAND_AS);
     saveDemandElementsAs->disable();
-    demandMenuCascade = new FXMenuCascade(fileMenu, "Demand Elements", GUIIconSubSys::getIcon(GUIIcon::SUPERMODEDEMAND), fileMenuDemandElements);
+    new FXMenuCascade(fileMenu, "Demand Elements", GUIIconSubSys::getIcon(GUIIcon::SUPERMODEDEMAND), fileMenuDemandElements);
     // create DataElements menu options
     GUIDesigns::buildFXMenuCommandShortcut(fileMenuDataElements,
                                            "Load Data Elements...", "Ctrl+B", "Load data elements.",
@@ -285,7 +290,7 @@ GNEApplicationWindowHelper::FileMenuCommands::buildFileMenuCommands(FXMenuPane* 
                          "Save Data Elements As...", "", "Save data elements to another file.",
                          GUIIconSubSys::getIcon(GUIIcon::SAVEDATAELEMENTS), myGNEApp, MID_GNE_TOOLBARFILE_SAVEDATA_AS);
     saveDataElementsAs->disable();
-    dataMenuCascade = new FXMenuCascade(fileMenu, "Data Elements", GUIIconSubSys::getIcon(GUIIcon::SUPERMODEDATA), fileMenuDataElements);
+    new FXMenuCascade(fileMenu, "Data Elements", GUIIconSubSys::getIcon(GUIIcon::SUPERMODEDATA), fileMenuDataElements);
     // close network
     new FXMenuSeparator(fileMenu);
     GUIDesigns::buildFXMenuCommandShortcut(fileMenu,
@@ -310,13 +315,13 @@ GNEApplicationWindowHelper::ModesMenuCommands::CommonMenuCommands::buildCommonMe
     // build every FXMenuCommand giving it a shortcut
     inspectMode = GUIDesigns::buildFXMenuCommandShortcut(modesMenu,
                   "&Inspect mode", "I", "Inspect elements and change their attributes.",
-                  GUIIconSubSys::getIcon(GUIIcon::MODEINSPECT), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_I_MODE_INSPECT);
+                  GUIIconSubSys::getIcon(GUIIcon::MODEINSPECT), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_I_MODES_INSPECT);
     deleteMode = GUIDesigns::buildFXMenuCommandShortcut(modesMenu,
                  "&Delete mode", "D", "Delete elements.",
-                 GUIIconSubSys::getIcon(GUIIcon::MODEDELETE), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_D_MODE_DELETE);
+                 GUIIconSubSys::getIcon(GUIIcon::MODEDELETE), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_D_MODES_DELETE);
     selectMode = GUIDesigns::buildFXMenuCommandShortcut(modesMenu,
                  "&Select mode", "S", "Select elements.",
-                 GUIIconSubSys::getIcon(GUIIcon::MODESELECT), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_S_MODE_SELECT);
+                 GUIIconSubSys::getIcon(GUIIcon::MODESELECT), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_S_MODES_SELECT);
 }
 
 // ---------------------------------------------------------------------------
@@ -333,7 +338,6 @@ GNEApplicationWindowHelper::ModesMenuCommands::NetworkMenuCommands::NetworkMenuC
     crossingMode(nullptr),
     TAZMode(nullptr),
     shapeMode(nullptr),
-    wireMode(nullptr),
     myModesMenuCommandsParent(modesMenuCommandsParent) {
 }
 
@@ -349,7 +353,6 @@ GNEApplicationWindowHelper::ModesMenuCommands::NetworkMenuCommands::showNetworkM
     crossingMode->show();
     TAZMode->show();
     shapeMode->show();
-    wireMode->show();
 }
 
 
@@ -364,7 +367,6 @@ GNEApplicationWindowHelper::ModesMenuCommands::NetworkMenuCommands::hideNetworkM
     crossingMode->hide();
     TAZMode->hide();
     shapeMode->hide();
-    wireMode->hide();
 }
 
 
@@ -373,34 +375,31 @@ GNEApplicationWindowHelper::ModesMenuCommands::NetworkMenuCommands::buildNetwork
     // build every FXMenuCommand giving it a shortcut
     moveMode = GUIDesigns::buildFXMenuCommandShortcut(modesMenu,
                "&Move mode", "M", "Move elements.",
-               GUIIconSubSys::getIcon(GUIIcon::MODEMOVE), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_M_MODE_MOVE);
+               GUIIconSubSys::getIcon(GUIIcon::MODEMOVE), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_M_MODES_MOVE);
     createEdgeMode = GUIDesigns::buildFXMenuCommandShortcut(modesMenu,
                      "&Edge mode", "E", "Create junction and edges.",
-                     GUIIconSubSys::getIcon(GUIIcon::MODECREATEEDGE), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_E_MODE_EDGE_EDGEDATA);
+                     GUIIconSubSys::getIcon(GUIIcon::MODECREATEEDGE), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_E_MODES_EDGE_EDGEDATA);
     connectMode = GUIDesigns::buildFXMenuCommandShortcut(modesMenu,
                   "&Connection mode", "C", "Modes connections between lanes.",
-                  GUIIconSubSys::getIcon(GUIIcon::MODECONNECTION), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_C_MODE_CONNECT_PERSONPLAN);
+                  GUIIconSubSys::getIcon(GUIIcon::MODECONNECTION), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_C_MODES_CONNECT_PERSONPLAN);
     prohibitionMode = GUIDesigns::buildFXMenuCommandShortcut(modesMenu,
-                      "Pro&hibition mode", "H", "Modes connection prohibitions.",
-                      GUIIconSubSys::getIcon(GUIIcon::MODEPROHIBITION), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_H_MODE_PROHIBITION_CONTAINERPLAN);
+                      "Pro&hibition mode", "W", "Modes connection prohibitions.",
+                      GUIIconSubSys::getIcon(GUIIcon::MODEPROHIBITION), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_W_MODES_PROHIBITION);
     TLSMode = GUIDesigns::buildFXMenuCommandShortcut(modesMenu,
               "&Traffic light mode", "T", "Modes traffic lights over junctions.",
-              GUIIconSubSys::getIcon(GUIIcon::MODETLS), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_T_MODE_TLS_TYPE);
+              GUIIconSubSys::getIcon(GUIIcon::MODETLS), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_T_MODES_TLS_TYPE);
     additionalMode = GUIDesigns::buildFXMenuCommandShortcut(modesMenu,
                      "&Additional mode", "A", "Create additional elements.",
-                     GUIIconSubSys::getIcon(GUIIcon::MODEADDITIONAL), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_A_MODE_ADDITIONAL_STOP);
+                     GUIIconSubSys::getIcon(GUIIcon::MODEADDITIONAL), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_A_MODES_ADDITIONAL_STOP);
     crossingMode = GUIDesigns::buildFXMenuCommandShortcut(modesMenu,
                    "C&rossing mode", "R", "Create crossings between edges.",
-                   GUIIconSubSys::getIcon(GUIIcon::MODECROSSING), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_R_MODE_CROSSING_ROUTE_EDGERELDATA);
+                   GUIIconSubSys::getIcon(GUIIcon::MODECROSSING), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_R_MODES_CROSSING_ROUTE_EDGERELDATA);
     TAZMode = GUIDesigns::buildFXMenuCommandShortcut(modesMenu,
               "TA&Z mode", "Z", "Create Traffic Assignment Zones.",
-              GUIIconSubSys::getIcon(GUIIcon::MODETAZ), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_Z_MODE_TAZ_TAZREL);
+              GUIIconSubSys::getIcon(GUIIcon::MODETAZ), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_Z_MODES_TAZ_TAZREL);
     shapeMode = GUIDesigns::buildFXMenuCommandShortcut(modesMenu,
                 "&POI-Poly mode", "P", "Create Points-Of-Interest and polygons.",
-                GUIIconSubSys::getIcon(GUIIcon::MODESHAPE), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_P_MODE_POLYGON_PERSON);
-    wireMode = GUIDesigns::buildFXMenuCommandShortcut(modesMenu,
-               "&Wire mode", "W", "Create wires.",
-               GUIIconSubSys::getIcon(GUIIcon::MODEWIRE), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_W_MODE_WIRE);
+                GUIIconSubSys::getIcon(GUIIcon::MODEPOLYGON), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_P_MODES_POLYGON_PERSON);
 }
 
 // ---------------------------------------------------------------------------
@@ -454,31 +453,31 @@ GNEApplicationWindowHelper::ModesMenuCommands::DemandMenuCommands::buildDemandMe
     // build every FXMenuCommand giving it a shortcut
     moveMode = GUIDesigns::buildFXMenuCommandShortcut(modesMenu,
                "&Move mode", "M", "Move elements.",
-               GUIIconSubSys::getIcon(GUIIcon::MODEMOVE), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_M_MODE_MOVE);
+               GUIIconSubSys::getIcon(GUIIcon::MODEMOVE), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_M_MODES_MOVE);
     routeMode = GUIDesigns::buildFXMenuCommandShortcut(modesMenu,
                 "Route mode", "R", "Create Routes.",
-                GUIIconSubSys::getIcon(GUIIcon::MODEROUTE), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_R_MODE_CROSSING_ROUTE_EDGERELDATA);
+                GUIIconSubSys::getIcon(GUIIcon::MODEROUTE), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_R_MODES_CROSSING_ROUTE_EDGERELDATA);
     vehicleMode = GUIDesigns::buildFXMenuCommandShortcut(modesMenu,
                   "Vehicle mode", "V", "Create vehicles.",
-                  GUIIconSubSys::getIcon(GUIIcon::MODEVEHICLE), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_V_MODE_VEHICLE);
+                  GUIIconSubSys::getIcon(GUIIcon::MODEVEHICLE), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_V_MODES_VEHICLE);
     typeMode = GUIDesigns::buildFXMenuCommandShortcut(modesMenu,
                "Type mode", "T", "Create types (vehicles, person an containers).",
-               GUIIconSubSys::getIcon(GUIIcon::MODETYPE), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_T_MODE_TLS_TYPE);
+               GUIIconSubSys::getIcon(GUIIcon::MODETYPE), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_T_MODES_TLS_TYPE);
     stopMode = GUIDesigns::buildFXMenuCommandShortcut(modesMenu,
                "Stop mode", "A", "Create stops.",
-               GUIIconSubSys::getIcon(GUIIcon::MODESTOP), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_A_MODE_ADDITIONAL_STOP);
+               GUIIconSubSys::getIcon(GUIIcon::MODESTOP), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_A_MODES_ADDITIONAL_STOP);
     personMode = GUIDesigns::buildFXMenuCommandShortcut(modesMenu,
                  "Person mode", "P", "Create persons.",
-                 GUIIconSubSys::getIcon(GUIIcon::MODEPERSON), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_P_MODE_POLYGON_PERSON);
+                 GUIIconSubSys::getIcon(GUIIcon::MODEPERSON), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_P_MODES_POLYGON_PERSON);
     personPlanMode = GUIDesigns::buildFXMenuCommandShortcut(modesMenu,
                      "Person plan mode", "C", "Create person plans.",
-                     GUIIconSubSys::getIcon(GUIIcon::MODEPERSONPLAN), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_C_MODE_CONNECT_PERSONPLAN);
+                     GUIIconSubSys::getIcon(GUIIcon::MODEPERSONPLAN), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_C_MODES_CONNECT_PERSONPLAN);
     containerMode = GUIDesigns::buildFXMenuCommandShortcut(modesMenu,
                     "Container mode", "G", "Create containers.",
                     GUIIconSubSys::getIcon(GUIIcon::MODECONTAINER), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_G_MODE_CONTAINER);
     containerPlanMode = GUIDesigns::buildFXMenuCommandShortcut(modesMenu,
                         "Container plan mode", "H", "Create container plans.",
-                        GUIIconSubSys::getIcon(GUIIcon::MODECONTAINERPLAN), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_H_MODE_PROHIBITION_CONTAINERPLAN);
+                        GUIIconSubSys::getIcon(GUIIcon::MODECONTAINERPLAN), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_H_MODE_CONTAINERDATA);
 }
 
 // ---------------------------------------------------------------------------
@@ -514,24 +513,19 @@ GNEApplicationWindowHelper::ModesMenuCommands::DataMenuCommands::buildDataMenuCo
     // build every FXMenuCommand giving it a shortcut
     edgeData = GUIDesigns::buildFXMenuCommand(modesMenu,
                "EdgeData Mode\tE\tCreate edgeData elements.",
-               GUIIconSubSys::getIcon(GUIIcon::MODEEDGEDATA), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_E_MODE_EDGE_EDGEDATA);
+               GUIIconSubSys::getIcon(GUIIcon::MODEEDGEDATA), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_E_MODES_EDGE_EDGEDATA);
     edgeRelData = GUIDesigns::buildFXMenuCommand(modesMenu,
                   "EdgeRelation Mode\tR\tCreate edgeRelation elements.",
-                  GUIIconSubSys::getIcon(GUIIcon::MODEEDGERELDATA), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_R_MODE_CROSSING_ROUTE_EDGERELDATA);
+                  GUIIconSubSys::getIcon(GUIIcon::MODEEDGERELDATA), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_R_MODES_CROSSING_ROUTE_EDGERELDATA);
     TAZRelData = GUIDesigns::buildFXMenuCommand(modesMenu,
                  "TAZRelation Mode\tZ\tCreate TAZRelation elements.",
-                 GUIIconSubSys::getIcon(GUIIcon::MODETAZRELDATA), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_Z_MODE_TAZ_TAZREL);
+                 GUIIconSubSys::getIcon(GUIIcon::MODETAZRELDATA), myModesMenuCommandsParent->myGNEApp, MID_HOTKEY_Z_MODES_TAZ_TAZREL);
 }
 
 // ---------------------------------------------------------------------------
 // GNEApplicationWindowHelper::ModesMenuCommands - methods
 // ---------------------------------------------------------------------------
 
-#ifdef _MSC_VER
-#pragma warning(push)
-/* Disable warning about using "this" in the constructor */
-#pragma warning(disable: 4355)
-#endif
 GNEApplicationWindowHelper::ModesMenuCommands::ModesMenuCommands(GNEApplicationWindow* GNEApp) :
     commonMenuCommands(this),
     networkMenuCommands(this),
@@ -539,9 +533,6 @@ GNEApplicationWindowHelper::ModesMenuCommands::ModesMenuCommands(GNEApplicationW
     dataMenuCommands(this),
     myGNEApp(GNEApp) {
 }
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
 
 
 void
@@ -565,14 +556,12 @@ GNEApplicationWindowHelper::ModesMenuCommands::buildModesMenuCommands(FXMenuPane
 
 GNEApplicationWindowHelper::EditMenuCommands::NetworkViewOptions::NetworkViewOptions(GNEApplicationWindow* GNEApp) :
     menuCheckToggleGrid(nullptr),
-    menuCheckToggleDrawJunctionShape(nullptr),
     menuCheckDrawSpreadVehicles(nullptr),
     menuCheckShowDemandElements(nullptr),
     menuCheckSelectEdges(nullptr),
     menuCheckShowConnections(nullptr),
     menuCheckHideConnections(nullptr),
     menuCheckShowAdditionalSubElements(nullptr),
-    menuCheckShowTAZElements(nullptr),
     menuCheckExtendSelection(nullptr),
     menuCheckChangeAllPhases(nullptr),
     menuCheckWarnAboutMerge(nullptr),
@@ -593,78 +582,68 @@ GNEApplicationWindowHelper::EditMenuCommands::NetworkViewOptions::buildNetworkVi
                           GUIIconSubSys::getIcon(GUIIcon::COMMONMODE_CHECKBOX_TOGGLEGRID),
                           myGNEApp, MID_GNE_NETWORKVIEWOPTIONS_TOGGLEGRID);
 
-    menuCheckToggleDrawJunctionShape = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                                       "Draw junction shape", "Ctrl+J or Alt+2", "",
-                                       GUIIconSubSys::getIcon(GUIIcon::COMMONMODE_CHECKBOX_TOGGLEDRAWJUNCTIONSHAPE),
-                                       myGNEApp, MID_GNE_NETWORKVIEWOPTIONS_TOGGLEDRAWJUNCTIONSHAPE);
-
     menuCheckDrawSpreadVehicles = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                                  "Draw vehicles spread in lane or in depart position", "Alt+3", "",
+                                  "Draw vehicles spread in lane or in depart position", "Alt+2", "",
                                   GUIIconSubSys::getIcon(GUIIcon::COMMONMODE_CHECKBOX_SPREADVEHICLE),
                                   myGNEApp, MID_GNE_NETWORKVIEWOPTIONS_DRAWSPREADVEHICLES);
 
     menuCheckShowDemandElements = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                                  "Show demand elements", "Alt+4", "",
+                                  "Show demand elements", "Alt+3", "",
                                   GUIIconSubSys::getIcon(GUIIcon::COMMONMODE_CHECKBOX_SHOWDEMANDELEMENTS),
                                   myGNEApp, MID_GNE_NETWORKVIEWOPTIONS_SHOWDEMANDELEMENTS);
 
     menuCheckSelectEdges = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                           "Clicking should select edges or lanes", "Alt+5", "",
+                           "Clicking should select edges or lanes", "Alt+4", "",
                            GUIIconSubSys::getIcon(GUIIcon::NETWORKMODE_CHECKBOX_SELECTEDGES),
                            myGNEApp, MID_GNE_NETWORKVIEWOPTIONS_SELECTEDGES);
 
     menuCheckShowConnections = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                               "Show connections over junctions", "Alt+6", "",
+                               "Show connections over junctions", "Alt+5", "",
                                GUIIconSubSys::getIcon(GUIIcon::NETWORKMODE_CHECKBOX_SHOWCONNECTIONS),
                                myGNEApp, MID_GNE_NETWORKVIEWOPTIONS_SHOWCONNECTIONS);
 
     menuCheckHideConnections = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                               "Hide connections", "Alt+7", "",
+                               "Hide connections", "Alt+6", "",
                                GUIIconSubSys::getIcon(GUIIcon::NETWORKMODE_CHECKBOX_HIDECONNECTIONS),
                                myGNEApp, MID_GNE_NETWORKVIEWOPTIONS_HIDECONNECTIONS);
 
     menuCheckShowAdditionalSubElements = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                                         "Show sub-additional elements", "Alt+8", "",
+                                         "Show sub-additional elements", "Alt+7", "",
                                          GUIIconSubSys::getIcon(GUIIcon::NETWORKMODE_CHECKBOX_SHOWSUBADDITIONALS),
                                          myGNEApp, MID_GNE_NETWORKVIEWOPTIONS_SHOWSUBADDITIONALS);
 
-    menuCheckShowTAZElements = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                               "Show TAZ elements", "Alt+9", "",
-                               GUIIconSubSys::getIcon(GUIIcon::NETWORKMODE_CHECKBOX_SHOWTAZELEMENTS),
-                               myGNEApp, MID_GNE_NETWORKVIEWOPTIONS_SHOWTAZELEMENTS);
-
     menuCheckExtendSelection = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                               "Selecting multiple edges automatically select their junctions", "Alt+10", "",
+                               "Selecting multiple edges automatically select their junctions", "Alt+6", "",
                                GUIIconSubSys::getIcon(GUIIcon::NETWORKMODE_CHECKBOX_AUTOSELECTJUNCTIONS),
                                myGNEApp, MID_GNE_NETWORKVIEWOPTIONS_EXTENDSELECTION);
 
     menuCheckChangeAllPhases = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                               "Clicking should apply state changes to all phases of TLS plan", "Alt+5", "",
+                               "Clicking should apply state changes to all phases of TLS plan", "Alt+4", "",
                                GUIIconSubSys::getIcon(GUIIcon::NETWORKMODE_CHECKBOX_APPLYTOALLPHASES),
                                myGNEApp, MID_GNE_NETWORKVIEWOPTIONS_CHANGEALLPHASES);
 
     menuCheckWarnAboutMerge = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                              "Ask for confirmation before merging junction", "Alt+5", "",
+                              "Ask for confirmation before merging junction", "Alt+4", "",
                               GUIIconSubSys::getIcon(GUIIcon::NETWORKMODE_CHECKBOX_ASKFORMERGE),
                               myGNEApp, MID_GNE_NETWORKVIEWOPTIONS_ASKFORMERGE);
 
     menuCheckShowJunctionBubble = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                                  "Show bubbles over junctions shapes", "Alt+6", "",
+                                  "Show bubbles over junctions shapes", "Alt+5", "",
                                   GUIIconSubSys::getIcon(GUIIcon::NETWORKMODE_CHECKBOX_BUBBLES),
                                   myGNEApp, MID_GNE_NETWORKVIEWOPTIONS_SHOWBUBBLES);
 
     menuCheckMoveElevation = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                             "Apply mouse movement to elevation", "Alt+7", "",
+                             "Apply mouse movement to elevation", "Alt+6", "",
                              GUIIconSubSys::getIcon(GUIIcon::NETWORKMODE_CHECKBOX_ELEVATION),
                              myGNEApp, MID_GNE_NETWORKVIEWOPTIONS_MOVEELEVATION);
 
     menuCheckChainEdges = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                          "Create consecutive edges", "Alt+5", "",
+                          "Create consecutive edges", "Alt+4", "",
                           GUIIconSubSys::getIcon(GUIIcon::NETWORKMODE_CHECKBOX_CHAIN),
                           myGNEApp, MID_GNE_NETWORKVIEWOPTIONS_CHAINEDGES);
 
     menuCheckAutoOppositeEdge = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                                "Create an edge in the opposite direction", "Alt+6", "",
+                                "Create an edge in the opposite direction", "Alt+5", "",
                                 GUIIconSubSys::getIcon(GUIIcon::NETWORKMODE_CHECKBOX_TWOWAY),
                                 myGNEApp, MID_GNE_NETWORKVIEWOPTIONS_AUTOOPPOSITEEDGES);
 
@@ -676,14 +655,12 @@ GNEApplicationWindowHelper::EditMenuCommands::NetworkViewOptions::buildNetworkVi
 void
 GNEApplicationWindowHelper::EditMenuCommands::NetworkViewOptions::hideNetworkViewOptionsMenuChecks() {
     menuCheckToggleGrid->hide();
-    menuCheckToggleDrawJunctionShape->hide();
     menuCheckDrawSpreadVehicles->hide();
     menuCheckShowDemandElements->hide();
     menuCheckSelectEdges->hide();
     menuCheckShowConnections->hide();
     menuCheckHideConnections->hide();
     menuCheckShowAdditionalSubElements->hide();
-    menuCheckShowTAZElements->hide();
     menuCheckExtendSelection->hide();
     menuCheckChangeAllPhases->hide();
     menuCheckWarnAboutMerge->hide();
@@ -696,69 +673,67 @@ GNEApplicationWindowHelper::EditMenuCommands::NetworkViewOptions::hideNetworkVie
 
 
 void
-GNEApplicationWindowHelper::EditMenuCommands::NetworkViewOptions::updateShortcuts() {
-    int index = 2;
-    // update all accel text
-    if (menuCheckDrawSpreadVehicles->shown()) {
-        menuCheckDrawSpreadVehicles->setAccelText(("Alt+" + toString(index)).c_str());
+GNEApplicationWindowHelper::EditMenuCommands::NetworkViewOptions::updateAltLabels() {
+    /* currently this function doesn't work
+    // declare index
+    int index = 1;
+    // update label depending of shown
+    if (menuCheckToggleGrid->shown()) {
+        menuCheckToggleGrid->setText(("Ctrl+G or Alt+" + toString(index) + "\t").c_str());
         index++;
     }
     if (menuCheckDrawSpreadVehicles->shown()) {
-        menuCheckDrawSpreadVehicles->setAccelText(("Alt+" + toString(index)).c_str());
+        menuCheckDrawSpreadVehicles->setText(("Alt+" + toString(index) + "\t").c_str());
         index++;
     }
     if (menuCheckShowDemandElements->shown()) {
-        menuCheckShowDemandElements->setAccelText(("Alt+" + toString(index)).c_str());
+        menuCheckShowDemandElements->setText(("Alt+" + toString(index) + "\t").c_str());
         index++;
     }
     if (menuCheckSelectEdges->shown()) {
-        menuCheckSelectEdges->setAccelText(("Alt+" + toString(index)).c_str());
+        menuCheckSelectEdges->setText(("Alt+" + toString(index) + "\t").c_str());
         index++;
     }
     if (menuCheckShowConnections->shown()) {
-        menuCheckShowConnections->setAccelText(("Alt+" + toString(index)).c_str());
+        menuCheckShowConnections->setText(("Alt+" + toString(index) + "\t").c_str());
         index++;
     }
     if (menuCheckHideConnections->shown()) {
-        menuCheckHideConnections->setAccelText(("Alt+" + toString(index)).c_str());
+        menuCheckHideConnections->setText(("Alt+" + toString(index) + "\t").c_str());
         index++;
     }
     if (menuCheckShowAdditionalSubElements->shown()) {
-        menuCheckShowAdditionalSubElements->setAccelText(("Alt+" + toString(index)).c_str());
-        index++;
-    }
-    if (menuCheckShowTAZElements->shown()) {
-        menuCheckShowTAZElements->setAccelText(("Alt+" + toString(index)).c_str());
+        menuCheckShowAdditionalSubElements->setText(("Alt+" + toString(index) + "\t").c_str());
         index++;
     }
     if (menuCheckExtendSelection->shown()) {
-        menuCheckExtendSelection->setAccelText(("Alt+" + toString(index)).c_str());
+        menuCheckExtendSelection->setText(("Alt+" + toString(index) + "\t").c_str());
         index++;
     }
     if (menuCheckChangeAllPhases->shown()) {
-        menuCheckChangeAllPhases->setAccelText(("Alt+" + toString(index)).c_str());
+        menuCheckChangeAllPhases->setText(("Alt+" + toString(index) + "\t").c_str());
         index++;
     }
     if (menuCheckWarnAboutMerge->shown()) {
-        menuCheckWarnAboutMerge->setAccelText(("Alt+" + toString(index)).c_str());
+        menuCheckWarnAboutMerge->setText(("Alt+" + toString(index) + "\t").c_str());
         index++;
     }
     if (menuCheckShowJunctionBubble->shown()) {
-        menuCheckShowJunctionBubble->setAccelText(("Alt+" + toString(index)).c_str());
-        index++;
+        menuCheckShowJunctionBubble->setText(("Alt+" + toString(index) + "\t").c_str());
     }
     if (menuCheckMoveElevation->shown()) {
-        menuCheckMoveElevation->setAccelText(("Alt+" + toString(index)).c_str());
+        menuCheckMoveElevation->setText(("Alt+" + toString(index) + "\t").c_str());
         index++;
     }
     if (menuCheckChainEdges->shown()) {
-        menuCheckChainEdges->setAccelText(("Alt+" + toString(index)).c_str());
+        menuCheckChainEdges->setText(("Alt+" + toString(index) + "\t").c_str());
         index++;
     }
     if (menuCheckAutoOppositeEdge->shown()) {
-        menuCheckAutoOppositeEdge->setAccelText(("Alt+" + toString(index)).c_str());
+        menuCheckAutoOppositeEdge->setText(("Alt+" + toString(index) + "\t").c_str());
         index++;
     }
+    */
 }
 
 // ---------------------------------------------------------------------------
@@ -767,7 +742,6 @@ GNEApplicationWindowHelper::EditMenuCommands::NetworkViewOptions::updateShortcut
 
 GNEApplicationWindowHelper::EditMenuCommands::DemandViewOptions::DemandViewOptions(GNEApplicationWindow* GNEApp) :
     menuCheckToggleGrid(nullptr),
-    menuCheckToggleDrawJunctionShape(nullptr),
     menuCheckDrawSpreadVehicles(nullptr),
     menuCheckHideShapes(nullptr),
     menuCheckShowAllTrips(nullptr),
@@ -786,57 +760,52 @@ void
 GNEApplicationWindowHelper::EditMenuCommands::DemandViewOptions::buildDemandViewOptionsMenuChecks(FXMenuPane* editMenu) {
     // create menu checks
     menuCheckToggleGrid = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                          "Show grid", "Ctrl+G or Alt+1", "",
+                          "Toggle grid", "Ctrl+G or Alt+1", "",
                           GUIIconSubSys::getIcon(GUIIcon::COMMONMODE_CHECKBOX_TOGGLEGRID),
                           myGNEApp, MID_GNE_DEMANDVIEWOPTIONS_SHOWGRID);
 
-    menuCheckToggleDrawJunctionShape = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                                       "Draw junction shape", "Ctrl+J or Alt+2", "",
-                                       GUIIconSubSys::getIcon(GUIIcon::COMMONMODE_CHECKBOX_TOGGLEDRAWJUNCTIONSHAPE),
-                                       myGNEApp, MID_GNE_DEMANDVIEWOPTIONS_TOGGLEDRAWJUNCTIONSHAPE);
-
     menuCheckDrawSpreadVehicles = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                                  "Draw vehicles spread/depart position", "Alt+3", "",
+                                  "Draw vehicles spread/depart position", "Alt+2", "",
                                   GUIIconSubSys::getIcon(GUIIcon::COMMONMODE_CHECKBOX_SPREADVEHICLE),
                                   myGNEApp, MID_GNE_DEMANDVIEWOPTIONS_DRAWSPREADVEHICLES);
 
     menuCheckHideShapes = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                          "Show shapes", "Alt+4", "",
+                          "Toggle show shapes", "Alt+3", "",
                           GUIIconSubSys::getIcon(GUIIcon::DEMANDMODE_CHECKBOX_HIDESHAPES),
                           myGNEApp, MID_GNE_DEMANDVIEWOPTIONS_HIDESHAPES);
 
     menuCheckShowAllTrips = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                            "Show all trips", "Alt+5", "",
+                            "Toggle show all trips", "Alt+4", "",
                             GUIIconSubSys::getIcon(GUIIcon::DEMANDMODE_CHECKBOX_SHOWTRIPS),
                             myGNEApp, MID_GNE_DEMANDVIEWOPTIONS_SHOWTRIPS);
 
     menuCheckShowAllPersonPlans = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                                  "Show all person plans", "Alt+6", "",
+                                  "Show all person plans", "Alt+5", "",
                                   GUIIconSubSys::getIcon(GUIIcon::DEMANDMODE_CHECKBOX_SHOWPERSONPLANS),
                                   myGNEApp, MID_GNE_DEMANDVIEWOPTIONS_SHOWALLPERSONPLANS);
 
     menuCheckLockPerson = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                          "Lock selected person", "Alt+7", "",
+                          "Lock selected person", "Alt+6", "",
                           GUIIconSubSys::getIcon(GUIIcon::DEMANDMODE_CHECKBOX_LOCKPERSON),
                           myGNEApp, MID_GNE_DEMANDVIEWOPTIONS_LOCKPERSON);
 
     menuCheckShowAllContainerPlans = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                                     "Show all container plans", "Alt+6", "",
+                                     "Show all container plans", "Alt+5", "",
                                      GUIIconSubSys::getIcon(GUIIcon::DEMANDMODE_CHECKBOX_SHOWCONTAINERPLANS),
                                      myGNEApp, MID_GNE_DEMANDVIEWOPTIONS_SHOWALLCONTAINERPLANS);
 
     menuCheckLockContainer = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                             "Lock selected container", "Alt+7", "",
+                             "Lock selected container", "Alt+6", "",
                              GUIIconSubSys::getIcon(GUIIcon::DEMANDMODE_CHECKBOX_LOCKCONTAINER),
                              myGNEApp, MID_GNE_DEMANDVIEWOPTIONS_LOCKCONTAINER);
 
     menuCheckHideNonInspectedDemandElements = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-            "Show non-inspected demand elements", "Alt+8", "",
+            "Toggle show non-inspected demand elements", "Alt+7", "",
             GUIIconSubSys::getIcon(GUIIcon::DEMANDMODE_CHECKBOX_HIDENONINSPECTEDDEMANDELEMENTS),
             myGNEApp, MID_GNE_DEMANDVIEWOPTIONS_HIDENONINSPECTED);
 
     menuCheckShowOverlappedRoutes = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                                    "Show number of overlapped routes", "Alt+9", "",
+                                    "Toggle show number of overlapped routes", "Alt+8", "",
                                     GUIIconSubSys::getIcon(GUIIcon::DEMANDMODE_CHECKBOX_SHOWOVERLAPPEDROUTES),
                                     myGNEApp, MID_GNE_DEMANDVIEWOPTIONS_SHOWOVERLAPPEDROUTES);
 
@@ -848,7 +817,6 @@ GNEApplicationWindowHelper::EditMenuCommands::DemandViewOptions::buildDemandView
 void
 GNEApplicationWindowHelper::EditMenuCommands::DemandViewOptions::hideDemandViewOptionsMenuChecks() {
     menuCheckToggleGrid->hide();
-    menuCheckToggleDrawJunctionShape->hide();
     menuCheckDrawSpreadVehicles->hide();
     menuCheckHideShapes->hide();
     menuCheckShowAllTrips->hide();
@@ -861,62 +829,18 @@ GNEApplicationWindowHelper::EditMenuCommands::DemandViewOptions::hideDemandViewO
     separator->hide();
 }
 
-
-void
-GNEApplicationWindowHelper::EditMenuCommands::DemandViewOptions::updateShortcuts() {
-    int index = 2;
-    // update all accel text
-    if (menuCheckDrawSpreadVehicles->shown()) {
-        menuCheckDrawSpreadVehicles->setAccelText(("Alt+" + toString(index)).c_str());
-        index++;
-    }
-    if (menuCheckHideShapes->shown()) {
-        menuCheckHideShapes->setAccelText(("Alt+" + toString(index)).c_str());
-        index++;
-    }
-    if (menuCheckShowAllTrips->shown()) {
-        menuCheckShowAllTrips->setAccelText(("Alt+" + toString(index)).c_str());
-        index++;
-    }
-    if (menuCheckHideNonInspectedDemandElements->shown()) {
-        menuCheckHideNonInspectedDemandElements->setAccelText(("Alt+" + toString(index)).c_str());
-        index++;
-    }
-    if (menuCheckShowOverlappedRoutes->shown()) {
-        menuCheckShowOverlappedRoutes->setAccelText(("Alt+" + toString(index)).c_str());
-        index++;
-    }
-    if (menuCheckShowAllPersonPlans->shown()) {
-        menuCheckShowAllPersonPlans->setAccelText(("Alt+" + toString(index)).c_str());
-        index++;
-    }
-    if (menuCheckLockPerson->shown()) {
-        menuCheckLockPerson->setAccelText(("Alt+" + toString(index)).c_str());
-        index++;
-    }
-    if (menuCheckShowAllContainerPlans->shown()) {
-        menuCheckShowAllContainerPlans->setAccelText(("Alt+" + toString(index)).c_str());
-        index++;
-    }
-    if (menuCheckLockContainer->shown()) {
-        menuCheckLockContainer->setAccelText(("Alt+" + toString(index)).c_str());
-        index++;
-    }
-}
-
 // ---------------------------------------------------------------------------
 // GNEApplicationWindowHelper::EditMenuCommands::DataViewOptions - methods
 // ---------------------------------------------------------------------------
 
 GNEApplicationWindowHelper::EditMenuCommands::DataViewOptions::DataViewOptions(GNEApplicationWindow* GNEApp) :
-    menuCheckToggleDrawJunctionShape(nullptr),
     menuCheckShowAdditionals(nullptr),
     menuCheckShowShapes(nullptr),
     menuCheckShowDemandElements(nullptr),
-    menuCheckToggleTAZRelDrawing(nullptr),
-    menuCheckToggleTAZDrawFill(nullptr),
-    menuCheckToggleTAZRelOnlyFrom(nullptr),
-    menuCheckToggleTAZRelOnlyTo(nullptr),
+    menuCheckToogleTAZRelDrawing(nullptr),
+    menuCheckToogleTAZDrawFill(nullptr),
+    menuCheckToogleTAZRelOnlyFrom(nullptr),
+    menuCheckToogleTAZRelOnlyTo(nullptr),
     separator(nullptr),
     myGNEApp(GNEApp) {
 }
@@ -925,43 +849,38 @@ GNEApplicationWindowHelper::EditMenuCommands::DataViewOptions::DataViewOptions(G
 void
 GNEApplicationWindowHelper::EditMenuCommands::DataViewOptions::buildDataViewOptionsMenuChecks(FXMenuPane* editMenu) {
     // create menu checks
-    menuCheckToggleDrawJunctionShape = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                                       "Draw junction shape", "Ctrl+J or Alt+1", "",
-                                       GUIIconSubSys::getIcon(GUIIcon::COMMONMODE_CHECKBOX_TOGGLEDRAWJUNCTIONSHAPE),
-                                       myGNEApp, MID_GNE_DEMANDVIEWOPTIONS_TOGGLEDRAWJUNCTIONSHAPE);
-
     menuCheckShowAdditionals = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                               "Show additionals", "Alt+2", "",
+                               "Toggle show additionals", "Alt+1", "",
                                GUIIconSubSys::getIcon(GUIIcon::DATAMODE_CHECKBOX_SHOWADDITIONALS),
                                myGNEApp, MID_GNE_DATAVIEWOPTIONS_SHOWADDITIONALS);
 
     menuCheckShowShapes = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                          "Show shapes", "Alt+3", "",
+                          "Toggle show shapes", "Alt+2", "",
                           GUIIconSubSys::getIcon(GUIIcon::DATAMODE_CHECKBOX_SHOWSHAPES),
                           myGNEApp, MID_GNE_DATAVIEWOPTIONS_SHOWSHAPES);
 
     menuCheckShowDemandElements = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                                  "Show demand elements", "Alt+4", "",
+                                  "Toggle show demand elements", "Alt+3", "",
                                   GUIIconSubSys::getIcon(GUIIcon::COMMONMODE_CHECKBOX_SHOWDEMANDELEMENTS),
                                   myGNEApp, MID_GNE_DATAVIEWOPTIONS_SHOWDEMANDELEMENTS);
 
-    menuCheckToggleTAZRelDrawing = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                                   "Draw TAZRel from center", "Alt+5", "",
+    menuCheckToogleTAZRelDrawing = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
+                                   "Toggle TAZRel drawing mode", "Alt+4", "",
                                    GUIIconSubSys::getIcon(GUIIcon::DATAMODE_CHECKBOX_TAZRELDRAWING),
                                    myGNEApp, MID_GNE_DATAVIEWOPTIONS_TAZRELDRAWING);
 
-    menuCheckToggleTAZDrawFill = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                                 "Draw TAZ fill", "Alt+6", "",
+    menuCheckToogleTAZDrawFill = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
+                                 "Toggle TAZ draw fill", "Alt+5", "",
                                  GUIIconSubSys::getIcon(GUIIcon::DATAMODE_CHECKBOX_TAZDRAWFILL),
                                  myGNEApp, MID_GNE_DATAVIEWOPTIONS_TAZDRAWFILL);
 
-    menuCheckToggleTAZRelOnlyFrom = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                                    "Only draw TAZRel from", "Alt+6", "",
+    menuCheckToogleTAZRelOnlyFrom = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
+                                    "Toggle only draw TAZRel from", "Alt+5", "",
                                     GUIIconSubSys::getIcon(GUIIcon::DATAMODE_CHECKBOX_TAZRELONLYFROM),
                                     myGNEApp, MID_GNE_DATAVIEWOPTIONS_TAZRELONLYFROM);
 
-    menuCheckToggleTAZRelOnlyTo = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
-                                  "Only draw TAZRel to", "Alt+7", "",
+    menuCheckToogleTAZRelOnlyTo = GUIDesigns::buildFXMenuCheckboxIcon(editMenu,
+                                  "Toggle only draw TAZRel to", "Alt+6", "",
                                   GUIIconSubSys::getIcon(GUIIcon::DATAMODE_CHECKBOX_TAZRELONLYTO),
                                   myGNEApp, MID_GNE_DATAVIEWOPTIONS_TAZRELONLYTO);
     // build separator
@@ -971,50 +890,14 @@ GNEApplicationWindowHelper::EditMenuCommands::DataViewOptions::buildDataViewOpti
 
 void
 GNEApplicationWindowHelper::EditMenuCommands::DataViewOptions::hideDataViewOptionsMenuChecks() {
-    menuCheckToggleDrawJunctionShape->hide();
     menuCheckShowAdditionals->hide();
     menuCheckShowShapes->hide();
     menuCheckShowDemandElements->hide();
-    menuCheckToggleTAZRelDrawing->hide();
-    menuCheckToggleTAZDrawFill->hide();
-    menuCheckToggleTAZRelOnlyFrom->hide();
-    menuCheckToggleTAZRelOnlyTo->hide();
+    menuCheckToogleTAZRelDrawing->hide();
+    menuCheckToogleTAZDrawFill->hide();
+    menuCheckToogleTAZRelOnlyFrom->hide();
+    menuCheckToogleTAZRelOnlyTo->hide();
     separator->hide();
-}
-
-
-void
-GNEApplicationWindowHelper::EditMenuCommands::DataViewOptions::updateShortcuts() {
-    int index = 2;
-    // update all accel text
-    if (menuCheckShowAdditionals->shown()) {
-        menuCheckShowAdditionals->setAccelText(("Alt+" + toString(index)).c_str());
-        index++;
-    }
-    if (menuCheckShowShapes->shown()) {
-        menuCheckShowShapes->setAccelText(("Alt+" + toString(index)).c_str());
-        index++;
-    }
-    if (menuCheckShowDemandElements->shown()) {
-        menuCheckShowDemandElements->setAccelText(("Alt+" + toString(index)).c_str());
-        index++;
-    }
-    if (menuCheckToggleTAZRelDrawing->shown()) {
-        menuCheckToggleTAZRelDrawing->setAccelText(("Alt+" + toString(index)).c_str());
-        index++;
-    }
-    if (menuCheckToggleTAZDrawFill->shown()) {
-        menuCheckToggleTAZDrawFill->setAccelText(("Alt+" + toString(index)).c_str());
-        index++;
-    }
-    if (menuCheckToggleTAZRelOnlyFrom->shown()) {
-        menuCheckToggleTAZRelOnlyFrom->setAccelText(("Alt+" + toString(index)).c_str());
-        index++;
-    }
-    if (menuCheckToggleTAZRelOnlyTo->shown()) {
-        menuCheckToggleTAZRelOnlyTo->setAccelText(("Alt+" + toString(index)).c_str());
-        index++;
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1095,6 +978,29 @@ GNEApplicationWindowHelper::EditMenuCommands::buildOpenSUMOMenuCommands(FXMenuPa
 // ---------------------------------------------------------------------------
 
 GNEApplicationWindowHelper::LockMenuCommands::LockMenuCommands(GNEApplicationWindow* GNEApp) :
+    menuCheckLockJunction(nullptr),
+    menuCheckLockEdges(nullptr),
+    menuCheckLockLanes(nullptr),
+    menuCheckLockConnections(nullptr),
+    menuCheckLockCrossings(nullptr),
+    menuCheckLockAdditionals(nullptr),
+    menuCheckLockTAZs(nullptr),
+    menuCheckLockPolygons(nullptr),
+    menuCheckLockPOIs(nullptr),
+    menuCheckLockRoutes(nullptr),
+    menuCheckLockVehicles(nullptr),
+    menuCheckLockPersons(nullptr),
+    menuCheckLockPersonTrip(nullptr),
+    menuCheckLockWalk(nullptr),
+    menuCheckLockRides(nullptr),
+    menuCheckLockContainers(nullptr),
+    menuCheckLockTransports(nullptr),
+    menuCheckLockTranships(nullptr),
+    menuCheckLockStops(nullptr),
+    menuCheckLockEdgeDatas(nullptr),
+    menuCheckLockEdgeRelDatas(nullptr),
+    menuCheckLockEdgeTAZRels(nullptr),
+    menuCheckLockSelectedElements(nullptr),
     myGNEApp(GNEApp) {
 }
 
@@ -1127,11 +1033,6 @@ GNEApplicationWindowHelper::LockMenuCommands::buildLockMenuCommands(FXMenuPane* 
                              GUIIconSubSys::getIcon(GUIIcon::CROSSING),
                              myGNEApp, MID_GNE_LOCK_ELEMENT);
 
-    menuCheckLockWalkingAreas = GUIDesigns::buildFXMenuCheckboxIcon(fileMenu,
-                                "Lock walkin&gAreas", "", "",
-                                GUIIconSubSys::getIcon(GUIIcon::WALKINGAREA),
-                                myGNEApp, MID_GNE_LOCK_ELEMENT);
-
     menuCheckLockAdditionals = GUIDesigns::buildFXMenuCheckboxIcon(fileMenu,
                                "Lock &additionals", "", "",
                                GUIIconSubSys::getIcon(GUIIcon::BUSSTOP),
@@ -1141,11 +1042,6 @@ GNEApplicationWindowHelper::LockMenuCommands::buildLockMenuCommands(FXMenuPane* 
                         "Lock &TAZs", "", "",
                         GUIIconSubSys::getIcon(GUIIcon::TAZ),
                         myGNEApp, MID_GNE_LOCK_ELEMENT);
-
-    menuCheckLockWires = GUIDesigns::buildFXMenuCheckboxIcon(fileMenu,
-                         "Lock &wires", "", "",
-                         GUIIconSubSys::getIcon(GUIIcon::OVERHEADWIRE),
-                         myGNEApp, MID_GNE_LOCK_ELEMENT);
 
     menuCheckLockPolygons = GUIDesigns::buildFXMenuCheckboxIcon(fileMenu,
                             "Lock &polygons", "", "",
@@ -1250,10 +1146,8 @@ GNEApplicationWindowHelper::LockMenuCommands::removeHotkeys() {
     menuCheckLockLanes->remHotKey(parseHotKey('l'));
     menuCheckLockConnections->remHotKey(parseHotKey('c'));
     menuCheckLockCrossings->remHotKey(parseHotKey('r'));
-    menuCheckLockWalkingAreas->remHotKey(parseHotKey('g'));
     menuCheckLockAdditionals->remHotKey(parseHotKey('a'));
     menuCheckLockTAZs->remHotKey(parseHotKey('t'));
-    menuCheckLockWires->remHotKey(parseHotKey('w'));
     menuCheckLockPolygons->remHotKey(parseHotKey('p'));
     menuCheckLockPOIs->remHotKey(parseHotKey('o'));
     // demand
@@ -1281,10 +1175,8 @@ GNEApplicationWindowHelper::LockMenuCommands::showNetworkLockMenuCommands() {
     menuCheckLockLanes->enable();
     menuCheckLockConnections->enable();
     menuCheckLockCrossings->enable();
-    menuCheckLockWalkingAreas->enable();
     menuCheckLockAdditionals->enable();
     menuCheckLockTAZs->enable();
-    menuCheckLockWires->enable();
     menuCheckLockPolygons->enable();
     menuCheckLockPOIs->enable();
     // set accels
@@ -1293,10 +1185,8 @@ GNEApplicationWindowHelper::LockMenuCommands::showNetworkLockMenuCommands() {
     menuCheckLockLanes->addHotKey(parseHotKey('l'));
     menuCheckLockConnections->addHotKey(parseHotKey('c'));
     menuCheckLockCrossings->addHotKey(parseHotKey('r'));
-    menuCheckLockWalkingAreas->addHotKey(parseHotKey('g'));
     menuCheckLockAdditionals->addHotKey(parseHotKey('a'));
     menuCheckLockTAZs->addHotKey(parseHotKey('t'));
-    menuCheckLockWires->addHotKey(parseHotKey('w'));
     menuCheckLockPolygons->addHotKey(parseHotKey('p'));
     menuCheckLockPOIs->addHotKey(parseHotKey('o'));
     // now show it
@@ -1305,10 +1195,8 @@ GNEApplicationWindowHelper::LockMenuCommands::showNetworkLockMenuCommands() {
     menuCheckLockLanes->show();
     menuCheckLockConnections->show();
     menuCheckLockCrossings->show();
-    menuCheckLockWalkingAreas->show();
     menuCheckLockAdditionals->show();
     menuCheckLockTAZs->show();
-    menuCheckLockWires->show();
     menuCheckLockPolygons->show();
     menuCheckLockPOIs->show();
 }
@@ -1322,7 +1210,6 @@ GNEApplicationWindowHelper::LockMenuCommands::hideNetworkLockMenuCommands() {
     menuCheckLockLanes->disable();
     menuCheckLockConnections->disable();
     menuCheckLockCrossings->disable();
-    menuCheckLockWalkingAreas->disable();
     menuCheckLockAdditionals->disable();
     menuCheckLockTAZs->disable();
     menuCheckLockPolygons->disable();
@@ -1333,10 +1220,8 @@ GNEApplicationWindowHelper::LockMenuCommands::hideNetworkLockMenuCommands() {
     menuCheckLockLanes->hide();
     menuCheckLockConnections->hide();
     menuCheckLockCrossings->hide();
-    menuCheckLockWalkingAreas->hide();
     menuCheckLockAdditionals->hide();
     menuCheckLockTAZs->hide();
-    menuCheckLockWires->hide();
     menuCheckLockPolygons->hide();
     menuCheckLockPOIs->hide();
 }
@@ -1444,10 +1329,8 @@ GNEApplicationWindowHelper::LockMenuCommands::lockAll() {
     menuCheckLockLanes->setCheck(TRUE);
     menuCheckLockConnections->setCheck(TRUE);
     menuCheckLockCrossings->setCheck(TRUE);
-    menuCheckLockWalkingAreas->setCheck(TRUE);
     menuCheckLockAdditionals->setCheck(TRUE);
     menuCheckLockTAZs->setCheck(TRUE);
-    menuCheckLockWires->setCheck(TRUE);
     menuCheckLockPolygons->setCheck(TRUE);
     menuCheckLockPOIs->setCheck(TRUE);
     menuCheckLockRoutes->setCheck(TRUE);
@@ -1473,10 +1356,8 @@ GNEApplicationWindowHelper::LockMenuCommands::unlockAll() {
     menuCheckLockLanes->setCheck(FALSE);
     menuCheckLockConnections->setCheck(FALSE);
     menuCheckLockCrossings->setCheck(FALSE);
-    menuCheckLockWalkingAreas->setCheck(FALSE);
     menuCheckLockAdditionals->setCheck(FALSE);
     menuCheckLockTAZs->setCheck(FALSE);
-    menuCheckLockWires->setCheck(FALSE);
     menuCheckLockPolygons->setCheck(FALSE);
     menuCheckLockPOIs->setCheck(FALSE);
     menuCheckLockRoutes->setCheck(FALSE);
@@ -1508,17 +1389,13 @@ GNEApplicationWindowHelper::LockMenuCommands::editLocking(const GNEAttributeCarr
         menuCheckLockConnections->setCheck(value);
     } else if (AC->getTagProperty().getTag() == SUMO_TAG_CROSSING) {
         menuCheckLockCrossings->setCheck(value);
-    } else if (AC->getTagProperty().getTag() == SUMO_TAG_WALKINGAREA) {
-        menuCheckLockWalkingAreas->setCheck(value);
     } else if (AC->getTagProperty().isAdditionalElement()) {
         menuCheckLockAdditionals->setCheck(value);
-    } else if (AC->getTagProperty().isTAZElement()) {
+    } else if (AC->getTagProperty().getTag() == SUMO_TAG_TAZ) {
         menuCheckLockTAZs->setCheck(value);
-    } else if (AC->getTagProperty().isWireElement()) {
-        menuCheckLockWires->setCheck(value);
     } else if (AC->getTagProperty().getTag() == SUMO_TAG_POLY) {
         menuCheckLockPolygons->setCheck(value);
-    } else if (AC->getTagProperty().isShapeElement() && (AC->getTagProperty().getTag() != SUMO_TAG_POLY)) {
+    } else if (AC->getTagProperty().getTag() == SUMO_TAG_POI) {
         menuCheckLockPOIs->setCheck(value);
     } else if (AC->getTagProperty().isRoute()) {
         menuCheckLockRoutes->setCheck(value);
@@ -1614,9 +1491,8 @@ GNEApplicationWindowHelper::ProcessingMenuCommands::buildProcessingMenuCommands(
     clearInvalidDemandElements = GUIDesigns::buildFXMenuCommandShortcut(fileMenu,
                                  "Clean invalid route elements", "F8", "Clear elements with an invalid path (routes, Trips, Flows...).",
                                  GUIIconSubSys::getIcon(GUIIcon::CLEANJUNCTIONS), myGNEApp, MID_HOTKEY_F8_CLEANINVALID_CROSSINGS_DEMANDELEMENTS);
-    // create separator
-    mySeparator = new FXMenuSeparator(fileMenu);
-    // create optionmenus
+    // add separator (because optionsmenu is commmon for Network and Demand modes
+    new FXMenuSeparator(fileMenu);
     optionMenus = GUIDesigns::buildFXMenuCommandShortcut(fileMenu,
                   "Options", "F10", "Configure Processing Options.",
                   GUIIconSubSys::getIcon(GUIIcon::OPTIONS), myGNEApp, MID_HOTKEY_F10_OPTIONSMENU);
@@ -1693,24 +1569,13 @@ GNEApplicationWindowHelper::ProcessingMenuCommands::hideDemandProcessingMenuComm
 
 void
 GNEApplicationWindowHelper::ProcessingMenuCommands::showDataProcessingMenuCommands() {
-    // currently nothing to show
+
 }
 
 
 void
 GNEApplicationWindowHelper::ProcessingMenuCommands::hideDataProcessingMenuCommands() {
-    // currently nothing to hide
-}
 
-void
-GNEApplicationWindowHelper::ProcessingMenuCommands::showSeparator() {
-    mySeparator->show();
-}
-
-
-void
-GNEApplicationWindowHelper::ProcessingMenuCommands::hideSeparator() {
-    mySeparator->hide();
 }
 
 // ---------------------------------------------------------------------------
@@ -1731,9 +1596,6 @@ GNEApplicationWindowHelper::LocateMenuCommands::buildLocateMenuCommands(FXMenuPa
     GUIDesigns::buildFXMenuCommandShortcut(locateMenu,
                                            "Locate &Edges", "Shift+E", "Open a dialog for locating an Edge.",
                                            GUIIconSubSys::getIcon(GUIIcon::LOCATEEDGE), myGNEApp, MID_LOCATEEDGE);
-    GUIDesigns::buildFXMenuCommandShortcut(locateMenu,
-                                           "Locate &WalkingAreas", "Shift+W", "Open a dialog for locating a Walking Area.",
-                                           GUIIconSubSys::getIcon(GUIIcon::LOCATEWALKINGAREA), myGNEApp, MID_LOCATEWALKINGAREA);
     GUIDesigns::buildFXMenuCommandShortcut(locateMenu,
                                            "Locate &Vehicles", "Shift+V", "Open a dialog for locating a Vehicle.",
                                            GUIIconSubSys::getIcon(GUIIcon::LOCATEVEHICLE), myGNEApp, MID_LOCATEVEHICLE);
@@ -1773,7 +1635,7 @@ void
 GNEApplicationWindowHelper::ToolsMenuCommands::buildToolsMenuCommands(FXMenuPane* locateMenu) {
     // build locate menu commands
     GUIDesigns::buildFXMenuCommandShortcut(locateMenu,
-                                           "&NetDiff", "", "Execute NetDiff.",
+                                           "&NetDiff", "", "Execute NETDIFF.",
                                            GUIIconSubSys::getIcon(GUIIcon::TOOL_NETDIFF), myGNEApp, MID_GNE_TOOLBARTOOLS_NETDIFF);
 }
 
@@ -1860,17 +1722,6 @@ GNEApplicationWindowHelper::toggleEditOptionsNetwork(GNEViewNet* viewNet, const 
         }
         // Call manually onCmdToggleShowGrid
         viewNet->onCmdToggleShowGrid(obj, sel, nullptr);
-    } else if (menuCheck == viewNet->getNetworkViewOptions().menuCheckToggleDrawJunctionShape) {
-        // Toggle menuCheckToggleDrawJunctionShape
-        if (viewNet->getNetworkViewOptions().menuCheckToggleDrawJunctionShape->amChecked() == TRUE) {
-            // show extra information for tests
-            WRITE_DEBUG("Disabled draw junction shape throught alt + " + toString(numericalKeyPressed + 1));
-        } else {
-            // show extra information for tests
-            WRITE_DEBUG("Enabled draw junction shape throught alt + " + toString(numericalKeyPressed + 1));
-        }
-        // Call manually onCmdToggleDrawJunctionShape
-        viewNet->onCmdToggleDrawJunctionShape(obj, sel, nullptr);
     } else if (menuCheck == viewNet->getNetworkViewOptions().menuCheckDrawSpreadVehicles) {
         // Toggle menuCheckDrawSpreadVehicles
         if (viewNet->getNetworkViewOptions().menuCheckDrawSpreadVehicles->amChecked() == TRUE) {
@@ -1937,17 +1788,6 @@ GNEApplicationWindowHelper::toggleEditOptionsNetwork(GNEViewNet* viewNet, const 
         }
         // Call manually onCmdToggleShowAdditionalSubElements
         viewNet->onCmdToggleShowAdditionalSubElements(obj, sel, nullptr);
-    } else if (menuCheck == viewNet->getNetworkViewOptions().menuCheckShowTAZElements) {
-        // Toggle menuCheckShowTAZElements
-        if (viewNet->getNetworkViewOptions().menuCheckShowTAZElements->amChecked() == TRUE) {
-            // show extra information for tests
-            WRITE_DEBUG("Disabled show TAZ elements throught alt + " + toString(numericalKeyPressed + 1));
-        } else {
-            // show extra information for tests
-            WRITE_DEBUG("Enabled show TAZ elements throught alt + " + toString(numericalKeyPressed + 1));
-        }
-        // Call manually onCmdToggleShowTAZElements
-        viewNet->onCmdToggleShowTAZElements(obj, sel, nullptr);
     } else if (menuCheck == viewNet->getNetworkViewOptions().menuCheckExtendSelection) {
         // Toggle menuCheckExtendSelection
         if (viewNet->getNetworkViewOptions().menuCheckExtendSelection->amChecked() == TRUE) {
@@ -2045,17 +1885,6 @@ GNEApplicationWindowHelper::toggleEditOptionsDemand(GNEViewNet* viewNet, const M
         }
         // Call manually onCmdToggleShowGrid
         viewNet->onCmdToggleShowGrid(obj, sel, nullptr);
-    } else if (menuCheck == viewNet->getDemandViewOptions().menuCheckToggleDrawJunctionShape) {
-        // Toggle menuCheckToggleDrawJunctionShape
-        if (viewNet->getDemandViewOptions().menuCheckToggleDrawJunctionShape->amChecked() == TRUE) {
-            // show extra information for tests
-            WRITE_DEBUG("Disabled draw junction shape throught alt + " + toString(numericalKeyPressed + 1));
-        } else {
-            // show extra information for tests
-            WRITE_DEBUG("Enabled draw junction shape throught alt + " + toString(numericalKeyPressed + 1));
-        }
-        // Call manually onCmdToggleDrawJunctionShape
-        viewNet->onCmdToggleDrawJunctionShape(obj, sel, nullptr);
     } else if (menuCheck == viewNet->getDemandViewOptions().menuCheckDrawSpreadVehicles) {
         // Toggle menuCheckDrawSpreadVehicles
         if (viewNet->getDemandViewOptions().menuCheckDrawSpreadVehicles->amChecked() == TRUE) {
@@ -2165,18 +1994,7 @@ GNEApplicationWindowHelper::toggleEditOptionsDemand(GNEViewNet* viewNet, const M
 
 bool
 GNEApplicationWindowHelper::toggleEditOptionsData(GNEViewNet* viewNet, const MFXCheckableButton* menuCheck, const int numericalKeyPressed, FXObject* obj, FXSelector sel) {
-    if (menuCheck == viewNet->getDataViewOptions().menuCheckToggleDrawJunctionShape) {
-        // Toggle menuCheckToggleDrawJunctionShape
-        if (viewNet->getDataViewOptions().menuCheckToggleDrawJunctionShape->amChecked() == TRUE) {
-            // show extra information for tests
-            WRITE_DEBUG("Disabled draw junction shape throught alt + " + toString(numericalKeyPressed + 1));
-        } else {
-            // show extra information for tests
-            WRITE_DEBUG("Enabled draw junction shape throught alt + " + toString(numericalKeyPressed + 1));
-        }
-        // Call manually onCmdToggleDrawJunctionShape
-        viewNet->onCmdToggleDrawJunctionShape(obj, sel, nullptr);
-    } else if (menuCheck == viewNet->getDataViewOptions().menuCheckShowAdditionals) {
+    if (menuCheck == viewNet->getDataViewOptions().menuCheckShowAdditionals) {
         // Toggle menuCheckHideShapes
         if (viewNet->getDataViewOptions().menuCheckShowAdditionals->amChecked() == TRUE) {
             // show extra information for tests
@@ -2209,47 +2027,47 @@ GNEApplicationWindowHelper::toggleEditOptionsData(GNEViewNet* viewNet, const MFX
         }
         // Call manually onCmdToggleShowDemandElementsData
         viewNet->onCmdToggleShowDemandElementsData(obj, sel, nullptr);
-    } else if (menuCheck == viewNet->getDataViewOptions().menuCheckToggleTAZRelDrawing) {
-        // Toggle menuCheckToggleTAZRelDrawing
-        if (viewNet->getDataViewOptions().menuCheckToggleTAZRelDrawing->amChecked() == TRUE) {
+    } else if (menuCheck == viewNet->getDataViewOptions().menuCheckToogleTAZRelDrawing) {
+        // Toggle menuCheckToogleTAZRelDrawing
+        if (viewNet->getDataViewOptions().menuCheckToogleTAZRelDrawing->amChecked() == TRUE) {
             // show extra information for tests
-            WRITE_DEBUG("Disabled toggle TAXRel drawing throught alt + " + toString(numericalKeyPressed + 1));
+            WRITE_DEBUG("Disabled toogle TAXRel drawing throught alt + " + toString(numericalKeyPressed + 1));
         } else {
             // show extra information for tests
-            WRITE_DEBUG("Enabled toggle TAXRel drawing throught alt + " + toString(numericalKeyPressed + 1));
+            WRITE_DEBUG("Enabled toogle TAXRel drawing throught alt + " + toString(numericalKeyPressed + 1));
         }
         // Call manually onCmdToggleTAZRelDrawing
         viewNet->onCmdToggleTAZRelDrawing(obj, sel, nullptr);
-    } else if (menuCheck == viewNet->getDataViewOptions().menuCheckToggleTAZDrawFill) {
-        // Toggle menuCheckToggleTAZDrawFill
-        if (viewNet->getDataViewOptions().menuCheckToggleTAZDrawFill->amChecked() == TRUE) {
+    } else if (menuCheck == viewNet->getDataViewOptions().menuCheckToogleTAZDrawFill) {
+        // Toggle menuCheckToogleTAZDrawFill
+        if (viewNet->getDataViewOptions().menuCheckToogleTAZDrawFill->amChecked() == TRUE) {
             // show extra information for tests
-            WRITE_DEBUG("Disabled toggle TAZ draw fill throught alt + " + toString(numericalKeyPressed + 1));
+            WRITE_DEBUG("Disabled toogle TAZ draw fill throught alt + " + toString(numericalKeyPressed + 1));
         } else {
             // show extra information for tests
-            WRITE_DEBUG("Enabled toggle TAZ draw fill throught alt + " + toString(numericalKeyPressed + 1));
+            WRITE_DEBUG("Enabled toogle TAZ draw fill throught alt + " + toString(numericalKeyPressed + 1));
         }
         // Call manually onCmdToggleTAZDrawFill
         viewNet->onCmdToggleTAZDrawFill(obj, sel, nullptr);
-    } else if (menuCheck == viewNet->getDataViewOptions().menuCheckToggleTAZRelOnlyFrom) {
-        // Toggle menuCheckToggleTAZRelOnlyFrom
-        if (viewNet->getDataViewOptions().menuCheckToggleTAZRelOnlyFrom->amChecked() == TRUE) {
+    } else if (menuCheck == viewNet->getDataViewOptions().menuCheckToogleTAZRelOnlyFrom) {
+        // Toggle menuCheckToogleTAZRelOnlyFrom
+        if (viewNet->getDataViewOptions().menuCheckToogleTAZRelOnlyFrom->amChecked() == TRUE) {
             // show extra information for tests
-            WRITE_DEBUG("Disabled toggle TAZRel only from throught alt + " + toString(numericalKeyPressed + 1));
+            WRITE_DEBUG("Disabled toogle TAZRel only from throught alt + " + toString(numericalKeyPressed + 1));
         } else {
             // show extra information for tests
-            WRITE_DEBUG("Enabled toggle TAZRel only from throught alt + " + toString(numericalKeyPressed + 1));
+            WRITE_DEBUG("Enabled toogle TAZRel only from throught alt + " + toString(numericalKeyPressed + 1));
         }
         // Call manually onCmdToggleTAZRelOnlyFrom
         viewNet->onCmdToggleTAZRelOnlyFrom(obj, sel, nullptr);
-    } else if (menuCheck == viewNet->getDataViewOptions().menuCheckToggleTAZRelOnlyTo) {
-        // Toggle menuCheckToggleTAZRelOnlyTo
-        if (viewNet->getDataViewOptions().menuCheckToggleTAZRelOnlyTo->amChecked() == TRUE) {
+    } else if (menuCheck == viewNet->getDataViewOptions().menuCheckToogleTAZRelOnlyTo) {
+        // Toggle menuCheckToogleTAZRelOnlyTo
+        if (viewNet->getDataViewOptions().menuCheckToogleTAZRelOnlyTo->amChecked() == TRUE) {
             // show extra information for tests
-            WRITE_DEBUG("Disabled toggle TAZRel only to throught alt + " + toString(numericalKeyPressed + 1));
+            WRITE_DEBUG("Disabled toogle TAZRel only to throught alt + " + toString(numericalKeyPressed + 1));
         } else {
             // show extra information for tests
-            WRITE_DEBUG("Enabled toggle TAZRel only to throught alt + " + toString(numericalKeyPressed + 1));
+            WRITE_DEBUG("Enabled toogle TAZRel only to throught alt + " + toString(numericalKeyPressed + 1));
         }
         // Call manually onCmdToggleTAZRelOnlyTo
         viewNet->onCmdToggleTAZRelOnlyTo(obj, sel, nullptr);
@@ -2257,16 +2075,6 @@ GNEApplicationWindowHelper::toggleEditOptionsData(GNEViewNet* viewNet, const MFX
         return false;
     }
     return true;
-}
-
-
-bool
-GNEApplicationWindowHelper::stringEndsWith(const std::string& str, const std::string& suffix) {
-    if (str.length() < suffix.length()) {
-        return false;
-    } else {
-        return str.compare(str.length() - suffix.length(), suffix.length(), suffix) == 0;
-    }
 }
 
 /****************************************************************************/

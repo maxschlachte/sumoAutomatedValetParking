@@ -182,8 +182,6 @@ public:
         PositionVector shape;
         /// @brief the lane-id of the next crossing(s)
         std::vector<std::string> nextCrossings;
-        /// @brief the lane-id of the previous crossing(s)
-        std::vector<std::string> prevCrossings;
         /// @brief the lane-id of the next sidewalk lane or ""
         std::vector<std::string> nextSidewalks;
         /// @brief the lane-id of the previous sidewalk lane or ""
@@ -646,7 +644,7 @@ public:
     bool checkCrossingDuplicated(EdgeVector edges);
 
     /// @brief build internal lanes, pedestrian crossings and walking areas
-    double buildInnerEdges();
+    void buildInnerEdges();
 
     /**@brief build pedestrian crossings
      * @return The next index for creating internal lanes
@@ -726,9 +724,6 @@ public:
 
     /// @brief return the crossing with the given Edges
     Crossing* getCrossing(const EdgeVector& edges, bool hardFail = true) const;
-
-    /// @brief return the walkingArea with the given ID
-    WalkingArea& getWalkingArea(const std::string& id);
 
     /* @brief set tl indices of this nodes crossing starting at the given index
      * @return Whether a custom index was used

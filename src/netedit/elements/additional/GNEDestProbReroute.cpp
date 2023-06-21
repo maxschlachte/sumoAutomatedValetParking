@@ -31,8 +31,9 @@
 
 GNEDestProbReroute::GNEDestProbReroute(GNENet* net):
     GNEAdditional("", net, GLO_REROUTER_DESTPROBREROUTE, SUMO_TAG_DEST_PROB_REROUTE, "",
-{}, {}, {}, {}, {}, {}),
-myNewEdgeDestination(nullptr),
+{}, {}, {}, {}, {}, {}, {}, {},
+std::map<std::string, std::string>()),
+    myNewEdgeDestination(nullptr),
 myProbability(0) {
     // reset default values
     resetDefaultValues();
@@ -41,7 +42,8 @@ myProbability(0) {
 
 GNEDestProbReroute::GNEDestProbReroute(GNEAdditional* rerouterIntervalParent, GNEEdge* newEdgeDestination, double probability):
     GNEAdditional(rerouterIntervalParent->getNet(), GLO_REROUTER_DESTPROBREROUTE, SUMO_TAG_DEST_PROB_REROUTE, "",
-{}, {}, {}, {rerouterIntervalParent}, {}, {}),
+{}, {}, {}, {rerouterIntervalParent}, {}, {}, {}, {},
+std::map<std::string, std::string>()),
 myNewEdgeDestination(newEdgeDestination),
 myProbability(probability) {
     // update boundary of rerouter parent
@@ -120,7 +122,7 @@ std::string
 GNEDestProbReroute::getAttribute(SumoXMLAttr key) const {
     switch (key) {
         case SUMO_ATTR_ID:
-            return getMicrosimID();
+            return getID();
         case SUMO_ATTR_EDGE:
             return myNewEdgeDestination->getID();
         case SUMO_ATTR_PROB:
@@ -138,12 +140,6 @@ GNEDestProbReroute::getAttribute(SumoXMLAttr key) const {
 double
 GNEDestProbReroute::getAttributeDouble(SumoXMLAttr key) const {
     throw InvalidArgument(getTagStr() + " doesn't have a double attribute of type '" + toString(key) + "'");
-}
-
-
-const Parameterised::Map&
-GNEDestProbReroute::getACParametersMap() const {
-    return PARAMETERS_EMPTY;
 }
 
 
@@ -179,6 +175,12 @@ GNEDestProbReroute::isValid(SumoXMLAttr key, const std::string& value) {
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
+}
+
+
+bool
+GNEDestProbReroute::isAttributeEnabled(SumoXMLAttr /* key */) const {
+    return true;
 }
 
 

@@ -36,17 +36,18 @@
 
 GNEVariableSpeedSign::GNEVariableSpeedSign(GNENet* net) :
     GNEAdditional("", net, GLO_VSS, SUMO_TAG_VSS, "",
-{}, {}, {}, {}, {}, {}) {
+{}, {}, {}, {}, {}, {}, {}, {},
+std::map<std::string, std::string>()) {
     // reset default values
     resetDefaultValues();
 }
 
 
 GNEVariableSpeedSign::GNEVariableSpeedSign(const std::string& id, GNENet* net, const Position& pos, const std::string& name,
-        const std::vector<std::string>& vTypes, const Parameterised::Map& parameters) :
+        const std::vector<std::string>& vTypes, const std::map<std::string, std::string>& parameters) :
     GNEAdditional(id, net, GLO_VSS, SUMO_TAG_VSS, name,
-{}, {}, {}, {}, {}, {}),
-Parameterised(parameters),
+{}, {}, {}, {}, {}, {}, {}, {},
+parameters),
 myPosition(pos),
 myVehicleTypes(vTypes) {
     // update centering boundary without updating grid
@@ -173,7 +174,7 @@ std::string
 GNEVariableSpeedSign::getAttribute(SumoXMLAttr key) const {
     switch (key) {
         case SUMO_ATTR_ID:
-            return getMicrosimID();
+            return getID();
         case SUMO_ATTR_LANES: {
             std::vector<std::string> lanes;
             for (const auto& VSSSymbol : getChildAdditionals()) {
@@ -202,12 +203,6 @@ GNEVariableSpeedSign::getAttribute(SumoXMLAttr key) const {
 double
 GNEVariableSpeedSign::getAttributeDouble(SumoXMLAttr key) const {
     throw InvalidArgument(getTagStr() + " doesn't have a double attribute of type '" + toString(key) + "'");
-}
-
-
-const Parameterised::Map&
-GNEVariableSpeedSign::getACParametersMap() const {
-    return getParametersMap();
 }
 
 
@@ -256,10 +251,16 @@ GNEVariableSpeedSign::isValid(SumoXMLAttr key, const std::string& value) {
         case GNE_ATTR_SELECTED:
             return canParse<bool>(value);
         case GNE_ATTR_PARAMETERS:
-            return areParametersValid(value);
+            return Parameterised::areParametersValid(value);
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
+}
+
+
+bool
+GNEVariableSpeedSign::isAttributeEnabled(SumoXMLAttr /* key */) const {
+    return true;
 }
 
 

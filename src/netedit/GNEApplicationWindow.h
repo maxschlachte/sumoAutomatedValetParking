@@ -95,7 +95,7 @@ public:
     /// @brief handle event of type Network loaded
     void handleEvent_NetworkLoaded(GUIEvent* e);
 
-    /// @brief handle event of type message
+    /// @brief hanlde event of type message
     void handleEvent_Message(GUIEvent* e);
     /// @}
 
@@ -119,20 +119,8 @@ public:
     /// @brief called when the command/FXCall open TLS programs is executed
     long onCmdOpenTLSPrograms(FXObject*, FXSelector, void*);
 
-    /// @brief called when the command/FXCall reload TLS programs is executed
-    long onCmdReloadTLSPrograms(FXObject*, FXSelector, void*);
-
-    /// @brief called when the command/FXCall reload TLS programs is updated
-    long onUpdReloadTLSPrograms(FXObject*, FXSelector, void*);
-
     /// @brief called when the command/FXCall open edgeType is executed
     long onCmdOpenEdgeTypes(FXObject*, FXSelector, void*);
-
-    /// @brief called when the command/FXCall reload edge types is executed
-    long onCmdReloadEdgeTypes(FXObject*, FXSelector, void*);
-
-    /// @brief called when the command/FXCall reload edge types is updated
-    long onUpdReloadEdgeTypes(FXObject*, FXSelector, void*);
 
     /// @brief called when the command/FXCall reload is executed
     long onCmdReload(FXObject*, FXSelector, void*);
@@ -153,7 +141,7 @@ public:
     long onCmdLocate(FXObject*, FXSelector, void*);
 
     /// @brief called when the command/FXCall run NetDiff is executed
-    long onCmdToolNetDiff(FXObject*, FXSelector, void*);
+    long onCmdRunNetDiff(FXObject*, FXSelector, void*);
 
     /// @brief called when the command/FXCall save all elements is executed
     long onCmdSaveAllElements(FXObject*, FXSelector, void*);
@@ -164,23 +152,14 @@ public:
     /// @brief called when the command/FXCall save TLSPrograms is executed
     long onCmdSaveTLSPrograms(FXObject*, FXSelector, void*);
 
-    /// @brief called when the command/FXCall save TLSPrograms is updated
-    long onUpdSaveTLSPrograms(FXObject*, FXSelector, void*);
-
     /// @brief called when the command/FXCall save edge types is executed
     long onCmdSaveEdgeTypes(FXObject*, FXSelector, void*);
-
-    /// @brief called when the command/FXCall save edge types is updated
-    long onUpdSaveEdgeTypes(FXObject*, FXSelector, void*);
 
     /// @brief called when the command/FXCall save TLSPrograms as is executed
     long onCmdSaveTLSProgramsAs(FXObject*, FXSelector, void*);
 
     /// @brief called when the command/FXCall save edgeTypes as is executed
     long onCmdSaveEdgeTypesAs(FXObject*, FXSelector, void*);
-
-    /// @brief called when the command/FXCall save edgeTypes as is updated
-    long onUpdSaveEdgeTypesAs(FXObject*, FXSelector, void*);
 
     /// @brief called when the command/FXCall open additionals is executed
     long onCmdOpenAdditionals(FXObject*, FXSelector, void*);
@@ -233,9 +212,6 @@ public:
     /// @brief called when the update/FXCall needs network is executed
     long onUpdNeedsNetwork(FXObject*, FXSelector, void*);
 
-    /// @brief called when the update/FXCall needs at least one newtork element is executed
-    long onUpdNeedsNetworkElement(FXObject*, FXSelector, void*);
-
     /// @brief called when the update/FXCall needs front element is executed
     long onUpdNeedsFrontElement(FXObject*, FXSelector, void*);
 
@@ -251,20 +227,11 @@ public:
     /// @brief called when the update/FXCall save additionals is executed
     long onUpdSaveAdditionals(FXObject*, FXSelector, void*);
 
-    /// @brief called when the update/FXCall save additionals as is executed
-    long onUpdSaveAdditionalsAs(FXObject*, FXSelector, void*);
-
     /// @brief called when the update/FXCall save demand elements is executed
     long onUpdSaveDemandElements(FXObject*, FXSelector, void*);
 
-    /// @brief called when the update/FXCall save demand elements as is executed
-    long onUpdSaveDemandElementsAs(FXObject*, FXSelector, void*);
-
     /// @brief called when the update/FXCall save data elements is executed
     long onUpdSaveDataElements(FXObject*, FXSelector, void*);
-
-    /// @brief called when the update/FXCall save data elements as is executed
-    long onUpdSaveDataElementsAs(FXObject*, FXSelector, void*);
 
     /// @brief called when the update/FXCall undo is executed
     long onUpdUndo(FXObject* obj, FXSelector sel, void* ptr);
@@ -382,9 +349,6 @@ public:
     /// @brief called if the user press key combination Ctrl + G to toggle grid
     long onCmdToggleGrid(FXObject*, FXSelector, void*);
 
-    /// @brief called if the user press key combination Ctrl + J to toggle draw junction shape
-    long onCmdToggleDrawJunctionShape(FXObject*, FXSelector, void*);
-
     /// @brief called if the user call set front element
     long onCmdSetFrontElement(FXObject*, FXSelector, void*);
 
@@ -493,9 +457,6 @@ protected:
     /// @brief information whether the gui is currently loading and the load-options shall be greyed out
     bool myAmLoading = false;
 
-    /// @brief information whether the gui is currently reloading
-    bool myReloading = false;
-
     /// @brief the submenus
     FXMenuPane* myFileMenu = nullptr,
                 *myFileMenuTLS = nullptr,
@@ -509,7 +470,7 @@ protected:
                         *myProcessingMenu = nullptr,
                          *myLocatorMenu = nullptr,
                           *myToolsMenu = nullptr,
-                           *myWindowMenu = nullptr,
+                           *myWindowsMenu = nullptr,
                             *myHelpMenu = nullptr;
 
     /// @brief menu title for modes

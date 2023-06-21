@@ -58,12 +58,14 @@ GUITriggerBuilder::buildLaneSpeedTrigger(MSNet& net,
 
 MSTriggeredRerouter*
 GUITriggerBuilder::buildRerouter(MSNet& net, const std::string& id,
-                                 MSEdgeVector& edges, double prob,
+                                 MSEdgeVector& edges,
+                                 double prob,
                                  // (cre): add prio parameter
-                                 double prio, bool off,
-                                 SUMOTime timeThreshold, const std::string& vTypes) {
+                                 double prio, const std::string& file, bool off,
+                                 SUMOTime timeThreshold,
+                                 const std::string& vTypes) {
     // (cre): pass prio parameter
-    GUITriggeredRerouter* rr = new GUITriggeredRerouter(id, edges, prob, prio, off, timeThreshold, vTypes,
+    GUITriggeredRerouter* rr = new GUITriggeredRerouter(id, edges, prob, prio, file, off, timeThreshold, vTypes,
             dynamic_cast<GUINet&>(net).getVisualisationSpeedUp());
     return rr;
 }

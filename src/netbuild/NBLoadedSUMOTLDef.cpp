@@ -117,12 +117,6 @@ NBLoadedSUMOTLDef::addConnection(NBEdge* from, NBEdge* to, int fromLane, int toL
 }
 
 void
-NBLoadedSUMOTLDef::setID(const std::string& newID) {
-    Named::setID(newID);
-    myTLLogic->setID(newID);
-}
-
-void
 NBLoadedSUMOTLDef::setProgramID(const std::string& programID) {
     NBTrafficLightDefinition::setProgramID(programID);
     myTLLogic->setProgramID(programID);
@@ -180,10 +174,8 @@ NBLoadedSUMOTLDef::replaceRemoved(NBEdge* removed, int removedLane, NBEdge* by, 
 
 
 void
-NBLoadedSUMOTLDef::addPhase(const SUMOTime duration, const std::string& state, const SUMOTime minDur, const SUMOTime maxDur,
-                            const SUMOTime earliestEnd, const SUMOTime latestEnd, const SUMOTime vehExt, const SUMOTime yellow,
-                            const SUMOTime red, const std::vector<int>& next, const std::string& name) {
-    myTLLogic->addStep(duration, state, minDur, maxDur, earliestEnd, latestEnd, vehExt, yellow, red, name, next);
+NBLoadedSUMOTLDef::addPhase(SUMOTime duration, const std::string& state, SUMOTime minDur, SUMOTime maxDur, const std::vector<int>& next, const std::string& name) {
+    myTLLogic->addStep(duration, state, minDur, maxDur, next, name);
 }
 
 
@@ -344,10 +336,9 @@ NBLoadedSUMOTLDef::patchIfCrossingsAdded() {
             NBTrafficLightLogic* newLogic = new NBTrafficLightLogic(getID(), getProgramID(), 0, myOffset, myType);
             SUMOTime brakingTime = TIME2STEPS(computeBrakingTime(OptionsCont::getOptions().getFloat("tls.yellow.min-decel")));
             //std::cout << "patchIfCrossingsAdded for " << getID() << " numPhases=" << phases.size() << "\n";
-            for (const auto& phase : phases) {
-                const std::string state = phase.state.substr(0, numNormalLinks) + crossingDefaultState;
-                NBOwnTLDef::addPedestrianPhases(newLogic, phase.duration, phase.minDur, phase.maxDur, phase.earliestEnd, phase.latestEnd,
-                                                state, crossings, fromEdges, toEdges);
+            for (std::vector<NBTrafficLightLogic::PhaseDefinition>::const_iterator it = phases.begin(); it != phases.end(); it++) {
+                const std::string state = it->state.substr(0, numNormalLinks) + crossingDefaultState;
+                NBOwnTLDef::addPedestrianPhases(newLogic, it->duration, it->minDur, it->maxDur, state, crossings, fromEdges, toEdges);
             }
             NBOwnTLDef::addPedestrianScramble(newLogic, noLinksAll, TIME2STEPS(10), brakingTime, crossings, fromEdges, toEdges);
 

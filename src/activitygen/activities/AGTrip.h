@@ -27,9 +27,9 @@
 #include <config.h>
 
 #include <list>
-#include <activitygen/city/AGPosition.h>
-#include <activitygen/city/AGCar.h>
-#include <activitygen/city/AGBus.h>
+#include "../city/AGPosition.h"
+#include "../city/AGCar.h"
+#include "../city/AGBus.h"
 
 
 // ===========================================================================

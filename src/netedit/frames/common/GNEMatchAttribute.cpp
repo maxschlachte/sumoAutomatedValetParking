@@ -24,6 +24,7 @@
 #include <utils/gui/windows/GUIAppEnum.h>
 
 #include "GNEMatchAttribute.h"
+#include "GNEElementSet.h"
 
 // ===========================================================================
 // FOX callback mapping
@@ -44,12 +45,12 @@ FXIMPLEMENT(GNEMatchAttribute, FXGroupBoxModule, GNEMatchAttributeMap, ARRAYNUMB
 // ===========================================================================
 
 GNEMatchAttribute::GNEMatchAttribute(GNEElementSet* elementSet, SumoXMLTag defaultTag, SumoXMLAttr defaultAttr, const std::string& defaultValue) :
-    FXGroupBoxModule(elementSet->getSelectorFrameParent(), "Match Attribute"),
+    FXGroupBoxModule(elementSet->getSelectorFrameParent()->getContentFrame(), "Match Attribute"),
     myElementSet(elementSet),
     myCurrentTag(defaultTag),
     myCurrentAttribute(defaultAttr) {
     // Create MFXIconComboBox for tags
-    myMatchTagComboBox = new MFXIconComboBox(getCollapsableFrame(), GUIDesignComboBoxNCol, true, this, MID_GNE_SELECTORFRAME_SELECTTAG, GUIDesignComboBox);
+    myMatchTagComboBox = new MFXIconComboBox(getCollapsableFrame(), GUIDesignComboBoxNCol, this, MID_GNE_SELECTORFRAME_SELECTTAG, GUIDesignComboBox);
     // Create FXComboBox for Attributes
     myMatchAttrComboBox = new FXComboBox(getCollapsableFrame(), GUIDesignComboBoxNCol, this, MID_GNE_SELECTORFRAME_SELECTATTRIBUTE, GUIDesignComboBox);
     // Create TextField for Match string
@@ -361,12 +362,10 @@ GNEMatchAttribute::updateAttribute() {
                 attrIndex = i;
             }
         }
-        // Check if are allowed "Parameter"
-        if (tagProperty.hasParameters()) {
-            myMatchAttrComboBox->appendItem(toString(GNE_ATTR_PARAMETERS).c_str());
-            if (myCurrentAttribute == GNE_ATTR_PARAMETERS) {
-                attrIndex = (myMatchAttrComboBox->getNumItems() - 1);
-            }
+        // Add extra attribute "Parameter"
+        myMatchAttrComboBox->appendItem(toString(GNE_ATTR_PARAMETERS).c_str());
+        if (myCurrentAttribute == GNE_ATTR_PARAMETERS) {
+            attrIndex = (myMatchAttrComboBox->getNumItems() - 1);
         }
         // check if item can close shape
         if (tagProperty.canCloseShape()) {

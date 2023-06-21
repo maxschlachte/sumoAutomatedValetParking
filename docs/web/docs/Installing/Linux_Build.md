@@ -40,34 +40,21 @@ alternatives below.
   For openSUSE this means installing libxerces-c-devel, libproj-devel,
   libgdal-devel, and fox16-devel. For ubuntu the call is above.
   The installation of swig, python3-dev and the jdk enables also the build of libsumo
-  while eigen3 is necessary for the overheadwire model.
+  wgile eigen3 is necessary for the overheadwire model.
   There are some outdated [platform specific
   and manual build instructions for the
   libraries](Linux_Build_Libraries.md)
 - Optionally you may want to add
- - ccache (to speed up builds)
  - ffmpeg-devel (for video output),
  - libOpenSceneGraph-devel (for the experimental 3D GUI),
  - gtest (for unit testing)
- - texttest, xvfb  and tkdiff (for the acceptance tests)
- - flake, astyle and autopep for style checking
- - see also further dependencies [for GUI testing](../Developer/GUI_Testing.md)
-
-The package names above are for openSUSE, for ubuntu the call to get the most important optional libraries and tools is:
+ - texttest (for the acceptance tests)
+  The package names above are for openSUSE, for ubuntu the call to get all optional libraries and tools is:
   
-```
-sudo apt-get install ccache libavformat-dev libswscale-dev libopenscenegraph-dev python3-pip python3-setuptools
-sudo apt-get install libgtest-dev tkdiff xvfb flake8 astyle python3-autopep8
-sudo pip3 install texttest
-```
-
-For the Python tools there are some requirements depending on which tools you want to use. If you want to install
-everything using pip do `pip install -r tools/requirements.txt`. To install the most common dependencies with your
-package manager on ubuntu do:
-
-```
-sudo apt-get install python3-pandas python3-rtree python3-pyproj
-```
+  ```
+  sudo apt-get install libavformat-dev libswscale-dev libopenscenegraph-dev libgtest-dev python3-pip python3-setuptools
+  sudo pip3 install texttest
+  ```
 
 ## Getting the source code
 
@@ -174,8 +161,10 @@ make -j $(grep -c ^processor /proc/cpuinfo)
 
 Other useful cmake options:
 
-- `-D PROFILING=ON` enable profiling instrumentation for gprof (gcc build only)
-- `-D COVERAGE=ON` enable coverage instrumentation for lcov (gcc build only)
+- `-D PROFILING=ON` enable profiling instrumentation for gprof (gcc
+  build only)
+- `-D COVERAGE=ON` enable coverage instrumentation for lcov (gcc build
+  only)
 - `-D CHECK_OPTIONAL_LIBS=OFF` disable all optional libraries (only
   include EPL compatible licensed code)
 - `-D CMAKE_BUILD_TYPE=RelWithDebInfo` enable debug symbols for
@@ -183,7 +172,6 @@ Other useful cmake options:
 - `-D PROJ_LIBRARY=` disable PROJ
 - `-D FOX_CONFIG=` disable FOX toolkit (GUI and multithreading)
 - `-D PYTHON_EXECUTABLE=/usr/bin/python3` select a different python version (also for libsumo / libtraci)
-- `-D MVN_EXECUTABLE=` disable maven packaging (especially useful if you have no network connection)
 
 
 ## Building with clang
@@ -210,14 +198,14 @@ CXX=clang++ cmake -DCMAKE_BUILD_TYPE=Debug ../..
 ```
 
 The clang-debug-build will detect memory leaks (among other things)
-If the errors are reported with cryptic hexadecimal numbers as
+If the errors are reported as
 
 ```
 Indirect leak of 72 byte(s) in 1 object(s) allocated from:
     #0 0xa4ee2d  (.../sumo/bin/netconvertD+0xa4ee2d) 
 ```
 
-set the following environment variable to point to the llvm-symbolizer executable:
+Set, the following environment variable to pinot at the llvm-symoblizer executable:
 `export ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer` before running the executable.
 
 ## Installing the SUMO binaries
@@ -254,7 +242,7 @@ sudo xargs rm -r $SUMO_HOME
 ## (Frequent) Rebuilds
 
 If you did a repository clone you can simply update it by doing `git pull`
-from inside the SUMO_HOME folder. Then change to the build directory and run
+from inside the SUMO_HOME folder. Then change to the buil directory and run
 `make -j $(nproc)` again.
 
 If your underlying system changed (updated libraries) or you experience other

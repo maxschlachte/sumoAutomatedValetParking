@@ -21,7 +21,6 @@
 #include <config.h>
 
 #include <netedit/frames/GNEFrame.h>
-#include <netedit/frames/GNEAttributesCreator.h>
 
 
 // ===========================================================================
@@ -251,13 +250,13 @@ public:
     EdgeTypeSelector* getEdgeTypeSelector() const;
 
     /// @brief get edgeType attributes
-    GNEAttributesCreator* getEdgeTypeAttributes() const;
+    GNEFrameAttributeModules::AttributesCreator* getEdgeTypeAttributes() const;
 
     /// @brief get lane type selector
     LaneTypeSelector* getLaneTypeSelector();
 
     /// @brief get laneType attributes
-    GNEAttributesCreator* getLaneTypeAttributes() const;
+    GNEFrameAttributeModules::AttributesCreator* getLaneTypeAttributes() const;
 
     /// @brief set default to using edge template
     void setUseEdgeTemplate();
@@ -267,13 +266,13 @@ protected:
     EdgeTypeSelector* myEdgeTypeSelector = nullptr;
 
     /// @brief internal edgeType attributes
-    GNEAttributesCreator* myEdgeTypeAttributes = nullptr;
+    GNEFrameAttributeModules::AttributesCreator* myEdgeTypeAttributes = nullptr;
 
     /// @brief lane type selector
     GNECreateEdgeFrame::LaneTypeSelector* myLaneTypeSelector = nullptr;
 
     /// @brief internal laneType attributes
-    GNEAttributesCreator* myLaneTypeAttributes = nullptr;
+    GNEFrameAttributeModules::AttributesCreator* myLaneTypeAttributes = nullptr;
 
     /// @brief Legend
     GNECreateEdgeFrame::Legend* myLegend = nullptr;

@@ -330,7 +330,7 @@ RODFDetector::writeEmitterDefinition(const std::string& file,
                 std::sort(departures.begin(), departures.end());
             } else {
                 for (int i = 0; i < numCars; ++i) {
-                    departures.push_back(time + (stepOffset * i / numCars));
+                    departures.push_back(time + (SUMOTime)(stepOffset * i / (double)numCars));
                 }
             }
 
@@ -851,7 +851,7 @@ RODFDetectorCon::writeValidationDetectors(const std::string& file,
                 pos += 1;
             }
             out.openTag(SUMO_TAG_E1DETECTOR).writeAttr(SUMO_ATTR_ID, "validation_" + StringUtils::escapeXML(det->getID())).writeAttr(SUMO_ATTR_LANE, det->getLaneID());
-            out.writeAttr(SUMO_ATTR_POSITION, pos).writeAttr(SUMO_ATTR_PERIOD, 60);
+            out.writeAttr(SUMO_ATTR_POSITION, pos).writeAttr(SUMO_ATTR_FREQUENCY, 60);
             if (friendly) {
                 out.writeAttr(SUMO_ATTR_FRIENDLY_POS, true);
             }
@@ -905,7 +905,7 @@ RODFDetectorCon::guessEmptyFlows(RODFDetectorFlows& flows) {
         const std::set<const RODFDetector*>& follower = det->getFollowerDetectors();
         int noFollowerWithRoutes = 0;
         int noPriorWithRoutes = 0;
-        // count occurrences of detectors with/without routes
+        // count occurences of detectors with/without routes
         std::set<const RODFDetector*>::const_iterator j;
         for (j = prior.begin(); j != prior.end(); ++j) {
             if (flows.knows((*j)->getID())) {

@@ -22,11 +22,6 @@
 
 #include <netedit/frames/GNEFrame.h>
 #include <netedit/elements/demand/GNERouteHandler.h>
-#include <netedit/frames/GNEAttributesCreator.h>
-#include <netedit/frames/GNETagSelector.h>
-#include <netedit/frames/GNEDemandSelector.h>
-#include <netedit/frames/GNEPathCreator.h>
-#include <netedit/frames/GNENeteditAttributes.h>
 
 
 // ===========================================================================
@@ -55,22 +50,22 @@ public:
 
     /**@brief add vehicle element
      * @param objectsUnderCursor collection of objects under cursor after click over view
-     * @return true if vehicle was successfully added
+     * @return true if vehicle was sucesfully added
      */
     bool addContainer(const GNEViewNetHelper::ObjectsUnderCursor& objectsUnderCursor, const GNEViewNetHelper::MouseButtonKeyPressed& mouseButtonKeyPressed);
 
-    /// @brief get GNEPathCreator modul
-    GNEPathCreator* getPathCreator() const;
+    /// @brief get PathCreator modul
+    GNEFrameModules::PathCreator* getPathCreator() const;
 
 protected:
-    /// @brief Tag selected in GNETagSelector
+    /// @brief Tag selected in TagSelector
     void tagSelected();
 
     /// @brief selected demand element in DemandElementSelector
     void demandElementSelected();
 
     /// @brief create path
-    void createPath(const bool useLastRoute);
+    void createPath();
 
 private:
     /// @brief route handler
@@ -80,25 +75,25 @@ private:
     CommonXMLStructure::SumoBaseObject* myContainerBaseObject;
 
     /// @brief container tag selector (used to select diffent kind of containers)
-    GNETagSelector* myContainerTagSelector;
+    GNEFrameModules::TagSelector* myContainerTagSelector;
 
     /// @brief Container Type selectors
-    DemandElementSelector* myTypeSelector;
+    GNEFrameModules::DemandElementSelector* myTypeSelector;
 
     /// @brief container plan selector (used to select diffent kind of container plan)
-    GNETagSelector* myContainerPlanTagSelector;
+    GNEFrameModules::TagSelector* myContainerPlanTagSelector;
 
     /// @brief internal vehicle attributes
-    GNEAttributesCreator* myContainerAttributes;
+    GNEFrameAttributeModules::AttributesCreator* myContainerAttributes;
 
     /// @brief internal container plan attributes
-    GNEAttributesCreator* myContainerPlanAttributes;
+    GNEFrameAttributeModules::AttributesCreator* myContainerPlanAttributes;
 
     /// @brief Netedit parameter
-    GNENeteditAttributes* myNeteditAttributes;
+    GNEFrameAttributeModules::NeteditAttributes* myNeteditAttributes;
 
     /// @brief edge path creator (used for Walks, rides and trips)
-    GNEPathCreator* myPathCreator;
+    GNEFrameModules::PathCreator* myPathCreator;
 
     /// @brief build container and return it (note: function includes a call to begin(...), but NOT a call to end(...))
     GNEDemandElement* buildContainer();

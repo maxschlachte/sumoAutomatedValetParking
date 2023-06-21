@@ -20,8 +20,6 @@
 ///
 // C++ TraCI client API implementation
 /****************************************************************************/
-#include <config.h>
-
 #include <thread>
 #include <chrono>
 #include <array>

@@ -34,7 +34,7 @@ class GNEEdge;
  * @class GNERerouter
  * Rerouter changes the route of a vehicle as soon as the vehicle moves onto a specified edge.
  */
-class GNERerouter : public GNEAdditional, public Parameterised {
+class GNERerouter : public GNEAdditional {
 
 public:
     /// @brief default Constructor
@@ -45,18 +45,19 @@ public:
      * @param[in] net pointer to GNENet of this additional element belongs
      * @param[in] pos position (center) of the rerouter in the map
      * @param[in] name Rerouter name
+     * @param[in] filename The path to the definition file
      * @param[in] probability The probability for vehicle rerouting
      * @param[in] off Whether the router should be inactive initially
      * @param[in] parameters generic parameters
      */
-    GNERerouter(const std::string& id, GNENet* net, const Position& pos, const std::string& name,
+    GNERerouter(const std::string& id, GNENet* net, const Position& pos, const std::string& name, const std::string& filename,
                 double probability, bool off, SUMOTime timeThreshold, const std::vector<std::string>& vTypes,
-                const Parameterised::Map& parameters);
+                const std::map<std::string, std::string>& parameters);
 
     /// @brief Destructor
     ~GNERerouter();
 
-    /**@brief write additional element into a xml file
+    /**@brief writte additional element into a xml file
      * @param[in] device device in which write parameters of additional element
      */
     void writeAdditional(OutputDevice& device) const;
@@ -111,9 +112,6 @@ public:
      */
     double getAttributeDouble(SumoXMLAttr key) const;
 
-    /// @brief get parameters map
-    const Parameterised::Map& getACParametersMap() const;
-
     /* @brief method for setting the attribute and letting the object perform additional changes
      * @param[in] key The attribute key
      * @param[in] value The new value
@@ -123,10 +121,15 @@ public:
 
     /* @brief method for checking if the key and their correspond attribute are valids
      * @param[in] key The attribute key
-     * @param[in] value The value associated to key key
+     * @param[in] value The value asociated to key key
      * @return true if the value is valid, false in other case
      */
     bool isValid(SumoXMLAttr key, const std::string& value);
+
+    /* @brief method for check if the value for certain attribute is set
+     * @param[in] key The attribute key
+     */
+    bool isAttributeEnabled(SumoXMLAttr key) const;
 
     /// @brief get PopPup ID (Used in AC Hierarchy)
     std::string getPopUpID() const;
@@ -138,6 +141,9 @@ public:
 protected:
     /// @brief position of rerouter in view
     Position myPosition;
+
+    /// @brief filename of rerouter
+    std::string myFilename;
 
     /// @brief probability of rerouter
     double myProbability;

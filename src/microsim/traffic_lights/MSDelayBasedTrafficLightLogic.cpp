@@ -21,14 +21,14 @@
 
 #include <cassert>
 #include <vector>
-#include <utils/common/FileHelpers.h>
-#include <utils/common/StringUtils.h>
 #include <microsim/MSGlobals.h>
 #include <microsim/MSNet.h>
 #include <microsim/output/MSDetectorControl.h>
+#include "MSSimpleTrafficLightLogic.h"
+#include "MSDelayBasedTrafficLightLogic.h"
 #include <microsim/MSLane.h>
 #include <netload/NLDetectorBuilder.h>
-#include "MSDelayBasedTrafficLightLogic.h"
+#include <utils/common/StringUtils.h>
 
 #define INVALID_POSITION std::numeric_limits<double>::max()
 
@@ -46,7 +46,7 @@ MSDelayBasedTrafficLightLogic::MSDelayBasedTrafficLightLogic(MSTLLogicControl& t
         const SUMOTime offset,
         const Phases& phases,
         int step, SUMOTime delay,
-        const Parameterised::Map& parameter,
+        const std::map<std::string, std::string>& parameter,
         const std::string& basePath) :
     MSSimpleTrafficLightLogic(tlcontrol, id, programID, offset, TrafficLightType::DELAYBASED, phases, step, delay, parameter) {
 #ifdef DEBUG_TIMELOSS_CONTROL
@@ -98,7 +98,7 @@ MSDelayBasedTrafficLightLogic::init(NLDetectorBuilder& nb) {
                     det->setVisible(myShowDetectors);
                 } else {
                     std::string id = "TLS" + myID + "_" + myProgramID + "_E2CollectorOn_" + lane->getID();
-                    det = nb.createE2Detector(id, DU_TL_CONTROL, lane, INVALID_POSITION, lane->getLength(), myDetectionRange, 0, 0, 0, myVehicleTypes, "", (int)PersonMode::NONE, myShowDetectors);
+                    det = nb.createE2Detector(id, DU_TL_CONTROL, lane, INVALID_POSITION, lane->getLength(), myDetectionRange, 0, 0, 0, myVehicleTypes, myShowDetectors);
                     MSNet::getInstance()->getDetectorControl().add(SUMO_TAG_LANE_AREA_DETECTOR, det, myFile, myFreq);
                 }
                 myLaneDetectors[lane] = det;

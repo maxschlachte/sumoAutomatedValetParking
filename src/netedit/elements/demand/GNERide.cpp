@@ -35,7 +35,7 @@
 
 GNERide::GNERide(SumoXMLTag tag, GNENet* net) :
     GNEDemandElement("", net, GLO_RIDE, tag, GNEPathManager::PathElement::Options::DEMAND_ELEMENT,
-{}, {}, {}, {}, {}, {}),
+{}, {}, {}, {}, {}, {}, {}, {}),
 myArrivalPosition(0) {
     // reset default values
     resetDefaultValues();
@@ -45,7 +45,7 @@ myArrivalPosition(0) {
 GNERide::GNERide(GNENet* net, GNEDemandElement* personParent, GNEEdge* fromEdge, GNEEdge* toEdge,
                  double arrivalPosition, const std::vector<std::string>& lines) :
     GNEDemandElement(personParent, net, GLO_RIDE, GNE_TAG_RIDE_EDGE, GNEPathManager::PathElement::Options::DEMAND_ELEMENT,
-{}, {fromEdge, toEdge}, {}, {}, {personParent}, {}),
+{}, {fromEdge, toEdge}, {}, {}, {}, {}, {personParent}, {}),
 myArrivalPosition(arrivalPosition),
 myLines(lines) {
 }
@@ -54,7 +54,7 @@ myLines(lines) {
 GNERide::GNERide(GNENet* net, GNEDemandElement* personParent, GNEEdge* fromEdge, GNEAdditional* toBusStop,
                  double arrivalPosition, const std::vector<std::string>& lines) :
     GNEDemandElement(personParent, net, GLO_RIDE, GNE_TAG_RIDE_BUSSTOP, GNEPathManager::PathElement::Options::DEMAND_ELEMENT,
-{}, {fromEdge}, {}, {toBusStop}, {personParent}, {}),
+{}, {fromEdge}, {}, {toBusStop}, {}, {}, {personParent}, {}),
 myArrivalPosition(arrivalPosition),
 myLines(lines) {
 }
@@ -89,7 +89,7 @@ GNERide::getPopUpMenu(GUIMainWindow& app, GUISUMOAbstractView& parent) {
     buildPopupHeader(ret, app);
     // build menu command for center button and copy cursor position to clipboard
     buildCenterPopupEntry(ret);
-    buildPositionCopyEntry(ret, app);
+    buildPositionCopyEntry(ret, false);
     // buld menu commands for names
     GUIDesigns::buildFXMenuCommand(ret, "Copy " + getTagStr() + " name to clipboard", nullptr, ret, MID_COPY_NAME);
     GUIDesigns::buildFXMenuCommand(ret, "Copy " + getTagStr() + " typed name to clipboard", nullptr, ret, MID_COPY_TYPED_NAME);
@@ -121,7 +121,7 @@ GNERide::writeDemandElement(OutputDevice& device) const {
     } else {
         device.writeAttr(SUMO_ATTR_TO, getParentEdges().back()->getID());
     }
-    // avoid write arrival positions in ride to busStop
+    // avoid writte arrival positions in ride to busStop
     if (!((myTagProperty.getTag() == GNE_TAG_RIDE_BUSSTOP) && (myArrivalPosition == 0))) {
         // only write arrivalPos if is different of -1
         if (myArrivalPosition != -1) {
@@ -290,7 +290,6 @@ GNERide::getAttribute(SumoXMLAttr key) const {
     switch (key) {
         // Common person plan attributes
         case SUMO_ATTR_ID:
-        case GNE_ATTR_PARENT:
             return getParentDemandElements().front()->getID();
         case SUMO_ATTR_FROM:
             return getParentEdges().front()->getID();
@@ -311,6 +310,8 @@ GNERide::getAttribute(SumoXMLAttr key) const {
             return toString(isAttributeCarrierSelected());
         case GNE_ATTR_PARAMETERS:
             return getParametersStr();
+        case GNE_ATTR_PARENT:
+            return getParentDemandElements().front()->getID();
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
@@ -361,7 +362,6 @@ GNERide::setAttribute(SumoXMLAttr key, const std::string& value, GNEUndoList* un
         case SUMO_ATTR_ARRIVALPOS:
         case SUMO_ATTR_LINES:
         case GNE_ATTR_SELECTED:
-        case GNE_ATTR_PARENT:
         case GNE_ATTR_PARAMETERS:
             undoList->changeAttribute(new GNEChange_Attribute(this, key, value));
             break;
@@ -419,9 +419,6 @@ GNERide::isValid(SumoXMLAttr key, const std::string& value) {
             if (value.empty()) {
                 return true;
             } else if (canParse<double>(value)) {
-                if (isTemplate()) {
-                    return true;
-                }
                 const double parsedValue = canParse<double>(value);
                 if ((parsedValue < 0) || (parsedValue > getLastPathLane()->getLaneShape().length())) {
                     return false;
@@ -435,17 +432,21 @@ GNERide::isValid(SumoXMLAttr key, const std::string& value) {
             return canParse<bool>(value);
         case GNE_ATTR_PARAMETERS:
             return Parameterised::areParametersValid(value);
-        case GNE_ATTR_PARENT:
-            if (myNet->getAttributeCarriers()->retrieveDemandElement(SUMO_TAG_PERSON, value, false) != nullptr) {
-                return true;
-            } else if (myNet->getAttributeCarriers()->retrieveDemandElement(SUMO_TAG_PERSONFLOW, value, false) != nullptr) {
-                return true;
-            } else {
-                return false;
-            }
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
+}
+
+
+void
+GNERide::enableAttribute(SumoXMLAttr /*key*/, GNEUndoList* /*undoList*/) {
+    //
+}
+
+
+void
+GNERide::disableAttribute(SumoXMLAttr /*key*/, GNEUndoList* /*undoList*/) {
+    //
 }
 
 
@@ -477,7 +478,7 @@ GNERide::getHierarchyName() const {
 }
 
 
-const Parameterised::Map&
+const std::map<std::string, std::string>&
 GNERide::getACParametersMap() const {
     return getParametersMap();
 }
@@ -529,17 +530,15 @@ GNERide::setAttribute(SumoXMLAttr key, const std::string& value) {
         case GNE_ATTR_PARAMETERS:
             setParametersStr(value);
             break;
-        case GNE_ATTR_PARENT:
-            if (myNet->getAttributeCarriers()->retrieveDemandElement(SUMO_TAG_PERSON, value, false) != nullptr) {
-                replaceDemandElementParent(SUMO_TAG_PERSON, value, 0);
-            } else if (myNet->getAttributeCarriers()->retrieveDemandElement(SUMO_TAG_PERSONFLOW, value, false) != nullptr) {
-                replaceDemandElementParent(SUMO_TAG_PERSONFLOW, value, 0);
-            }
-            updateGeometry();
-            break;
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
+}
+
+
+void
+GNERide::toogleAttribute(SumoXMLAttr /*key*/, const bool /*value*/, const int /*previousParameters*/) {
+    // nothing to toogle
 }
 
 

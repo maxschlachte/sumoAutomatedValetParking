@@ -51,8 +51,6 @@ class GNEAttributeCarrier : public GNEReferenceCounter {
     friend class GNEChange_Attribute;
     friend class GNEChange_EnableAttribute;
     friend class GNEFrameAttributeModules;
-    friend class GNEAttributesCreatorRow;
-    friend class GNEFlowEditor;
 
 public:
 
@@ -64,9 +62,6 @@ public:
 
     /// @brief Destructor
     virtual ~GNEAttributeCarrier();
-
-    /// @brief get ID (all Attribute Carriers have one)
-    const std::string getID() const;
 
     /// @brief get pointer to net
     GNENet* getNet() const;
@@ -88,6 +83,9 @@ public:
 
     /// @name Function related with graphics (must be implemented in all children)
     /// @{
+    /// @brief get ID (all Attribute Carriers have one)
+    virtual const std::string& getID() const = 0;
+
     /// @brief get GUIGlObject associated with this AttributeCarrier
     virtual GUIGlObject* getGUIGlObject() = 0;
 
@@ -125,24 +123,24 @@ public:
      * @param[in] undoList The undoList on which to register changes
      * @note certain attributes can be only enabled, and can produce the disabling of other attributes
      */
-    virtual void enableAttribute(SumoXMLAttr key, GNEUndoList* undoList);
+    virtual void enableAttribute(SumoXMLAttr key, GNEUndoList* undoList) = 0;
 
     /* @brief method for disable attribute
      * @param[in] key The attribute key
      * @param[in] undoList The undoList on which to register changes
      * @note certain attributes can be only enabled, and can produce the disabling of other attributes
      */
-    virtual void disableAttribute(SumoXMLAttr key, GNEUndoList* undoList);
+    virtual void disableAttribute(SumoXMLAttr key, GNEUndoList* undoList) = 0;
 
     /* @brief method for check if the value for certain attribute is set
      * @param[in] key The attribute key
      */
-    virtual bool isAttributeEnabled(SumoXMLAttr key) const;
+    virtual bool isAttributeEnabled(SumoXMLAttr key) const = 0;
 
     /* @brief method for check if the value for certain attribute is computed (for example, due a network recomputing)
      * @param[in] key The attribute key
      */
-    virtual bool isAttributeComputed(SumoXMLAttr key) const;
+    virtual bool isAttributeComputed(SumoXMLAttr key) const = 0;
 
     /// @brief get PopPup ID (Used in AC Hierarchy)
     virtual std::string getPopUpID() const = 0;
@@ -155,7 +153,7 @@ public:
     /// @name Function related with parameters
     /// @{
     /// @brief get parameters map
-    virtual const Parameterised::Map& getACParametersMap() const = 0;
+    virtual const std::map<std::string, std::string>& getACParametersMap() const = 0;
 
     /// @brief get parameters
     template<typename T>
@@ -168,7 +166,7 @@ public:
     void setACParameters(const std::vector<std::pair<std::string, std::string> >& parameters, GNEUndoList* undoList);
 
     /// @brief set parameters (string vector)
-    void setACParameters(const Parameterised::Map& parameters, GNEUndoList* undoList);
+    void setACParameters(const std::map<std::string, std::string>& parameters, GNEUndoList* undoList);
 
     /// @brief add (or update attribute) key and attribute
     void addACParameters(const std::string& key, const std::string& attribute, GNEUndoList* undoList);
@@ -275,15 +273,6 @@ public:
     /// @brief max number of attributes allowed for every tag
     static const size_t MAXNUMBEROFATTRIBUTES;
 
-    /// @brief empty parameter maps (used by ACs without parameters)
-    static const Parameterised::Map PARAMETERS_EMPTY;
-
-    /// @brief true value in string format (used for comparing boolean values in getAttribute(...))
-    static const std::string True;
-
-    /// @brief true value in string format(used for comparing boolean values in getAttribute(...))
-    static const std::string False;
-
 protected:
     /// @brief reference to tagProperty associated with this attribute carrier
     const GNETagProperties& myTagProperty;
@@ -297,12 +286,12 @@ protected:
     /// @brief whether the current object is a template object (not drawn in the view)
     bool myIsTemplate;
 
-    /// @brief method for enable or disable the attribute and nothing else (used in GNEChange_EnableAttribute)
-    virtual void toggleAttribute(SumoXMLAttr key, const bool value);
-
 private:
     /// @brief method for setting the attribute and nothing else (used in GNEChange_Attribute)
     virtual void setAttribute(SumoXMLAttr key, const std::string& value) = 0;
+
+    /// @brief method for enable or disable the attribute and nothing else (used in GNEChange_EnableAttribute)
+    virtual void toogleAttribute(SumoXMLAttr key, const bool value, const int previousParameters) = 0;
 
     /// @brief reset attributes to their default values without undo-redo (used in GNEFrameAttributeModules)
     void resetAttributes();
@@ -314,16 +303,13 @@ private:
     static void fillNetworkElements();
 
     /// @brief fill additional elements
-    static void fillAdditionalElements();
+    static void fillAdditionals();
 
     /// @brief fill shape elements
-    static void fillShapeElements();
+    static void fillShapes();
 
     /// @brief fill TAZ elements
     static void fillTAZElements();
-
-    /// @brief fill Wire elements
-    static void fillWireElements();
 
     /// @brief fill demand elements
     static void fillDemandElements();
@@ -333,9 +319,6 @@ private:
 
     /// @brief fill stop elements
     static void fillStopElements();
-
-    /// @brief fill waypoint elements
-    static void fillWaypointElements();
 
     /// @brief fill person elements
     static void fillPersonElements();
@@ -386,13 +369,10 @@ private:
     static void fillCommonContainerAttributes(SumoXMLTag currentTag);
 
     /// @brief fill stop person attributes
-    static void fillCommonStopAttributes(SumoXMLTag currentTag, const bool waypoint);
+    static void fillCommonStopAttributes(SumoXMLTag currentTag);
 
     /// @brief fill Data elements
     static void fillDataElements();
-
-    /// @brief returns icon associated to the given vClass
-    static FXIcon* getVClassIcon(const SUMOVehicleClass vc);
 
     /// @brief map with the tags properties
     static std::map<SumoXMLTag, GNETagProperties> myTagProperties;

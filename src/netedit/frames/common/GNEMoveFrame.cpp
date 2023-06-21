@@ -61,7 +61,7 @@ FXIMPLEMENT(GNEMoveFrame::ShiftShapeGeometry,           FXGroupBoxModule, ShiftS
 // ---------------------------------------------------------------------------
 
 GNEMoveFrame::CommonModeOptions::CommonModeOptions(GNEMoveFrame* moveFrameParent) :
-    FXGroupBoxModule(moveFrameParent, "Common move options") {
+    FXGroupBoxModule(moveFrameParent->myContentFrame, "Common move options") {
     // Create checkbox for enable/disable move whole polygons
     myAllowChangeLanes = new FXCheckButton(getCollapsableFrame(), "Allow change Lane", this, MID_GNE_SET_ATTRIBUTE, GUIDesignCheckButton);
     myAllowChangeLanes->setCheck(FALSE);
@@ -81,7 +81,7 @@ GNEMoveFrame::CommonModeOptions::getAllowChangeLane() const {
 // ---------------------------------------------------------------------------
 
 GNEMoveFrame::NetworkModeOptions::NetworkModeOptions(GNEMoveFrame* moveFrameParent) :
-    FXGroupBoxModule(moveFrameParent, "Network move options"),
+    FXGroupBoxModule(moveFrameParent->myContentFrame, "Network move options"),
     myMoveFrameParent(moveFrameParent) {
     // Create checkbox for enable/disable move whole polygons
     myMoveWholePolygons = new FXCheckButton(getCollapsableFrame(), "Move whole polygons", this, MID_GNE_SET_ATTRIBUTE, GUIDesignCheckButton);
@@ -120,7 +120,7 @@ GNEMoveFrame::NetworkModeOptions::getMoveWholePolygons() const {
 // ---------------------------------------------------------------------------
 
 GNEMoveFrame::DemandModeOptions::DemandModeOptions(GNEMoveFrame* moveFrameParent) :
-    FXGroupBoxModule(moveFrameParent, "Demand move options"),
+    FXGroupBoxModule(moveFrameParent->myContentFrame, "Demand move options"),
     myMoveFrameParent(moveFrameParent) {
     // Create checkbox for enable/disable move whole polygons
     myLeaveStopPersonsConnected = new FXCheckButton(getCollapsableFrame(), "Leave stopPersons connected", this, MID_GNE_SET_ATTRIBUTE, GUIDesignCheckButton);
@@ -159,7 +159,7 @@ GNEMoveFrame::DemandModeOptions::getLeaveStopPersonsConnected() const {
 // ---------------------------------------------------------------------------
 
 GNEMoveFrame::ShiftEdgeSelectedGeometry::ShiftEdgeSelectedGeometry(GNEMoveFrame* moveFrameParent) :
-    FXGroupBoxModule(moveFrameParent, "Shift selected edges geometry"),
+    FXGroupBoxModule(moveFrameParent->myContentFrame, "Shift selected edges geometry"),
     myMoveFrameParent(moveFrameParent) {
     // create horizontal frame
     FXHorizontalFrame* myZValueFrame = new FXHorizontalFrame(getCollapsableFrame(), GUIDesignAuxiliarHorizontalFrame);
@@ -239,7 +239,7 @@ GNEMoveFrame::ShiftEdgeSelectedGeometry::onCmdShiftEdgeGeometry(FXObject*, FXSel
 // ---------------------------------------------------------------------------
 
 GNEMoveFrame::ChangeZInSelection::ChangeZInSelection(GNEMoveFrame* moveFrameParent) :
-    FXGroupBoxModule(moveFrameParent, "Change Z in selection"),
+    FXGroupBoxModule(moveFrameParent->myContentFrame, "Change Z in selection"),
     myMoveFrameParent(moveFrameParent) {
     // create horizontal frame
     FXHorizontalFrame* myZValueFrame = new FXHorizontalFrame(getCollapsableFrame(), GUIDesignAuxiliarHorizontalFrame);
@@ -506,7 +506,7 @@ GNEMoveFrame::ChangeZInSelection::updateInfoLabel() {
 // ---------------------------------------------------------------------------
 
 GNEMoveFrame::ShiftShapeGeometry::ShiftShapeGeometry(GNEMoveFrame* moveFrameParent) :
-    FXGroupBoxModule(moveFrameParent, "Shift shape geometry"),
+    FXGroupBoxModule(moveFrameParent->myContentFrame, "Shift shape geometry"),
     myMoveFrameParent(moveFrameParent) {
     // create horizontal frame
     FXHorizontalFrame* horizontalFrameX = new FXHorizontalFrame(getCollapsableFrame(), GUIDesignAuxiliarHorizontalFrame);
@@ -561,7 +561,7 @@ GNEMoveFrame::ShiftShapeGeometry::onCmdShiftShapeGeometry(FXObject*, FXSelector,
     const Position shiftValue(shiftValueX, shiftValueY);
     // get selected polygons and POIs
     const auto selectedShapes = myMoveFrameParent->getViewNet()->getNet()->getAttributeCarriers()->getSelectedShapes();
-    std::vector<GNEAdditional*> polygons, POIs;
+    std::vector<GNEShape*> polygons, POIs;
     for (const auto& shape : selectedShapes) {
         if (shape->getTagProperty().getTag() == SUMO_TAG_POLY) {
             polygons.push_back(shape);
@@ -569,6 +569,7 @@ GNEMoveFrame::ShiftShapeGeometry::onCmdShiftShapeGeometry(FXObject*, FXSelector,
             POIs.push_back(shape);
         }
     }
+
     // begin undo-redo
     myMoveFrameParent->getViewNet()->getUndoList()->begin(GUIIcon::POLY, "shift shape geometries");
     // iterate over shapes

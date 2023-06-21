@@ -112,7 +112,7 @@ private:
      * @param[in] arg The token to parse
      * @exception InvalidArgument If a performed setting of an option failed (see Option::set)
      */
-    static bool processNonBooleanSingleSwitch(OptionsCont& oc, const char* arg, const bool append);
+    static bool processNonBooleanSingleSwitch(OptionsCont& oc, const char* arg);
 
 
 };

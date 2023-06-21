@@ -42,7 +42,7 @@ const RGBColor SUMO_color_TL_GREEN_MAJOR(0, 255, 0);
 const RGBColor SUMO_color_TL_GREEN_MINOR(0, 179, 0);
 const RGBColor SUMO_color_TL_RED(255, 0, 0);
 const RGBColor SUMO_color_TL_REDYELLOW(255, 128, 0);
-const RGBColor SUMO_color_TL_YELLOW_MAJOR(255, 255, 128);
+const RGBColor SUMO_color_TL_YELLOW_MAJOR(255, 255, 0);
 const RGBColor SUMO_color_TL_YELLOW_MINOR(255, 255, 0);
 const RGBColor SUMO_color_TL_OFF_BLINKING(128, 64, 0);
 const RGBColor SUMO_color_TL_OFF_NOSIGNAL(0, 255, 255);
@@ -114,10 +114,6 @@ const RGBColor GUIVisualizationAdditionalSettings::vaporizerColor(120, 216, 0, 2
 const double GUIVisualizationAdditionalSettings::vaporizerSize(1);
 const RGBColor GUIVisualizationAdditionalSettings::connectionColor(255, 216, 0, 255);
 const RGBColor GUIVisualizationAdditionalSettings::connectionColorSelected(0, 0, 150, 255);
-const double GUIVisualizationAdditionalSettings::tractionSubstationSize(1);
-const RGBColor GUIVisualizationAdditionalSettings::overheadWireColorTop(255, 0, 0);
-const RGBColor GUIVisualizationAdditionalSettings::overheadWireColorBot(0, 255, 0);
-const RGBColor GUIVisualizationAdditionalSettings::overheadWireColorSelected(0, 0, 150, 255);
 const double GUIVisualizationAdditionalSettings::arrowWidth(1);
 const double GUIVisualizationAdditionalSettings::arrowLength(0.25);
 const double GUIVisualizationAdditionalSettings::arrowOffset(0.1);
@@ -368,7 +364,6 @@ GUIVisualizationColorSettings::GUIVisualizationColorSettings() :
     parkingSpaceColorContour(0, 255, 0),
     parkingSpaceColor(255, 200, 200),
     stopColor(220, 20, 30),
-    waypointColor(0, 127, 14),
     vehicleTripColor(255, 128, 0),
     stopPersonColor(255, 0, 0),
     personTripColor(200, 0, 255),
@@ -409,7 +404,6 @@ GUIVisualizationColorSettings::operator==(const GUIVisualizationColorSettings& v
            (parkingSpaceColorContour == v2.parkingSpaceColorContour) &&
            (parkingSpaceColor == v2.parkingSpaceColor) &&
            (stopColor == v2.stopColor) &&
-           (waypointColor == v2.waypointColor) &&
            (vehicleTripColor == v2.vehicleTripColor) &&
            (stopPersonColor == v2.stopPersonColor) &&
            (personTripColor == v2.personTripColor) &&
@@ -450,7 +444,6 @@ GUIVisualizationColorSettings::operator!=(const GUIVisualizationColorSettings& v
            (parkingSpaceColorContour != v2.parkingSpaceColorContour) ||
            (parkingSpaceColor != v2.parkingSpaceColor) ||
            (stopColor != v2.stopColor) ||
-           (waypointColor != v2.waypointColor) ||
            (vehicleTripColor != v2.vehicleTripColor) ||
            (stopPersonColor != v2.stopPersonColor) ||
            (personTripColor != v2.personTripColor) ||
@@ -500,8 +493,8 @@ GUIVisualizationWidthSettings::operator!=(const GUIVisualizationWidthSettings& v
 // GUIVisualizationWidthSettings - methods
 // ---------------------------------------------------------------------------
 
-GUIVisualizationSettings::GUIVisualizationSettings(const std::string& _name, bool _netedit) :
-    name(_name),
+GUIVisualizationSettings::GUIVisualizationSettings(bool _netedit) :
+    name(""),
     netedit(_netedit),
     angle(0),
     dither(false),
@@ -543,7 +536,7 @@ GUIVisualizationSettings::GUIVisualizationSettings(const std::string& _name, boo
     vehicleValue(false, 80, RGBColor::CYAN),
     vehicleScaleValue(false, 80, RGBColor::GREY),
     vehicleText(false, 80, RGBColor::RED),
-    personQuality(netedit ? 2 : 0),
+    personQuality(0),
     personSize(1),
     personName(false, 60, RGBColor(0, 153, 204, 255)),
     personValue(false, 80, RGBColor::CYAN),
@@ -579,9 +572,6 @@ GUIVisualizationSettings::GUIVisualizationSettings(const std::string& _name, boo
     relDataAttr("count"),
     dataValueHideCheck(false),
     dataValueHideThreshold(0),
-    show3DTLSLinkMarkers(true),
-    show3DTLSDomes(true),
-    generate3DTLSModels(false),
     showSizeLegend(true),
     showColorLegend(false),
     showVehicleColorLegend(false),
@@ -592,7 +582,6 @@ GUIVisualizationSettings::GUIVisualizationSettings(const std::string& _name, boo
     drawForRectangleSelection(false),
     forceDrawForPositionSelection(false),
     forceDrawForRectangleSelection(false),
-    geometryIndices(false, 50, RGBColor(255, 0, 128, 255)),
     lefthand(false),
     disableLaneIcons(false) {
     // init defaults depending of NETEDIT or SUMO-GUI
@@ -601,13 +590,6 @@ GUIVisualizationSettings::GUIVisualizationSettings(const std::string& _name, boo
     } else {
         initSumoGuiDefaults();
     }
-}
-
-
-void
-GUIVisualizationSettings::copy(const GUIVisualizationSettings& s) {
-    // just copy. Note: By default = operator is disabled to avoid accidental copies)
-    *this = s;
 }
 
 
@@ -1093,10 +1075,10 @@ GUIVisualizationSettings::initSumoGuiDefaults() {
     containerColorer.addScheme(scheme);
     scheme = GUIColorScheme("by mode", RGBColor::GREY, "waiting for insertion", true, 0, COL_SCHEME_DYNAMIC);
     scheme.addColor(RGBColor::RED, 1., "stopped");
+    scheme.addColor(RGBColor::GREEN, 2., "tranship"); // walking
     scheme.addColor(RGBColor::BLUE, 3., "transport");
     scheme.addColor(RGBColor::CYAN, 4., "accessing trainStop");
     scheme.addColor(RGBColor::YELLOW, 5., "waiting for transport");
-    scheme.addColor(RGBColor::GREEN, 6., "tranship"); // (moving without vehicle)
     containerColorer.addScheme(scheme);
     scheme = GUIColorScheme("by waiting time", RGBColor::BLUE, "", false, 0, COL_SCHEME_DYNAMIC);
     scheme.addColor(RGBColor::CYAN, 30.);
@@ -1154,7 +1136,6 @@ GUIVisualizationSettings::initSumoGuiDefaults() {
     scheme.addColor(RGBColor(0, 102, 204, 255), 1, "selected");
     polyColorer.addScheme(scheme);
     polyColorer.addScheme(GUIColorScheme("uniform", RGBColor::ORANGE, "", true));
-    polyColorer.addScheme(GUIColorScheme("random", RGBColor::YELLOW, "", true));
 
     /// add lane scaling schemes
     {
@@ -1600,7 +1581,6 @@ GUIVisualizationSettings::initNeteditDefaults() {
     scheme.addColor(RGBColor(0, 102, 204, 255), 1, "selected");
     polyColorer.addScheme(scheme);
     polyColorer.addScheme(GUIColorScheme("uniform", RGBColor::ORANGE, "", true));
-    polyColorer.addScheme(GUIColorScheme("random", RGBColor::YELLOW, "", true));
 
     /// add edge scaling schemes
     {
@@ -1673,7 +1653,6 @@ GUIVisualizationSettings::save(OutputDevice& dev) const {
     dev.writeAttr("drawBoundaries", drawBoundaries);
     dev.writeAttr("forceDrawPositionSelection", forceDrawForPositionSelection);
     dev.writeAttr("forceDrawRectangleSelection", forceDrawForRectangleSelection);
-    geometryIndices.print(dev, "geometryIndices");
     dev.closeTag();
     dev.openTag(SUMO_TAG_VIEWSETTINGS_BACKGROUND);
     dev.writeAttr("backgroundColor", backgroundColor);
@@ -1843,7 +1822,6 @@ GUIVisualizationSettings::save(OutputDevice& dev) const {
     dev.writeAttr("selectedVehicleColor", colorSettings.selectedVehicleColor);
     dev.writeAttr("selectionColor", colorSettings.selectionColor);
     dev.writeAttr("stopColor", colorSettings.stopColor);
-    dev.writeAttr("waypointColor", colorSettings.waypointColor);
     dev.writeAttr("stopContainerColor", colorSettings.stopContainerColor);
     dev.writeAttr("stopPersonColor", colorSettings.stopPersonColor);
     dev.writeAttr("trainStopColor", colorSettings.trainStopColor);
@@ -1874,11 +1852,6 @@ GUIVisualizationSettings::save(OutputDevice& dev) const {
     polyType.print(dev, "polyType");
     polyColorer.save(dev);
     dev.closeTag();
-    dev.openTag(SUMO_TAG_VIEWSETTINGS_3D);
-    dev.writeAttr("show3DTLSLinkMarkers", show3DTLSLinkMarkers);
-    dev.writeAttr("show3DTLSDomes", show3DTLSDomes);
-    dev.writeAttr("generate3DTLSModels", generate3DTLSModels);
-    dev.closeTag();
     // legend
     dev.openTag(SUMO_TAG_VIEWSETTINGS_LEGEND);
     dev.writeAttr("showSizeLegend", showSizeLegend);
@@ -1892,15 +1865,6 @@ GUIVisualizationSettings::save(OutputDevice& dev) const {
 
 bool
 GUIVisualizationSettings::operator==(const GUIVisualizationSettings& v2) {
-    if (show3DTLSDomes != v2.show3DTLSDomes) {
-        return false;
-    }
-    if (show3DTLSLinkMarkers != v2.show3DTLSLinkMarkers) {
-        return false;
-    }
-    if (generate3DTLSModels != v2.generate3DTLSModels) {
-        return false;
-    }
     if (dither != v2.dither) {
         return false;
     }
@@ -1914,9 +1878,6 @@ GUIVisualizationSettings::operator==(const GUIVisualizationSettings& v2) {
         return false;
     }
     if (forceDrawForRectangleSelection != v2.forceDrawForRectangleSelection) {
-        return false;
-    }
-    if (geometryIndices != v2.geometryIndices) {
         return false;
     }
     if (backgroundColor != v2.backgroundColor) {
@@ -2307,7 +2268,7 @@ GUIVisualizationSettings::getCircleResolution() const {
         return 8;
     } else if (scale >= 10) {
         return 32;
-    } else if (scale >= 5) {
+    } else if (scale >= 2) {
         return 16;
     } else {
         return 8;

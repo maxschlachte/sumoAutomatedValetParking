@@ -61,11 +61,16 @@ GNEEdgeTemplate::updateLaneTemplates() {
     for (const auto& laneTemplate : myLaneTemplates) {
         delete laneTemplate;
     }
-    myLaneTemplates.clear();
     // now set new laneTemplates
     for (const auto& lane : myEdge->getLanes()) {
         myLaneTemplates.push_back(new GNELaneTemplate(lane));
     }
+}
+
+
+const std::string&
+GNEEdgeTemplate::getID() const {
+    return myEdge->getID();
 }
 
 
@@ -98,10 +103,26 @@ GNEEdgeTemplate::isValid(SumoXMLAttr /*key*/, const std::string& /*value*/) {
     throw InvalidArgument("cannot be called in templates");
 }
 
+void
+GNEEdgeTemplate::enableAttribute(SumoXMLAttr /*key*/, GNEUndoList* /*undoList*/) {
+    throw InvalidArgument("cannot be called in templates");
+}
+
+
+void
+GNEEdgeTemplate::disableAttribute(SumoXMLAttr /*key*/, GNEUndoList* /*undoList*/) {
+    throw InvalidArgument("cannot be called in templates");
+}
+
 
 bool
 GNEEdgeTemplate::isAttributeEnabled(SumoXMLAttr /*key*/) const {
-    // All attributes are disabled in templates
+    return false;
+}
+
+
+bool
+GNEEdgeTemplate::isAttributeComputed(SumoXMLAttr /*key*/) const {
     return false;
 }
 
@@ -118,7 +139,7 @@ GNEEdgeTemplate::getHierarchyName() const {
 }
 
 
-const Parameterised::Map&
+const std::map<std::string, std::string>&
 GNEEdgeTemplate::getACParametersMap() const {
     return myEdge->getACParametersMap();
 }
@@ -129,6 +150,11 @@ GNEEdgeTemplate::getACParametersMap() const {
 
 void
 GNEEdgeTemplate::setAttribute(SumoXMLAttr /*key*/, const std::string& /*value*/) {
+    throw InvalidArgument("cannot be called in templates");
+}
+
+void
+GNEEdgeTemplate::toogleAttribute(SumoXMLAttr /*key*/, const bool /*value*/, const int /*previousParameters*/) {
     throw InvalidArgument("cannot be called in templates");
 }
 

@@ -41,7 +41,7 @@ class OverheadWireDomain(Domain):
         return self._getUniversal(tc.VAR_POSITION, stopID)
 
     def getEndPos(self, stopID):
-        """getEndPos(string) -> double
+        """getStartPos(string) -> double
 
         The end position of the stop along the lane measured in m.
         """
@@ -55,13 +55,13 @@ class OverheadWireDomain(Domain):
         return self._getUniversal(tc.VAR_NAME, stopID)
 
     def getVehicleCount(self, stopID):
-        """getVehicleCount() -> integer
+        """getOverheadWireWaiting() -> integer
         Get the total number of vehicles stopped at the named overhead wire.
         """
         return self._getUniversal(tc.VAR_STOP_STARTING_VEHICLES_NUMBER, stopID)
 
     def getVehicleIDs(self, stopID):
-        """getVehicleIDs() -> list(string)
+        """getOverheadWireWaiting() -> list(string)
         Get the IDs of vehicles stopped at the named overhead wire.
         """
         return self._getUniversal(tc.VAR_STOP_STARTING_VEHICLES_IDS, stopID)

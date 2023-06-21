@@ -105,15 +105,11 @@ public:
 
     void changed() override;
 
-    void resetState() override;
-
     double getSafetyFactor() const override;
 
     double getOppositeSafetyFactor() const override;
 
     void prepareStep() override;
-
-    double getExtraReservation(int bestLaneOffset) const override;
 
     /// @brief whether the current vehicles shall be debugged
     bool debugVehicle() const override;
@@ -136,7 +132,7 @@ public:
 
 protected:
     /** helper function which contains the actual logic */
-    double _patchSpeed(double min, const double wanted, double max,
+    double _patchSpeed(const double min, const double wanted, const double max,
                        const MSCFModel& cfModel);
 
     /// @brief helper function for doing the actual work
@@ -188,8 +184,13 @@ protected:
     /// @brief compute useful slowdowns for blocked vehicles
     int slowDownForBlocked(MSVehicle** blocked, int state);
 
+    /// @brief save space for vehicles which need to counter-lane-change
+    void saveBlockerLength(const MSVehicle* blocker, int lcaCounter);
+
     /// @brief reserve space at the end of the lane to avoid dead locks
-    bool saveBlockerLength(double length, double foeLeftSpace) override;
+    inline void saveBlockerLength(double length) override {
+        myLeadingBlockerLength = MAX2(length, myLeadingBlockerLength);
+    };
 
     inline bool amBlockingLeader() {
         return (myOwnState & LCA_AMBLOCKINGLEADER) != 0;
@@ -240,9 +241,7 @@ protected:
     int computeSublaneShift(const MSEdge* prevEdge, const MSEdge* curEdge);
 
     /// @brief get the longest vehicle in the given info
-    CLeaderDist getLongest(const MSLeaderDistanceInfo& ldi) const;
-
-    bool tieBrakeLeader(const MSVehicle* veh) const;
+    static CLeaderDist getLongest(const MSLeaderDistanceInfo& ldi);
 
     /// @brief get the slowest vehicle in the given info
     static CLeaderDist getSlowest(const MSLeaderDistanceInfo& ldi);
@@ -263,7 +262,7 @@ protected:
 
     /// @brief check whether any of the vehicles overlaps with ego
     int checkBlockingVehicles(const MSVehicle* ego, const MSLeaderDistanceInfo& vehicles,
-                              int laneOffset, double latDist, double foeOffset, bool leaders,
+                              double latDist, double foeOffset, bool leaders, LaneChangeAction blockType,
                               double& safeLatGapRight, double& safeLatGapLeft,
                               std::vector<CLeaderDist>* collectBlockers = 0) const;
 
@@ -366,9 +365,6 @@ protected:
 
     /// @brief check against thresholds
     inline bool wantsKeepRight(double keepRightProb) const;
-
-    /// @brief check whether lane is an upcoming bidi lane
-    bool isBidi(const MSLane* lane) const;
 
 protected:
     /// @brief a value for tracking the probability that a change to the right is beneficial

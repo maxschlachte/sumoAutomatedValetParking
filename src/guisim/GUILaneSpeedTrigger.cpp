@@ -150,11 +150,12 @@ GUILaneSpeedTrigger::GUIManip_LaneSpeedTrigger::GUIManip_LaneSpeedTrigger(
         //myUserDefinedSpeed->setIncrements(1, 10, 10);
         myUserDefinedSpeed->setIncrement(10);
         myUserDefinedSpeed->setRange(0, 300);
-        myUserDefinedSpeed->setValue(myObject->getDefaultSpeed() * 3.6);
+        myUserDefinedSpeed->setValue(
+            static_cast<GUILaneSpeedTrigger*>(myObject)->getDefaultSpeed() * 3.6);
     }
     new FXButton(f1, "Close", nullptr, this, MID_CLOSE,
                  BUTTON_INITIAL | BUTTON_DEFAULT | FRAME_RAISED | FRAME_THICK | LAYOUT_TOP | LAYOUT_LEFT | LAYOUT_CENTER_X, 0, 0, 0, 0, 30, 30, 4, 4);
-    myObject->setOverriding(true);
+    static_cast<GUILaneSpeedTrigger*>(myObject)->setOverriding(true);
 }
 
 
@@ -170,8 +171,8 @@ GUILaneSpeedTrigger::GUIManip_LaneSpeedTrigger::onCmdClose(FXObject*, FXSelector
 
 long
 GUILaneSpeedTrigger::GUIManip_LaneSpeedTrigger::onCmdUserDef(FXObject*, FXSelector, void*) {
-    mySpeed = myUserDefinedSpeed->getValue() / 3.6;
-    myObject->setOverridingValue(mySpeed);
+    mySpeed = (double)(myUserDefinedSpeed->getValue() / 3.6);
+    static_cast<GUILaneSpeedTrigger*>(myObject)->setOverridingValue(mySpeed);
     myParent->updateChildren();
     return 1;
 }
@@ -189,8 +190,8 @@ GUILaneSpeedTrigger::GUIManip_LaneSpeedTrigger::onUpdUserDef(FXObject* sender, F
 
 long
 GUILaneSpeedTrigger::GUIManip_LaneSpeedTrigger::onCmdPreDef(FXObject*, FXSelector, void*) {
-    mySpeed = ((double)myPredefinedValues->getCurrentItem() * 20. + 20.) / 3.6;
-    myObject->setOverridingValue(mySpeed);
+    mySpeed = (double)(double)((myPredefinedValues->getCurrentItem() * 20 + 20) / 3.6);
+    static_cast<GUILaneSpeedTrigger*>(myObject)->setOverridingValue(mySpeed);
     myParent->updateChildren();
     return 1;
 }
@@ -208,29 +209,29 @@ GUILaneSpeedTrigger::GUIManip_LaneSpeedTrigger::onUpdPreDef(FXObject* sender, FX
 
 long
 GUILaneSpeedTrigger::GUIManip_LaneSpeedTrigger::onCmdChangeOption(FXObject*, FXSelector, void*) {
-    myObject->setOverriding(true);
+    static_cast<GUILaneSpeedTrigger*>(myObject)->setOverriding(true);
     switch (myChosenValue) {
         case 0:
-            mySpeed = myObject->getDefaultSpeed();
+            mySpeed = (double) static_cast<GUILaneSpeedTrigger*>(myObject)->getDefaultSpeed();
             break;
         case 1:
-            mySpeed = myObject->getLoadedSpeed();
+            mySpeed = (double) static_cast<GUILaneSpeedTrigger*>(myObject)->getLoadedSpeed();
             break;
         case 2:
-            mySpeed = ((double)myPredefinedValues->getCurrentItem() * 20. + 20.) / 3.6;
+            mySpeed = (double)((myPredefinedValues->getCurrentItem() * 20 + 20) / 3.6);
             break;
         case 3:
-            mySpeed = myUserDefinedSpeed->getValue() / 3.6;
+            mySpeed = (double)(myUserDefinedSpeed->getValue() / 3.6);
             break;
         default:
             // hmmm, should not happen
             break;
     }
-    myObject->setOverridingValue(mySpeed);
+    static_cast<GUILaneSpeedTrigger*>(myObject)->setOverridingValue(mySpeed);
     myParent->updateChildren();
     if (myChosenValue == 1) {
         // !!! lock in between
-        myObject->setOverriding(false);
+        static_cast<GUILaneSpeedTrigger*>(myObject)->setOverriding(false);
     }
     return 1;
 }
@@ -293,7 +294,7 @@ GUILaneSpeedTrigger::getPopUpMenu(GUIMainWindow& app,
     buildNameCopyPopupEntry(ret);
     buildSelectionPopupEntry(ret);
     buildShowParamsPopupEntry(ret);
-    buildPositionCopyEntry(ret, app);
+    buildPositionCopyEntry(ret, false);
     return ret;
 }
 

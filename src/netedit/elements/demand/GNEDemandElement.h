@@ -20,14 +20,13 @@
 #pragma once
 #include <config.h>
 
+#include <netedit/elements/GNEHierarchicalElement.h>
+#include <utils/gui/div/GUIGeometry.h>
 #include <netedit/GNEMoveElement.h>
 #include <netedit/GNEPathManager.h>
-#include <netedit/elements/GNEHierarchicalElement.h>
 #include <utils/common/Parameterised.h>
 #include <utils/geom/PositionVector.h>
-#include <utils/gui/div/GUIGeometry.h>
 #include <utils/gui/globjects/GUIGlObject.h>
-#include <utils/vehicle/SUMOVehicleParameter.h>
 
 // ===========================================================================
 // class declarations
@@ -48,7 +47,7 @@ class GNEJunction;
 
 /**
  * @class GNEDemandElement
- * @brief An Element which don't belong to GNENet but has influence in the simulation
+ * @brief An Element which don't belongs to GNENet but has influency in the simulation
  */
 class GNEDemandElement : public GUIGlObject, public GNEHierarchicalElement, public GNEMoveElement, public GNEPathManager::PathElement {
 
@@ -64,7 +63,6 @@ public:
         DISCONNECTED_PLAN,      // Plan element (person, containers) is not connected with the previous or next plan
         INVALID_STOPPOSITION,   // StopPosition is invalid (only used in stops over edges or lanes
         STOP_DOWNSTREAM,        // Stops don't follow their route parent
-        NO_PLANS                // Person or container doesn't have a plan
     };
 
     /**@brief Constructor
@@ -77,6 +75,8 @@ public:
      * @param[in] edgeParents vector of edge parents
      * @param[in] laneParents vector of lane parents
      * @param[in] additionalParents vector of additional parents
+     * @param[in] shapeParents vector of shape parents
+     * @param[in] TAZElementParents vector of TAZElement parents
      * @param[in] demandElementParents vector of demand element parents
      * @param[in] genericDataParents vector of generic data parents
      */
@@ -85,6 +85,8 @@ public:
                      const std::vector<GNEEdge*>& edgeParents,
                      const std::vector<GNELane*>& laneParents,
                      const std::vector<GNEAdditional*>& additionalParents,
+                     const std::vector<GNEShape*>& shapeParents,
+                     const std::vector<GNETAZElement*>& TAZElementParents,
                      const std::vector<GNEDemandElement*>& demandElementParents,
                      const std::vector<GNEGenericData*>& genericDataParents);
 
@@ -98,6 +100,8 @@ public:
      * @param[in] edgeParents vector of edge parents
      * @param[in] laneParents vector of lane parents
      * @param[in] additionalParents vector of additional parents
+     * @param[in] shapeParents vector of shape parents
+     * @param[in] TAZElementParents vector of TAZElement parents
      * @param[in] demandElementParents vector of demand element parents
      * @param[in] genericDataParents vector of generic data parents
      */
@@ -106,6 +110,8 @@ public:
                      const std::vector<GNEEdge*>& edgeParents,
                      const std::vector<GNELane*>& laneParents,
                      const std::vector<GNEAdditional*>& additionalParents,
+                     const std::vector<GNEShape*>& shapeParents,
+                     const std::vector<GNETAZElement*>& TAZElementParents,
                      const std::vector<GNEDemandElement*>& demandElementParents,
                      const std::vector<GNEGenericData*>& genericDataParents);
 
@@ -119,6 +125,9 @@ public:
 
     /// @brief remove geometry point in the clicked position (Currently unused in shapes)
     void removeGeometryPoint(const Position clickedPosition, GNEUndoList* undoList);
+
+    /// @brief get ID
+    const std::string& getID() const;
 
     /// @brief get GUIGlObject associated with this AttributeCarrier
     GUIGlObject* getGUIGlObject();
@@ -155,7 +164,7 @@ public:
 
     /// @name members and functions relative to write demand elements into XML
     /// @{
-    /**@brief write demand element element into a xml file
+    /**@brief writte demand element element into a xml file
      * @param[in] device device in which write parameters of demand element element
      */
     virtual void writeDemandElement(OutputDevice& device) const = 0;
@@ -215,7 +224,7 @@ public:
      */
     GUIParameterTableWindow* getParameterWindow(GUIMainWindow& app, GUISUMOAbstractView& parent);
 
-    /// @brief return exaggeration associated with this GLObject
+    /// @brief return exaggeration asociated with this GLObject
     virtual double getExaggeration(const GUIVisualizationSettings& s) const = 0;
 
     /**@brief Returns the boundary to which the view shall be centered in order to show the object
@@ -228,9 +237,6 @@ public:
      * @see GUIGlObject::drawGL
      */
     virtual void drawGL(const GUIVisualizationSettings& s) const = 0;
-
-    /// @brief update GLObject (geometry, ID, etc.)
-    void updateGLObject();
 
     /// @}
 
@@ -305,13 +311,37 @@ public:
 
     /**@brief method for checking if the key and their conrrespond attribute are valids
      * @param[in] key The attribute key
-     * @param[in] value The value associated to key key
+     * @param[in] value The value asociated to key key
      * @return true if the value is valid, false in other case
      */
     virtual bool isValid(SumoXMLAttr key, const std::string& value) = 0;
 
+    /* @brief method for enable attribute
+     * @param[in] key The attribute key
+     * @param[in] undoList The undoList on which to register changes
+     * @note certain attributes can be only enabled, and can produce the disabling of other attributes
+     */
+    virtual void enableAttribute(SumoXMLAttr key, GNEUndoList* undoList) = 0;
+
+    /* @brief method for disable attribute
+     * @param[in] key The attribute key
+     * @param[in] undoList The undoList on which to register changes
+     * @note certain attributes can be only enabled, and can produce the disabling of other attributes
+     */
+    virtual void disableAttribute(SumoXMLAttr key, GNEUndoList* undoList) = 0;
+
+    /* @brief method for check if the value for certain attribute is set
+     * @param[in] key The attribute key
+     */
+    virtual bool isAttributeEnabled(SumoXMLAttr key) const = 0;
+
+    /* @brief method for check if the value for certain attribute is computed (for example, due a network recomputing)
+     * @param[in] key The attribute key
+     */
+    bool isAttributeComputed(SumoXMLAttr key) const;
+
     /// @brief get parameters map
-    virtual const Parameterised::Map& getACParametersMap() const = 0;
+    virtual const std::map<std::string, std::string>& getACParametersMap() const = 0;
 
     /// @brief get PopPup ID (Used in AC Hierarchy)
     virtual std::string getPopUpID() const = 0;
@@ -413,20 +443,11 @@ protected:
         const GNEEdge* edge;
 
         /// @brief stops sorted by end position
-        std::vector<std::pair<std::pair<double, double >, const GNEDemandElement*> > myStops;
+        std::vector<std::pair<double, const GNEDemandElement*> > myStops;
     };
 
     /// @brief get sorted stops
     std::vector<const GNEDemandElement*> getSortedStops(const std::vector<GNEEdge*>& edges) const;
-
-    /// @brief set flow parameters (used in toggleAttribute(...) function of vehicles, persons and containers
-    void setFlowParameters(SUMOVehicleParameter* vehicleParameters, const SumoXMLAttr attribute, const bool value);
-
-    /// @brief adjust flow default attributes (called in vehicle/person/flow constructors)
-    void adjustDefaultFlowAttributes(SUMOVehicleParameter* vehicleParameters);
-
-    /// @brief build menu command route length
-    void buildMenuCommandRouteLength(GUIGLObjectPopupMenu* ret) const;
 
 private:
     /**@brief check restriction with the number of children
@@ -436,6 +457,9 @@ private:
 
     /// @brief method for setting the attribute and nothing else (used in GNEChange_Attribute)
     virtual void setAttribute(SumoXMLAttr key, const std::string& value) = 0;
+
+    /// @brief method for enable or disable the attribute and nothing else (used in GNEChange_EnableAttribute)
+    virtual void toogleAttribute(SumoXMLAttr key, const bool value, const int previousParameters) = 0;
 
     /// @brief set move shape
     virtual void setMoveShape(const GNEMoveResult& moveResult) = 0;

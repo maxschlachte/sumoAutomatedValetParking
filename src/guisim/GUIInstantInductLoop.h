@@ -43,9 +43,7 @@ public:
      * @param[in] position Position of the detector within the lane.
      */
     GUIInstantInductLoop(const std::string& id, OutputDevice& od,
-                         MSLane* const lane, double positionInMeters,
-                         const std::string& vTypes,
-                         const std::string& nextEdges);
+                         MSLane* const lane, double positionInMeters, const std::string& vTypes);
 
 
     /// @brief Destructor
@@ -85,7 +83,7 @@ public:
         GUIParameterTableWindow* getParameterWindow(
             GUIMainWindow& app, GUISUMOAbstractView& parent);
 
-        /// @brief return exaggeration associated with this GLObject
+        /// @brief return exaggeration asociated with this GLObject
         double getExaggeration(const GUIVisualizationSettings& s) const;
 
         /** @brief Returns the boundary to which the view shall be centered in order to show the object

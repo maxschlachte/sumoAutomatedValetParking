@@ -63,9 +63,7 @@ public:
     GUIE2Collector(const std::string& id, DetectorUsage usage,
                    MSLane* lane, double startPos, double endPos, double detLength,
                    SUMOTime haltingTimeThreshold, double haltingSpeedThreshold, double jamDistThreshold,
-                   const std::string& vTypes,
-                   const std::string& nextEdges,
-                   int detectPersons, bool showDetector);
+                   const std::string& vTypes, int detectPersons, bool showDetector);
 
 
     /** @brief Constructor with a sequence of lanes and given start and end position on the first and last lanes
@@ -85,9 +83,7 @@ public:
     GUIE2Collector(const std::string& id, DetectorUsage usage,
                    std::vector<MSLane*> lanes, double startPos, double endPos,
                    SUMOTime haltingTimeThreshold, double haltingSpeedThreshold, double jamDistThreshold,
-                   const std::string& vTypes,
-                   const std::string& nextEdges,
-                   int detectPersons, bool showDetector);
+                   const std::string& vTypes, int detectPersons, bool showDetector);
 
 
     /// @brief Destructor
@@ -138,35 +134,30 @@ public:
          * @return The built parameter window
          * @see GUIGlObject::getParameterWindow
          */
-        GUIParameterTableWindow* getParameterWindow(GUIMainWindow& app, GUISUMOAbstractView& parent) override;
+        GUIParameterTableWindow* getParameterWindow(
+            GUIMainWindow& app, GUISUMOAbstractView& parent);
 
-        /// @brief return exaggeration associated with this GLObject
-        double getExaggeration(const GUIVisualizationSettings& s) const override;
+        /// @brief return exaggeration asociated with this GLObject
+        double getExaggeration(const GUIVisualizationSettings& s) const;
 
         /** @brief Returns the boundary to which the view shall be centered in order to show the object
          *
          * @return The boundary the object is within
          * @see GUIGlObject::getCenteringBoundary
          */
-        Boundary getCenteringBoundary() const override;
+        Boundary getCenteringBoundary() const;
 
         /** @brief Draws the object
          * @param[in] s The settings for the current view (may influence drawing)
          * @see GUIGlObject::drawGL
          */
-        void drawGL(const GUIVisualizationSettings& s) const override;
+        void drawGL(const GUIVisualizationSettings& s) const;
         //@}
 
 
         /// @brief Returns the detector itself
         GUIE2Collector& getDetector();
 
-    protected:
-        /// @brief whether this detector has an active virtual detector call
-        bool haveOverride() const override;
-
-        /// @brief toggle virtual detector call
-        void toggleOverride() const override;
 
     private:
         /// @brief The wrapped detector

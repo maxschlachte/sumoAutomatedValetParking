@@ -22,7 +22,6 @@
 
 #include <mesosim/MESegment.h>
 #include "MSLane.h"
-#include "MSNet.h"
 #include "MSParkingArea.h"
 #include "MSStoppingPlace.h"
 #include "MSStop.h"
@@ -34,9 +33,7 @@
 double
 MSStop::getEndPos(const SUMOVehicle& veh) const {
     const double brakePos = veh.getEdge() == getEdge() ? veh.getPositionOnLane() + veh.getBrakeGap() : 0;
-    if ((pars.parametersSet & STOP_END_SET) != 0) {
-        return pars.endPos;
-    } else if (busstop != nullptr) {
+    if (busstop != nullptr) {
         return busstop->getLastFreePos(veh, brakePos);
     } else if (containerstop != nullptr) {
         return containerstop->getLastFreePos(veh, brakePos);
@@ -123,44 +120,5 @@ MSStop::initPars(const SUMOVehicleParameter::Stop& stopPar) {
 }
 
 
-int
-MSStop::getStateFlagsOld() const {
-    return ((reached ? 1 : 0) + 2 * pars.getFlags());
-}
-
-
-SUMOTime
-MSStop::getMinDuration(SUMOTime time) const {
-    if (MSGlobals::gUseStopEnded && pars.ended >= 0) {
-        return pars.ended - time;
-    }
-    if (pars.until >= 0) {
-        if (duration == -1) {
-            return pars.until - time;
-        } else {
-            return MAX2(duration, pars.until - time);
-        }
-    } else {
-        return duration;
-    }
-}
-
-
-SUMOTime
-MSStop::getUntil() const {
-    return MSGlobals::gUseStopEnded && pars.ended >= 0 ? pars.ended : pars.until;
-}
-
-
-double
-MSStop::getSpeed() const {
-    return skipOnDemand ? std::numeric_limits<double>::max() : pars.speed;
-}
-
-
-bool
-MSStop::isInRange(const double pos, const double tolerance) const {
-    return pars.startPos - tolerance <= pos && pars.endPos + tolerance >= pos;
-}
 
 /****************************************************************************/

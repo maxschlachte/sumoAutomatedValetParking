@@ -37,21 +37,21 @@
 // ===========================================================================
 
 GNEEdgeType::GNEEdgeType(GNECreateEdgeFrame* createEdgeFrame) :
-    GNENetworkElement(createEdgeFrame->getViewNet()->getNet(), "", GLO_EDGE, SUMO_TAG_TYPE, {}, {}, {}, {}, {}, {}) {
+    GNENetworkElement(createEdgeFrame->getViewNet()->getNet(), "", GLO_EDGE, SUMO_TAG_TYPE, {}, {}, {}, {}, {}, {}, {}, {}) {
     // create laneType
     myLaneTypes.push_back(new GNELaneType(this));
 }
 
 
 GNEEdgeType::GNEEdgeType(const GNEEdgeType* edgeType) :
-    GNENetworkElement(edgeType->getNet(), edgeType->getID(), GLO_EDGE, SUMO_TAG_TYPE, {}, {}, {}, {}, {}, {}),
+    GNENetworkElement(edgeType->getNet(), edgeType->getID(), GLO_EDGE, SUMO_TAG_TYPE, {}, {}, {}, {}, {}, {}, {}, {}),
                   Parameterised(edgeType->getParametersMap()),
 NBTypeCont::EdgeTypeDefinition(edgeType) {
 }
 
 
 GNEEdgeType::GNEEdgeType(GNENet* net) :
-    GNENetworkElement(net, net->getAttributeCarriers()->generateEdgeTypeID(), GLO_EDGE, SUMO_TAG_TYPE, {}, {}, {}, {}, {}, {}) {
+    GNENetworkElement(net, net->getAttributeCarriers()->generateEdgeTypeID(), GLO_EDGE, SUMO_TAG_TYPE, {}, {}, {}, {}, {}, {}, {}, {}) {
     // create laneType
     GNELaneType* laneType = new GNELaneType(this);
     myLaneTypes.push_back(laneType);
@@ -59,7 +59,7 @@ GNEEdgeType::GNEEdgeType(GNENet* net) :
 
 
 GNEEdgeType::GNEEdgeType(GNENet* net, const std::string& ID, const NBTypeCont::EdgeTypeDefinition* edgeType) :
-    GNENetworkElement(net, ID, GLO_EDGE, SUMO_TAG_TYPE, {}, {}, {}, {}, {}, {}) {
+    GNENetworkElement(net, ID, GLO_EDGE, SUMO_TAG_TYPE, {}, {}, {}, {}, {}, {}, {}, {}) {
     // create  laneTypes
     for (const auto& laneTypeDef : edgeType->laneTypeDefinitions) {
         GNELaneType* laneType = new GNELaneType(this, laneTypeDef);
@@ -67,7 +67,6 @@ GNEEdgeType::GNEEdgeType(GNENet* net, const std::string& ID, const NBTypeCont::E
     }
     // copy parameters
     speed = edgeType->speed;
-    friction = edgeType->friction;
     priority = edgeType->priority;
     permissions = edgeType->permissions;
     spreadType = edgeType->spreadType;
@@ -202,19 +201,13 @@ GNEEdgeType::drawGL(const GUIVisualizationSettings& /*s*/) const {
 }
 
 
-void
-GNEEdgeType::updateGLObject() {
-    updateGeometry();
-}
-
-
 std::string
 GNEEdgeType::getAttribute(SumoXMLAttr key) const {
     // get options
     const OptionsCont& oc = OptionsCont::getOptions();
     switch (key) {
         case SUMO_ATTR_ID:
-            return getMicrosimID();
+            return getID();
         case SUMO_ATTR_NUMLANES:
             return toString(myLaneTypes.size());
         case SUMO_ATTR_SPEED:
@@ -222,12 +215,6 @@ GNEEdgeType::getAttribute(SumoXMLAttr key) const {
                 return toString(oc.getFloat("default.speed"));
             } else {
                 return toString(speed);
-            }
-        case SUMO_ATTR_FRICTION:
-            if (attrs.count(key) == 0) {
-                return toString(oc.getFloat("default.friction"));
-            } else {
-                return toString(friction);
             }
         case SUMO_ATTR_ALLOW:
             if ((permissions == SVCAll) || (permissions == -1)) {
@@ -327,7 +314,19 @@ GNEEdgeType::isValid(SumoXMLAttr key, const std::string& value) {
 }
 
 
-const Parameterised::Map&
+bool
+GNEEdgeType::isAttributeEnabled(SumoXMLAttr /*key*/) const {
+    return true;
+}
+
+
+bool
+GNEEdgeType::isAttributeComputed(SumoXMLAttr /*key*/) const {
+    return false;
+}
+
+
+const std::map<std::string, std::string>&
 GNEEdgeType::getACParametersMap() const {
     return getParametersMap();
 }
@@ -367,14 +366,6 @@ GNEEdgeType::setAttribute(SumoXMLAttr key, const std::string& value) {
                 speed = parse<double>(value);
             }
             break;
-        case SUMO_ATTR_FRICTION:
-            if (value.empty()) {
-                attrs.erase(key);
-            } else {
-                attrs.insert(key);
-                friction = parse<double>(value);
-            }
-            break;
         case SUMO_ATTR_ALLOW:
             // parse permissions
             permissions = parseVehicleClasses(value);
@@ -388,10 +379,6 @@ GNEEdgeType::setAttribute(SumoXMLAttr key, const std::string& value) {
             } else {
                 attrs.insert(SUMO_ATTR_ALLOW);
                 attrs.insert(SUMO_ATTR_DISALLOW);
-            }
-            // also change it in all lanes
-            for (auto& laneType : myLaneTypes) {
-                laneType->setAttribute(SUMO_ATTR_ALLOW, value);
             }
             break;
         case SUMO_ATTR_DISALLOW:
@@ -407,10 +394,6 @@ GNEEdgeType::setAttribute(SumoXMLAttr key, const std::string& value) {
             } else {
                 attrs.insert(SUMO_ATTR_ALLOW);
                 attrs.insert(SUMO_ATTR_DISALLOW);
-            }
-            // also change it in all lanes
-            for (auto& laneType : myLaneTypes) {
-                laneType->setAttribute(SUMO_ATTR_DISALLOW, value);
             }
             break;
         case SUMO_ATTR_SPREADTYPE:

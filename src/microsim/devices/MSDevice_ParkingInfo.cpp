@@ -51,10 +51,10 @@ MSDevice_ParkingInfo::insertOptions(OptionsCont& oc) {
     oc.addOptionSubTopic("ParkingInfo Device");
     insertDefaultAssignmentOptions("parkinginfo", "ParkingInfo Device", oc);
 
-    oc.doRegister("device.parkinginfo.begEdge", new Option_String());
-    oc.doRegister("device.parkinginfo.endEdge", new Option_String());
-    oc.addDescription("device.parkinginfo.begEdge", "ParkingInfo Device", "Edge at which measuring starts.");
-    oc.addDescription("device.parkinginfo.endEdge", "ParkingInfo Device", "Edge at which measuring ends.");
+    oc.doRegister("device.parkinginfo.begEdges", new Option_String());
+    oc.doRegister("device.parkinginfo.endEdges", new Option_String());
+    oc.addDescription("device.parkinginfo.begEdges", "ParkingInfo Device", "Edge at which measuring starts.");
+    oc.addDescription("device.parkinginfo.endEdges", "ParkingInfo Device", "Edge at which measuring ends.");
 }
 
 
@@ -63,12 +63,12 @@ MSDevice_ParkingInfo::buildVehicleDevices(SUMOVehicle& v, std::vector<MSVehicleD
     OptionsCont& oc = OptionsCont::getOptions();
     std::vector<std::string> begIDs;
     std::vector<std::string> endIDs;
-    std::string begIDstr = oc.getString("device.parkinginfo.begEdge");
+    std::string begIDstr = oc.getString("device.parkinginfo.begEdges");
     StringTokenizer stBeg(begIDstr, " ", true);
     while (stBeg.hasNext()) {
         begIDs.push_back(StringUtils::prune(stBeg.next()));
     }
-    std::string endIDstr = oc.getString("device.parkinginfo.endEdge");
+    std::string endIDstr = oc.getString("device.parkinginfo.endEdges");
     StringTokenizer stEnd(endIDstr, " ", true);
     while (stEnd.hasNext()) {
         endIDs.push_back(StringUtils::prune(stEnd.next()));
@@ -102,6 +102,19 @@ MSDevice_ParkingInfo::MSDevice_ParkingInfo(SUMOVehicle& holder, const std::strin
     myIsWithinBounds(false),
     myReachedParkingArea(false) {
       myMSHolder = dynamic_cast<MSVehicle*>(&myHolder);
+      // check if edges exist
+      for(auto id : begIDs) {
+        MSEdge* e = MSEdge::dictionary(id);
+        if (e == nullptr) {
+            WRITE_ERROR("Unknown edge ('" + id + "') referenced in attribute 'begEdges' of ParkingInfo device for vehicle '" + holder.getID() + "'.");
+        }
+      }
+      for(auto id : endIDs) {
+        MSEdge* e = MSEdge::dictionary(id);
+        if (e == nullptr) {
+            WRITE_ERROR("Unknown edge ('" + id + "') referenced in attribute 'endEdges' of ParkingInfo device for vehicle '" + holder.getID() + "'.");
+        }
+      }
 }
 
 MSDevice_ParkingInfo::~MSDevice_ParkingInfo() {

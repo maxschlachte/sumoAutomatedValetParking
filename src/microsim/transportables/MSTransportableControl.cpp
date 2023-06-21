@@ -68,14 +68,6 @@ MSTransportableControl::MSTransportableControl(const bool isPerson):
     } else {
         myMovementModel = myNonInteractingModel = new MSPModel_NonInteracting(oc, net);
     }
-    if (oc.isSet("vehroute-output")) {
-        myRouteInfos.routeOut = &OutputDevice::getDeviceByOption("vehroute-output");
-    }
-    if (oc.isSet("personroute-output")) {
-        OutputDevice::createDeviceByOption("personroute-output", "routes", "routes_file.xsd");
-        myRouteInfos.routeOut = &OutputDevice::getDeviceByOption("personroute-output");
-    }
-    myAbortWaitingTimeout = string2time(oc.getString("time-to-teleport.ride"));
 }
 
 
@@ -103,24 +95,6 @@ MSTransportableControl::add(MSTransportable* transportable) {
 }
 
 
-void
-MSTransportableControl::fixLoadCount(const MSTransportable* transportable) {
-    myLoadedNumber--;
-    if (transportable->hasDeparted()) {
-        const SUMOVehicleParameter& param = transportable->getParameter();
-        const SUMOTime step = param.depart % DELTA_T == 0 ? param.depart : (param.depart / DELTA_T + 1) * DELTA_T;
-        TransportableVector& waiting = myWaiting4Departure[step];
-        auto it = std::find(waiting.begin(), waiting.end(), transportable);
-        if (it != waiting.end()) {
-            waiting.erase(it);
-            if (waiting.size() == 0) {
-                myWaiting4Departure.erase(step);
-            }
-        }
-    }
-}
-
-
 MSTransportable*
 MSTransportableControl::get(const std::string& id) const {
     std::map<std::string, MSTransportable*>::const_iterator i = myTransportables.find(id);
@@ -141,15 +115,14 @@ MSTransportableControl::erase(MSTransportable* transportable) {
         OutputDevice_String dev;
         transportable->tripInfoOutput(dev);
     }
-    if (oc.isSet("vehroute-output") || oc.isSet("personroute-output")) {
+    if (oc.isSet("vehroute-output")) {
         if (oc.getBool("vehroute-output.sorted")) {
-            const SUMOTime departure = oc.getBool("vehroute-output.intended-depart") ? transportable->getParameter().depart : transportable->getDeparture();
             OutputDevice_String od(1);
             transportable->routeOutput(od, oc.getBool("vehroute-output.route-length"));
-            MSDevice_Vehroutes::writeSortedOutput(&myRouteInfos,
-                                                  departure, transportable->getID(), od.getString());
+            MSDevice_Vehroutes::writeSortedOutput(OutputDevice::getDeviceByOption("vehroute-output"),
+                                                  transportable->getDeparture(), transportable->getID(), od.getString());
         } else {
-            transportable->routeOutput(*myRouteInfos.routeOut, oc.getBool("vehroute-output.route-length"));
+            transportable->routeOutput(OutputDevice::getDeviceByOption("vehroute-output"), oc.getBool("vehroute-output.route-length"));
         }
     }
     const std::map<std::string, MSTransportable*>::iterator i = myTransportables.find(transportable->getID());
@@ -191,14 +164,8 @@ MSTransportableControl::checkWaiting(MSNet* net, const SUMOTime time) {
                 myRunningNumber++;
                 MSNet::getInstance()->informTransportableStateListener(t,
                         isPerson ? MSNet::TransportableState::PERSON_DEPARTED : MSNet::TransportableState::CONTAINER_DEPARTED);
-                const OptionsCont& oc = OptionsCont::getOptions();
-                if (oc.getBool("vehroute-output.sorted")) {
-                    const SUMOTime departure = oc.getBool("vehroute-output.intended-depart") ? t->getParameter().depart : time;
-                    if (oc.isSet("personroute-output")) {
-                        myRouteInfos.departureCounts[departure]++;
-                    } else {
-                        MSDevice_Vehroutes::registerTransportableDepart(departure);
-                    }
+                if (OptionsCont::getOptions().getBool("vehroute-output.sorted")) {
+                    MSDevice_Vehroutes::registerTransportableDepart(time);
                 }
             } else {
                 erase(t);
@@ -219,86 +186,109 @@ MSTransportableControl::checkWaiting(MSNet* net, const SUMOTime time) {
     }
 }
 
-
 void
 MSTransportableControl::forceDeparture() {
     myRunningNumber++;
 }
-
 
 void
 MSTransportableControl::addWaiting(const MSEdge* const edge, MSTransportable* transportable) {
     myWaiting4Vehicle[edge].push_back(transportable);
     myWaitingForVehicleNumber++;
     myHaveNewWaiting = true;
-    if (myAbortWaitingTimeout >= 0) {
-        transportable->setAbortWaiting(myAbortWaitingTimeout);
-    }
 }
 
 
 bool
-MSTransportableControl::hasAnyWaiting(const MSEdge* edge, SUMOVehicle* vehicle) const {
-    const auto wait = myWaiting4Vehicle.find(edge);
-    if (wait != myWaiting4Vehicle.end()) {
-        for (const MSTransportable* t : wait->second) {
-            if (t->isWaitingFor(vehicle)
-                    && vehicle->allowsBoarding(t)
-                    && vehicle->isStoppedInRange(t->getEdgePos(), MSGlobals::gStopTolerance, true)) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-
-bool
-MSTransportableControl::loadAnyWaiting(const MSEdge* edge, SUMOVehicle* vehicle, SUMOTime& timeToLoadNext, SUMOTime& stopDuration) {
+MSTransportableControl::boardAnyWaiting(const MSEdge* edge, SUMOVehicle* vehicle, SUMOTime& timeToBoardNextPerson, SUMOTime& stopDuration) {
     bool ret = false;
-    const auto wait = myWaiting4Vehicle.find(edge);
-    if (wait != myWaiting4Vehicle.end()) {
-        const SUMOTime currentTime = SIMSTEP;
-        TransportableVector& transportables = wait->second;
-        for (TransportableVector::iterator i = transportables.begin(); i != transportables.end();) {
-            MSTransportable* const t = *i;
-            if (t->isWaitingFor(vehicle)
-                    && vehicle->allowsBoarding(t)
-                    && timeToLoadNext - DELTA_T <= currentTime
-                    && vehicle->isStoppedInRange(t->getEdgePos(), MSGlobals::gStopTolerance)) {
-                edge->removeTransportable(t);
-                vehicle->addTransportable(t);
-                if (myAbortWaitingTimeout >= 0) {
-                    t->setAbortWaiting(-1);
-                }
-                if (timeToLoadNext >= 0) { // meso does not have loading times
-                    const SUMOTime loadingDuration = vehicle->getVehicleType().getLoadingDuration(t->isPerson());
-                    //update the time point at which the next transportable can be loaded on the vehicle
-                    if (timeToLoadNext > currentTime - DELTA_T) {
-                        timeToLoadNext += loadingDuration;
+    if (myWaiting4Vehicle.find(edge) != myWaiting4Vehicle.end()) {
+        TransportableVector& wait = myWaiting4Vehicle[edge];
+        SUMOTime currentTime =  MSNet::getInstance()->getCurrentTimeStep();
+        for (TransportableVector::iterator i = wait.begin(); i != wait.end();) {
+            if ((*i)->isWaitingFor(vehicle)
+                    && vehicle->allowsBoarding(*i)
+                    && timeToBoardNextPerson - DELTA_T <= currentTime
+                    && vehicle->isStoppedInRange((*i)->getEdgePos(), MSGlobals::gStopTolerance)) {
+                edge->removePerson(*i);
+                vehicle->addTransportable(*i);
+                if (timeToBoardNextPerson >= 0) { // meso does not have boarding times
+                    const SUMOTime boardingDuration = vehicle->getVehicleType().getBoardingDuration();
+                    //update the time point at which the next person can board the vehicle
+                    if (timeToBoardNextPerson > currentTime - DELTA_T) {
+                        timeToBoardNextPerson += boardingDuration;
                     } else {
-                        timeToLoadNext = currentTime + loadingDuration;
+                        timeToBoardNextPerson = currentTime + boardingDuration;
                     }
                 }
 
-                static_cast<MSStageDriving*>(t->getCurrentStage())->setVehicle(vehicle);
-                if (t->getCurrentStage()->getOriginStop() != nullptr) {
-                    t->getCurrentStage()->getOriginStop()->removeTransportable(*i);
+                static_cast<MSStageDriving*>((*i)->getCurrentStage())->setVehicle(vehicle);
+                if ((*i)->getCurrentStage()->getOriginStop() != nullptr) {
+                    (*i)->getCurrentStage()->getOriginStop()->removeTransportable(*i);
                 }
-                i = transportables.erase(i);
+                i = wait.erase(i);
                 myWaitingForVehicleNumber--;
                 ret = true;
             } else {
                 ++i;
             }
         }
-        if (transportables.empty()) {
-            myWaiting4Vehicle.erase(wait);
+        if (wait.size() == 0) {
+            myWaiting4Vehicle.erase(myWaiting4Vehicle.find(edge));
         }
-        if (ret && timeToLoadNext >= 0) {
-            //if the time a transportable needs to get loaded on the vehicle extends the duration of the stop of the vehicle extend
-            //the duration by setting it to the loading duration of the transportable
-            stopDuration = MAX2(stopDuration, timeToLoadNext - currentTime);
+        if (ret && timeToBoardNextPerson >= 0) {
+            //if the time a person needs to enter the vehicle extends the duration of the stop of the vehicle extend
+            //the duration by setting it to the boarding duration of the person
+            stopDuration = MAX2(stopDuration, timeToBoardNextPerson - currentTime);
+        }
+    }
+    return ret;
+}
+
+
+bool
+MSTransportableControl::loadAnyWaiting(const MSEdge* edge, SUMOVehicle* vehicle, SUMOTime& timeToLoadNextContainer, SUMOTime& stopDuration) {
+    bool ret = false;
+    if (myWaiting4Vehicle.find(edge) != myWaiting4Vehicle.end()) {
+        SUMOTime currentTime = MSNet::getInstance()->getCurrentTimeStep();
+        TransportableVector& waitContainers = myWaiting4Vehicle[edge];
+        for (TransportableVector::iterator i = waitContainers.begin(); i != waitContainers.end();) {
+            if ((*i)->isWaitingFor(vehicle)
+                    && vehicle->allowsBoarding(*i)
+                    && timeToLoadNextContainer - DELTA_T <= currentTime
+                    && vehicle->isStoppedInRange((*i)->getEdgePos(), MSGlobals::gStopTolerance)) {
+                edge->removeContainer(*i);
+                vehicle->addTransportable(*i);
+                if (timeToLoadNextContainer >= 0) { // meso does not have loading times
+                    //if the time a person needs to enter the vehicle extends the duration of the stop of the vehicle extend
+                    //the duration by setting it to the boarding duration of the person
+                    const SUMOTime loadingDuration = vehicle->getVehicleType().getLoadingDuration();
+                    //update the time point at which the next container can be loaded on the vehicle
+                    if (timeToLoadNextContainer > currentTime - DELTA_T) {
+                        timeToLoadNextContainer += loadingDuration;
+                    } else {
+                        timeToLoadNextContainer = currentTime + loadingDuration;
+                    }
+                }
+
+                static_cast<MSStageDriving*>((*i)->getCurrentStage())->setVehicle(vehicle);
+                if ((*i)->getCurrentStage()->getOriginStop() != nullptr) {
+                    (*i)->getCurrentStage()->getOriginStop()->removeTransportable(*i);
+                }
+                i = waitContainers.erase(i);
+                myWaitingForVehicleNumber--;
+                ret = true;
+            } else {
+                ++i;
+            }
+        }
+        if (waitContainers.size() == 0) {
+            myWaiting4Vehicle.erase(myWaiting4Vehicle.find(edge));
+        }
+        if (ret && timeToLoadNextContainer >= 0) {
+            //if the time a container needs to get loaded on the vehicle extends the duration of the stop of the vehicle extend
+            //the duration by setting it to the loading duration of the container
+            stopDuration = MAX2(stopDuration, timeToLoadNextContainer - currentTime);
         }
     }
     return ret;
@@ -322,7 +312,6 @@ MSTransportableControl::getActiveCount() {
     return (int)myWaiting4Departure.size() + myRunningNumber - myWaitingForVehicleNumber;
 }
 
-
 int
 MSTransportableControl::getMovingNumber() const {
     return myMovementModel->getActiveNumber();
@@ -341,16 +330,20 @@ MSTransportableControl::getDepartedNumber() const {
 
 void
 MSTransportableControl::abortAnyWaitingForVehicle() {
-    for (const auto& it : myWaiting4Vehicle) {
-        const MSEdge* edge = it.first;
-        for (MSTransportable* const p : it.second) {
-            edge->removeTransportable(p);
+    for (std::map<const MSEdge*, TransportableVector>::iterator i = myWaiting4Vehicle.begin(); i != myWaiting4Vehicle.end(); ++i) {
+        const MSEdge* edge = (*i).first;
+        for (MSTransportable* const p : i->second) {
+            std::string transportableType;
+            if (p->isPerson()) {
+                edge->removePerson(p);
+                transportableType = "Person";
+            } else {
+                transportableType = "Container";
+                edge->removeContainer(p);
+            }
             MSStageDriving* stage = dynamic_cast<MSStageDriving*>(p->getCurrentStage());
             const std::string waitDescription = stage == nullptr ? "waiting" : stage->getWaitingDescription();
-            WRITE_WARNING(p->getObjectType() + " '" + p->getID() + "' aborted " + waitDescription + ".");
-            if (myAbortWaitingTimeout >= 0) {
-                p->setAbortWaiting(-1);
-            }
+            WRITE_WARNING(transportableType + " '" + p->getID() + "' aborted " + waitDescription + ".");
             erase(p);
         }
     }
@@ -366,9 +359,6 @@ MSTransportableControl::abortWaitingForVehicle(MSTransportable* t) {
         TransportableVector& waiting = it->second;
         auto it2 = std::find(waiting.begin(), waiting.end(), t);
         if (it2 != waiting.end()) {
-            if (myAbortWaitingTimeout >= 0) {
-                (*it2)->setAbortWaiting(-1);
-            }
             waiting.erase(it2);
         }
     }

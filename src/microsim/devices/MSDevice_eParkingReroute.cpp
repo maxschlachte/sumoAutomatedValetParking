@@ -37,9 +37,8 @@
 #include "MSDevice_Tripinfo.h"
 #include "MSDevice_eParkingReroute.h"
 #include "MSDevice_Battery.h"
-#include <libsumo/TraCIConstants.h>
 
-//#define DEBUG_COND (getHolder().getID() == "f_eAuto.55")
+//#define DEBUG_COND (getHolder().getID() == "f_eAuto_1.327")
 //#define DEBUG_COND (getHolder().getID() == "f_eAuto.6" || getHolder().getID() == "f_eAuto.2")
 #define DEBUG_COND (false)
 //#define DEBUG_COND (isSelected())
@@ -237,7 +236,11 @@ MSDevice_eParkingReroute::notifyParking() {
         // if the vehicle is fully charged or the duration is below 1, we call a new vehicle
         if ((myMSVehicleHolder->getStops().front().duration <= 1 || myBattery->getActualBatteryCapacity() >= myBattery->getMaximumBatteryCapacity()) && !myCalledNextCandidate) {
             if (DEBUG_COND) {
-                std::cout << SIMTIME << " veh=" << myMSVehicleHolder->getID() << " is fully charged! (current charge=" << myBattery->getActualBatteryCapacity() << ", capacity=" << myBattery->getMaximumBatteryCapacity() << std::endl;
+                if (myMSVehicleHolder->getStops().front().duration <= 1) {
+                    std::cout << SIMTIME << " veh=" << myMSVehicleHolder->getID() << " is not fully charged, but parking time expired! (current charge=" << myBattery->getActualBatteryCapacity() << ", capacity=" << myBattery->getMaximumBatteryCapacity() << std::endl;
+                } else {
+                    std::cout << SIMTIME << " veh=" << myMSVehicleHolder->getID() << " is fully charged! (current charge=" << myBattery->getActualBatteryCapacity() << ", capacity=" << myBattery->getMaximumBatteryCapacity() << std::endl;
+                }
             }
             // get current parking area
             MSParkingArea* currentParkingArea = myMSVehicleHolder->getStops().front().parkingarea;
@@ -350,54 +353,58 @@ MSDevice_eParkingReroute::notifyParking() {
             }
 
             if(!myCallOnlyMode) {
-                if (myTargetAreas.size() == 0) {
-                    WRITE_ERROR("No target areas for eParkingReroute device of vehicle '" + myMSVehicleHolder->getID() + "' were given!");
-                    return ;
-                }
-
-                // find the nearest target area
-                int nearestID = -1;
-                double minDist = libsumo::INVALID_DOUBLE_VALUE;
-                for (int i = 0; i < myTargetAreas.size(); ++i) {
-                    if (minDist == libsumo::INVALID_DOUBLE_VALUE || (*myMSVehicleHolder->getStops().front().edge)->getDistanceTo(&myTargetAreas.at(i)->getLane().getEdge()) < minDist) {
-                        nearestID = i;
-                        minDist = (*myMSVehicleHolder->getStops().front().edge)->getDistanceTo(&myTargetAreas.at(i)->getLane().getEdge());
+                // if the remaining duration is more than 0 search for the nearest target area
+                // if the parking duration of the original parking area is already expired, route to the next stop as per normal!
+                if (remainingDuration > 0) {
+                    if (myTargetAreas.size() == 0) {
+                        WRITE_ERROR("No target areas for eParkingReroute device of vehicle '" + myMSVehicleHolder->getID() + "' were given!");
+                        return ;
                     }
-                }
 
-                // make vehicle leave parking area
-                SUMOVehicleParameter::Stop pars;
-                pars.busstop = "";
-                pars.containerstop = "";
-                pars.parkingarea = myTargetAreas.at(nearestID)->getID();
-                pars.chargingStation = "";
-                pars.overheadWireSegment = "";
-                pars.triggered = myMSVehicleHolder->getStops().front().triggered;
-                pars.containerTriggered = false;
-                pars.joinTriggered = false;
-                pars.parking = true;
-                pars.lane = myTargetAreas.at(nearestID)->getLane().getID();
-                pars.edge = myTargetAreas.at(nearestID)->getLane().getEdge().getID();
-                pars.duration = remainingDuration;
-                errorMsg = "";
-              	if (myMSVehicleHolder->rerouteNewStop(pars, errorMsg)) {
-                    myMSVehicleHolder->setReparkTimeStamp();
-              		  myMSVehicleHolder->setCurrentStopDuration(0);
-              	} else {
-              		  WRITE_ERROR(errorMsg);
-              	}
-
-                // debug print
-                if (DEBUG_COND && VERBOSE) {
-                    std::cout << "veh=" << myMSVehicleHolder->getID() << " edges after reroute:" << std::endl;
-                    for (auto it = myMSVehicleHolder->getRoute().begin(); it != myMSVehicleHolder->getRoute().end(); ++it) {
-                        if (myMSVehicleHolder->getCurrentRouteEdge() == it) std::cout << " >";
-                        else std::cout << "  ";
-                        std::cout << (*it)->getID() << std::endl;
+                    // find the nearest target area
+                    int nearestID = -1;
+                    double minDist = libsumo::INVALID_DOUBLE_VALUE;
+                    for (int i = 0; i < myTargetAreas.size(); ++i) {
+                        if (minDist == libsumo::INVALID_DOUBLE_VALUE || (*myMSVehicleHolder->getStops().front().edge)->getDistanceTo(&myTargetAreas.at(i)->getLane().getEdge()) < minDist) {
+                            nearestID = i;
+                            minDist = (*myMSVehicleHolder->getStops().front().edge)->getDistanceTo(&myTargetAreas.at(i)->getLane().getEdge());
+                        }
                     }
-                    std::cout << "veh=" << myMSVehicleHolder->getID() << " stops after reroute:" << std::endl;
-                    for (auto s : myMSVehicleHolder->getStops()) {
-                        std::cout << "  " << s.getDescription() << " at edge=" << s.lane->getEdge().getID() << std::endl;
+
+                    // make vehicle leave parking area
+                    SUMOVehicleParameter::Stop pars;
+                    pars.busstop = "";
+                    pars.containerstop = "";
+                    pars.parkingarea = myTargetAreas.at(nearestID)->getID();
+                    pars.chargingStation = "";
+                    pars.overheadWireSegment = "";
+                    pars.triggered = myMSVehicleHolder->getStops().front().triggered;
+                    pars.containerTriggered = false;
+                    pars.joinTriggered = false;
+                    pars.parking = true;
+                    pars.lane = myTargetAreas.at(nearestID)->getLane().getID();
+                    pars.edge = myTargetAreas.at(nearestID)->getLane().getEdge().getID();
+                    pars.duration = remainingDuration;
+                    errorMsg = "";
+                    if (myMSVehicleHolder->rerouteNewStop(pars, errorMsg)) {
+                        myMSVehicleHolder->setReparkTimeStamp();
+                        myMSVehicleHolder->setCurrentStopDuration(0);
+                    } else {
+                        WRITE_ERROR(errorMsg);
+                    }
+
+                    // debug print
+                    if (DEBUG_COND && VERBOSE) {
+                        std::cout << "veh=" << myMSVehicleHolder->getID() << " edges after reroute:" << std::endl;
+                        for (auto it = myMSVehicleHolder->getRoute().begin(); it != myMSVehicleHolder->getRoute().end(); ++it) {
+                            if (myMSVehicleHolder->getCurrentRouteEdge() == it) std::cout << " >";
+                            else std::cout << "  ";
+                            std::cout << (*it)->getID() << std::endl;
+                        }
+                        std::cout << "veh=" << myMSVehicleHolder->getID() << " stops after reroute:" << std::endl;
+                        for (auto s : myMSVehicleHolder->getStops()) {
+                            std::cout << "  " << s.getDescription() << " at edge=" << s.lane->getEdge().getID() << std::endl;
+                        }
                     }
                 }
             }

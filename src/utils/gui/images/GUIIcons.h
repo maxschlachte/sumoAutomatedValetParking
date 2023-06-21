@@ -91,7 +91,6 @@ enum class GUIIcon {
     LOCATE,
     LOCATEJUNCTION,
     LOCATEEDGE,
-    LOCATEWALKINGAREA,
     LOCATEVEHICLE,
     LOCATEROUTE,
     LOCATESTOP,
@@ -217,17 +216,14 @@ enum class GUIIcon {
     BIGARROWLEFT,
     BIGARROWRIGHT,
     FRONTELEMENT,
-    SIMPLIFYNETWORK,
     COMPUTEPATHMANAGER,
     COLLAPSE,
     UNCOLLAPSE,
-    EXTEND,
     /// @}
 
     /// @name NETEDIT common mode specific icons
     /// @{
     COMMONMODE_CHECKBOX_TOGGLEGRID,
-    COMMONMODE_CHECKBOX_TOGGLEDRAWJUNCTIONSHAPE,
     COMMONMODE_CHECKBOX_SPREADVEHICLE,
     COMMONMODE_CHECKBOX_SHOWDEMANDELEMENTS,
     /// @}
@@ -244,7 +240,6 @@ enum class GUIIcon {
     NETWORKMODE_CHECKBOX_TWOWAY,
     NETWORKMODE_CHECKBOX_HIDECONNECTIONS,
     NETWORKMODE_CHECKBOX_SHOWSUBADDITIONALS,
-    NETWORKMODE_CHECKBOX_SHOWTAZELEMENTS,
     NETWORKMODE_CHECKBOX_APPLYTOALLPHASES,
     /// @}
 
@@ -314,9 +309,8 @@ enum class GUIIcon {
     MODEMOVE,
     MODESELECT,
     MODETLS,
-    MODESHAPE,
+    MODEPOLYGON,
     MODEPROHIBITION,
-    MODEWIRE,
     /// @}
 
     /// @name NETEDIT Demand modes icons
@@ -350,7 +344,7 @@ enum class GUIIcon {
     OPTIONS,
     /// @}
 
-    /// @name network elements icons
+    /// @name NETEDIT network elements icons
     /// @{
     JUNCTION,
     EDGETYPE,
@@ -360,10 +354,9 @@ enum class GUIIcon {
     CONNECTION,
     PROHIBITION,
     CROSSING,
-    WALKINGAREA,
     /// @}
 
-    /// @name additional elements icons
+    /// @name NETEDIT additional elements icons
     /// @{
     BUSSTOP,
     TRAINSTOP,
@@ -390,29 +383,13 @@ enum class GUIIcon {
     DESTPROBREROUTE,
     PARKINGZONEREROUTE,
     ROUTEPROBREROUTE,
-    /// @}
-
-    /// @name poly elements icons
-    /// @{
-    TRACTION_SUBSTATION,
-    OVERHEADWIRE,
-    OVERHEADWIRE_CLAMP,
-    /// @}
-
-    /// @name poly elements icons
-    /// @{
     POLY,
     POI,
     POILANE,
     POIGEO,
-    /// @}
-
-    /// @name TAZ elements icons
-    /// @{
     TAZ,
     TAZEDGE,
     /// @}
-
 
     /// @name NETEDIT Demand elements icons
     /// @{
@@ -426,7 +403,6 @@ enum class GUIIcon {
     FLOW_JUNCTIONS,
     ROUTEFLOW,
     STOPELEMENT,
-    WAYPOINT,
     PERSON,
     PERSONFLOW,
     PERSONTRIP_FROMTO,
@@ -457,7 +433,7 @@ enum class GUIIcon {
     TAZRELDATA,
     /// @}
 
-    /// @name vehicle Class icons (big, used in vType Dialog)
+    /// @name vehicle Class icons
     /// @{
     VCLASS_IGNORING,
     VCLASS_PRIVATE,
@@ -477,7 +453,6 @@ enum class GUIIcon {
     VCLASS_RAIL_URBAN,
     VCLASS_RAIL,
     VCLASS_RAIL_ELECTRIC,
-    VCLASS_RAIL_FAST,
     VCLASS_MOTORCYCLE,
     VCLASS_MOPED,
     VCLASS_BICYCLE,
@@ -486,37 +461,6 @@ enum class GUIIcon {
     VCLASS_SHIP,
     VCLASS_CUSTOM1,
     VCLASS_CUSTOM2,
-    /// @}
-
-    /// @name small vehicle Class icons (used in comboBox)
-    /// @{
-    VCLASS_SMALL_IGNORING,
-    VCLASS_SMALL_PRIVATE,
-    VCLASS_SMALL_EMERGENCY,
-    VCLASS_SMALL_AUTHORITY,
-    VCLASS_SMALL_ARMY,
-    VCLASS_SMALL_VIP,
-    VCLASS_SMALL_PASSENGER,
-    VCLASS_SMALL_HOV,
-    VCLASS_SMALL_TAXI,
-    VCLASS_SMALL_BUS,
-    VCLASS_SMALL_COACH,
-    VCLASS_SMALL_DELIVERY,
-    VCLASS_SMALL_TRUCK,
-    VCLASS_SMALL_TRAILER,
-    VCLASS_SMALL_TRAM,
-    VCLASS_SMALL_RAIL_URBAN,
-    VCLASS_SMALL_RAIL,
-    VCLASS_SMALL_RAIL_ELECTRIC,
-    VCLASS_SMALL_RAIL_FAST,
-    VCLASS_SMALL_MOTORCYCLE,
-    VCLASS_SMALL_MOPED,
-    VCLASS_SMALL_BICYCLE,
-    VCLASS_SMALL_PEDESTRIAN,
-    VCLASS_SMALL_EVEHICLE,
-    VCLASS_SMALL_SHIP,
-    VCLASS_SMALL_CUSTOM1,
-    VCLASS_SMALL_CUSTOM2,
     /// @}
 
     /// @name vehicle Shape icons

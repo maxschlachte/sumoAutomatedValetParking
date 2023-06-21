@@ -69,11 +69,14 @@ public:
      * @param[in] edges The edges the rerouter is placed at
      * @param[in] prob The probability the rerouter reoutes vehicles with
      * @param[in] prio The priority the rerouter reroutes vehicles with (utl)
+     * @param[in] file The file to read the reroute definitions from
      */
-    MSTriggeredRerouter(const std::string& id, const MSEdgeVector& edges,
+    MSTriggeredRerouter(const std::string& id,
+                        const MSEdgeVector& edges,
                         double prob,
                         // (utl): add prio parameter
-                        double prio, bool off, SUMOTime timeThreshold,
+                        double prio, const std::string& file, bool off,
+                        SUMOTime timeThreshold,
                         const std::string& vTypes);
 
 

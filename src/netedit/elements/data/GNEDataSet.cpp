@@ -127,6 +127,12 @@ GNEDataSet::getHierarchicalElement() {
 }
 
 
+const std::string&
+GNEDataSet::getID() const {
+    return myDataSetID;
+}
+
+
 GUIGlObject*
 GNEDataSet::getGUIGlObject() {
     return nullptr;
@@ -222,7 +228,7 @@ GNEDataSet::removeDataIntervalChild(GNEDataInterval* dataInterval) {
     if (myDataIntervalChildren.count(dataInterval->getAttributeDouble(SUMO_ATTR_BEGIN)) == 1) {
         // remove data interval child
         myDataIntervalChildren.erase(dataInterval->getAttributeDouble(SUMO_ATTR_BEGIN));
-        // remove it from inspected elements and GNEElementTree
+        // remove it from inspected elements and HierarchicalElementTree
         myNet->getViewNet()->removeFromAttributeCarrierInspected(dataInterval);
         myNet->getViewNet()->getViewParent()->getInspectorFrame()->getHierarchicalElementTree()->removeCurrentEditedAttributeCarrier(dataInterval);
         // remove reference from attributeCarriers
@@ -338,6 +344,30 @@ GNEDataSet::isValid(SumoXMLAttr key, const std::string& value) {
 }
 
 
+void
+GNEDataSet::enableAttribute(SumoXMLAttr /*key*/, GNEUndoList* /*undoList*/) {
+    // nothing to enable
+}
+
+
+void
+GNEDataSet::disableAttribute(SumoXMLAttr /*key*/, GNEUndoList* /*undoList*/) {
+    // nothing to disable
+}
+
+
+bool
+GNEDataSet::isAttributeEnabled(SumoXMLAttr /*key*/) const {
+    return true;
+}
+
+
+bool
+GNEDataSet::isAttributeComputed(SumoXMLAttr /*key*/) const {
+    return false;
+}
+
+
 std::string
 GNEDataSet::getPopUpID() const {
     return getTagStr();
@@ -350,7 +380,7 @@ GNEDataSet::getHierarchyName() const {
 }
 
 
-const Parameterised::Map&
+const std::map<std::string, std::string>&
 GNEDataSet::getACParametersMap() const {
     return getParametersMap();
 }
@@ -369,8 +399,12 @@ GNEDataSet::setAttribute(SumoXMLAttr key, const std::string& value) {
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
-    // mark interval toolbar for update
-    myNet->getViewNet()->getIntervalBar().markForUpdate();
+}
+
+
+void
+GNEDataSet::toogleAttribute(SumoXMLAttr /*key*/, const bool /*value*/, const int /*previousParameters*/) {
+    throw InvalidArgument("Nothing to enable");
 }
 
 

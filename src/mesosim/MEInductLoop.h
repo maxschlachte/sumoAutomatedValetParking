@@ -48,7 +48,6 @@ public:
                  MESegment* s,
                  double positionInMeters,
                  const std::string& vTypes,
-                 const std::string& nextEdges,
                  int detectPersons);
 
 

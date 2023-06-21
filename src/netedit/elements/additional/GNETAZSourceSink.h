@@ -19,7 +19,7 @@
 /****************************************************************************/
 #pragma once
 #include <config.h>
-#include "GNEAdditional.h"
+#include "GNETAZElement.h"
 
 
 // ===========================================================================
@@ -29,7 +29,7 @@
  * @class GNETAZSourceSink
  * class used to represent a interval used in Traffic Assignment Zones
  */
-class GNETAZSourceSink : public GNEAdditional, public Parameterised {
+class GNETAZSourceSink : public GNETAZElement {
 
 public:
     /// @brief default Constructor
@@ -41,20 +41,18 @@ public:
      * @param[in] edge Edge of this TAZ Child belongs
      * @param[in] departWeight depart weight of this TAZ child
      */
-    GNETAZSourceSink(SumoXMLTag sourceSinkTag, GNEAdditional* TAZParent, GNEEdge* edge, double departWeight);
+    GNETAZSourceSink(SumoXMLTag sourceSinkTag, GNETAZElement* TAZParent, GNEEdge* edge, double departWeight);
 
     /// @brief destructor
     ~GNETAZSourceSink();
 
-    /**@brief get move operation
-     * @note returned GNEMoveOperation can be nullptr
-     */
-    GNEMoveOperation* getMoveOperation();
+    /// @brief get TAZ Shape
+    const PositionVector& getTAZElementShape() const;
 
-    /**@brief write additional element into a xml file
-     * @param[in] device device in which write parameters of additional element
+    /**@brief writte TAZElement element into a xml file
+     * @param[in] device device in which write parameters of TAZElement element
      */
-    void writeAdditional(OutputDevice& device) const;
+    void writeTAZElement(OutputDevice& device) const;
 
     /// @brief get depart weight
     double getDepartWeight() const;
@@ -67,14 +65,11 @@ public:
     /// @brief Returns position of additional in view
     Position getPositionInView() const;
 
-    /// @brief return exaggeration associated with this GLObject
+    /// @brief return exaggeration asociated with this GLObject
     double getExaggeration(const GUIVisualizationSettings& s) const;
 
     /// @brief Returns the boundary to which the view shall be centered in order to show the object
     Boundary getCenteringBoundary() const;
-
-    /// @brief update centering boundary (implies change in RTREE)
-    void updateCenteringBoundary(const bool updateGrid);
 
     /// @brief split geometry
     void splitEdgeGeometry(const double splitPosition, const GNENetworkElement* originalElement, const GNENetworkElement* newElement, GNEUndoList* undoList);
@@ -117,9 +112,6 @@ public:
      */
     double getAttributeDouble(SumoXMLAttr key) const;
 
-    /// @brief get parameters map
-    const Parameterised::Map& getACParametersMap() const;
-
     /* @brief method for getting the Attribute of an XML key in position format (to avoid unnecessary parse<position>(...) for certain attributes)
      * @param[in] key The attribute key
      * @return double with the value associated to key
@@ -160,12 +152,6 @@ protected:
 private:
     /// @brief method for setting the attribute and nothing else
     void setAttribute(SumoXMLAttr key, const std::string& value);
-
-    /// @brief set move shape
-    void setMoveShape(const GNEMoveResult& moveResult);
-
-    /// @brief commit move shape
-    void commitMoveShape(const GNEMoveResult& moveResult, GNEUndoList* undoList);
 
     /// @brief Invalidated copy constructor.
     GNETAZSourceSink(const GNETAZSourceSink&) = delete;

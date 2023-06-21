@@ -54,12 +54,6 @@ public:
     /// @brief Destructor
     ~GNECrossing();
 
-    /// @brief check if current network element is valid to be written into XML
-    bool isNetworkElementValid() const;
-
-    /// @brief return a string with the current network element problem
-    std::string getNetworkElementProblem() const;
-
     /// @name Functions related with geometry of element
     /// @{
     /// @brief get Crossing shape
@@ -101,7 +95,7 @@ public:
      */
     GUIGLObjectPopupMenu* getPopUpMenu(GUIMainWindow& app, GUISUMOAbstractView& parent);
 
-    /// @brief return exaggeration associated with this GLObject
+    /// @brief return exaggeration asociated with this GLObject
     double getExaggeration(const GUIVisualizationSettings& s) const;
 
     /// @brief update centering boundary (implies change in RTREE)
@@ -112,9 +106,6 @@ public:
      * @see GUIGlObject::drawGL
      */
     void drawGL(const GUIVisualizationSettings& s) const;
-
-    /// @brief update GLObject (geometry, ID, etc.)
-    void updateGLObject();
     /// @}
 
     /// @name inherited from GNEAttributeCarrier
@@ -134,7 +125,7 @@ public:
 
     /* @brief method for checking if the key and their correspond attribute are valids
      * @param[in] key The attribute key
-     * @param[in] value The value associated to key key
+     * @param[in] value The value asociated to key key
      * @return true if the value is valid, false in other case
      */
     bool isValid(SumoXMLAttr key, const std::string& value);
@@ -144,10 +135,15 @@ public:
      */
     bool isAttributeEnabled(SumoXMLAttr key) const;
 
+    /* @brief method for check if the value for certain attribute is computed (for example, due a network recomputing)
+     * @param[in] key The attribute key
+     */
+    bool isAttributeComputed(SumoXMLAttr key) const;
+
     /// @}
 
     /// @brief get parameters map
-    const Parameterised::Map& getACParametersMap() const;
+    const std::map<std::string, std::string>& getACParametersMap() const;
 
     /// @brief return true if a edge belongs to crossing's edges
     bool checkEdgeBelong(GNEEdge* edges) const;

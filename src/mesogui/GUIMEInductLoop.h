@@ -45,9 +45,7 @@ class GUIMEInductLoop : public MEInductLoop {
 public:
     /// Construtor
     GUIMEInductLoop(const std::string& id, MESegment* s,
-                    double position,
-                    const std::string& vTypes,
-                    const std::string& nextEdges,
+                    double position, const std::string& vTypes,
                     int detectPersons, bool show);
 
     /// Destructor
@@ -93,7 +91,7 @@ public:
          */
         void drawGL(const GUIVisualizationSettings& s) const;
 
-        /// @brief return exaggeration associated with this GLObject
+        /// @brief return exaggeration asociated with this GLObject
         double getExaggeration(const GUIVisualizationSettings& s) const;
 
         /** @brief Returns the boundary to which the view shall be centered in order to show the object

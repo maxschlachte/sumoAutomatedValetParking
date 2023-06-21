@@ -81,7 +81,7 @@ GNELoadThread::run() {
         }
     }
     if (oc.isDefault("aggregate-warnings")) {
-        oc.setDefault("aggregate-warnings", "5");
+        oc.set("aggregate-warnings", "5");
     }
     MsgHandler::initOutputOptions();
     if (!(NIFrame::checkOptions() &&
@@ -300,13 +300,7 @@ GNELoadThread::fillOptions(OptionsCont& oc) {
     oc.addDescription("routeProbe-prefix", "Netedit", "prefix for routeProbe naming");
 
     oc.doRegister("vss-prefix", new Option_String("vs"));
-    oc.addDescription("vss-prefix", "Netedit", "prefix for variable speed sign naming");
-
-    oc.doRegister("tractionSubstation-prefix", new Option_String("tr"));
-    oc.addDescription("tractionSubstation-prefix", "Netedit", "prefix for traction substation naming");
-
-    oc.doRegister("overheadWire-prefix", new Option_String("ow"));
-    oc.addDescription("overheadWire-prefix", "Netedit", "prefix for overhead wire naming");
+    oc.addDescription("vss-prefix", "Netedit", "prefix for vss naming");
 
     oc.doRegister("polygon-prefix", new Option_String("po"));
     oc.addDescription("polygon-prefix", "Netedit", "prefix for polygon naming");
@@ -380,9 +374,6 @@ GNELoadThread::fillOptions(OptionsCont& oc) {
 
     oc.doRegister("default.action-step-length", new Option_Float(0.0));
     oc.addDescription("default.action-step-length", "Processing", "Length of the default interval length between action points for the car-following and lane-change models (in seconds). If not specified, the simulation step-length is used per default. Vehicle- or VType-specific settings override the default. Must be a multiple of the simulation step-length.");
-
-    oc.doRegister("default.speeddev", new Option_Float(-1));
-    oc.addDescription("default.speeddev", "Processing", "Select default speed deviation. A negative value implies vClass specific defaults (0.1 for the default passenger class");
 
     NIFrame::fillOptions(true);
     NBFrame::fillOptions(false);

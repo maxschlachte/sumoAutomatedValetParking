@@ -117,7 +117,7 @@ def parse_length(xmldoc):
     """parses the vehicle type lengths from the VISSIM data
     :param xmldoc:  input VISSIM xml
     :type xmldoc:   xml.dom.minidom.Document
-    :return:    map of lengths by str(numeric type)
+    :return:    map of lenghts by str(numeric type)
     :rtype:     dict
     """
     len_d = dict()
@@ -562,7 +562,7 @@ if __name__ == '__main__':
     create_flow_elems(routes_by_start_d, flow_d, routes_Elem)
     print('OK.\n---')
 
-    print('* writing output:')
+    print('* wrinting output:')
     # write the data into a .rou.xml file
     out_Fn = args.output_file
     if not out_Fn.endswith('.xml'):

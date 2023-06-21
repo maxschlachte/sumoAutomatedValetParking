@@ -233,9 +233,7 @@ public:
                   const CrossSectionVector& entries, const CrossSectionVector& exits,
                   double haltingSpeedThreshold,
                   SUMOTime haltingTimeThreshold,
-                  const std::string& vTypes,
-                  const std::string& nextEdges,
-                  int detectPersons, bool openEntry);
+                  const std::string& vTypes, int detectPersons, bool openEntry);
 
 
     /// @brief Destructor
@@ -276,11 +274,6 @@ public:
     */
     void leave(const SUMOTrafficObject& veh, const double leaveTimestep, const double fractionTimeOnDet, bool isBackward = false);
 
-    /// @brief Returns the entry cross sections
-    const CrossSectionVector& getEntries() const;
-
-    /// @brief Returns the exit cross sections
-    const CrossSectionVector& getExits() const;
 
     /// @name Methods returning current values
     /// @{
@@ -374,7 +367,7 @@ public:
     void detectorUpdate(const SUMOTime step);
 
     /** @brief Remove all vehicles before quick-loading state */
-    virtual void clearState(SUMOTime step);
+    virtual void clearState();
 
 protected:
     void notifyMovePerson(MSTransportable* p, MSMoveReminder* rem, double detPos, int dir, double pos);

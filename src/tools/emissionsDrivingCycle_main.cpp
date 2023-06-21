@@ -118,10 +118,7 @@ main(int argc, char** argv) {
     oc.addOptionSubTopic("Output");
     oc.doRegister("output-file", 'o', new Option_String());
     oc.addSynonyme("output", "output-file");
-    oc.addDescription("output", "Output", "Defines the file to write the emission cycle results into.");
-
-    oc.doRegister("output.attributes", new Option_StringVector());
-    oc.addDescription("output.attributes", "Output", "Defines the attributes to write.");
+    oc.addDescription("output", "Output", "Defines the file to write the emission cycle results into. ");
 
     oc.doRegister("emission-output", new Option_FileName());
     oc.addDescription("emission-output", "Output", "Save the emission values of each vehicle in XML");
@@ -131,17 +128,8 @@ main(int argc, char** argv) {
     oc.addDescription("sum-output", "Output", "Save the aggregated and normed emission values of each vehicle in CSV");
 
     oc.addOptionSubTopic("Emissions");
-    oc.doRegister("emissions.volumetric-fuel", new Option_Bool(false));
-    oc.addDescription("emissions.volumetric-fuel", "Emissions", "Return fuel consumption values in (legacy) unit l instead of mg");
-
     oc.doRegister("phemlight-path", new Option_FileName(StringVector({ "./PHEMlight/" })));
-    oc.addDescription("phemlight-path", "Emissions", "Determines where to load PHEMlight definitions from");
-
-    oc.doRegister("phemlight-year", new Option_Integer(0));
-    oc.addDescription("phemlight-year", "Emissions", "Enable fleet age modelling with the given reference year in PHEMlight5");
-
-    oc.doRegister("phemlight-temperature", new Option_Float(INVALID_DOUBLE));
-    oc.addDescription("phemlight-temperature", "Emissions", "Set ambient temperature to correct NOx emissions in PHEMlight5");
+    oc.addDescription("phemlight-path", "Emissions", "Determines where to load PHEMlight definitions from.");
 
     oc.doRegister("begin", new Option_String("0", "TIME"));
     oc.addDescription("begin", "Processing", "Defines the begin time in seconds;");
@@ -176,24 +164,6 @@ main(int argc, char** argv) {
         std::ostream* out = nullptr;
         if (oc.isSet("output-file")) {
             out = new std::ofstream(oc.getString("output-file").c_str());
-        }
-        long long int attributes = 0;
-        if (oc.isSet("output.attributes")) {
-            for (std::string attrName : oc.getStringVector("output.attributes")) {
-                if (!SUMOXMLDefinitions::Attrs.hasString(attrName)) {
-                    if (attrName == "all") {
-                        attributes = std::numeric_limits<long long int>::max() - 1;
-                    } else {
-                        WRITE_ERROR("Unknown attribute '" + attrName + "' to write in output.");
-                    }
-                    continue;
-                }
-                int attr = SUMOXMLDefinitions::Attrs.get(attrName);
-                assert(attr < 63);
-                attributes |= ((long long int)1 << attr);
-            }
-        } else {
-            attributes = ~(((long long int)1 << SUMO_ATTR_AMOUNT));
         }
         OutputDevice::createDeviceByOption("emission-output", "emission-export", "emission_file.xsd");
         OutputDevice* xmlOut = nullptr;
@@ -231,7 +201,7 @@ main(int argc, char** argv) {
 
         const SUMOEmissionClass defaultClass = PollutantsInterface::getClassByName(oc.getString("emission-class"));
         const bool computeA = oc.getBool("compute-a") || oc.getBool("compute-a.forward");
-        TrajectoriesHandler handler(computeA, oc.getBool("compute-a.forward"), oc.getBool("compute-a.zero-correction"), defaultClass, &energyParams, attributes, oc.getFloat("slope"), out, xmlOut);
+        TrajectoriesHandler handler(computeA, oc.getBool("compute-a.forward"), oc.getBool("compute-a.zero-correction"), defaultClass, &energyParams, oc.getFloat("slope"), out, xmlOut);
 
         if (oc.isSet("timeline-file")) {
             int skip = oc.getBool("skip-first") ? 1 : oc.getInt("timeline-file.skip");
@@ -243,9 +213,6 @@ main(int argc, char** argv) {
             int time = 0;
 
             LineReader lr(oc.getString("timeline-file"));
-            if (!lr.good()) {
-                throw ProcessError("Unreadable file '" + lr.getFileName() + "'.");
-            }
             while (lr.hasMore()) {
                 std::string line = lr.readLine();
                 if (skip > 0) {
@@ -268,7 +235,7 @@ main(int argc, char** argv) {
                         }
                         double a = !computeA && st.hasNext() ? StringUtils::toDouble(st.next()) : TrajectoriesHandler::INVALID_VALUE;
                         double s = haveSlope && st.hasNext() ? StringUtils::toDouble(st.next()) : TrajectoriesHandler::INVALID_VALUE;
-                        if (handler.writeEmissions(*out, "", defaultClass, &energyParams, attributes, t, v, a, s)) {
+                        if (handler.writeEmissions(*out, "", defaultClass, &energyParams, t, v, a, s)) {
                             l += v;
                             totalA += a;
                             totalS += s;

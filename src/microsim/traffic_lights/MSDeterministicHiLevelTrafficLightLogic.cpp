@@ -28,7 +28,7 @@
 MSDeterministicHiLevelTrafficLightLogic::MSDeterministicHiLevelTrafficLightLogic(
     MSTLLogicControl& tlcontrol, const std::string& id,
     const std::string& programID, const Phases& phases, int step,
-    SUMOTime delay, const Parameterised::Map& parameters) :
+    SUMOTime delay, const std::map<std::string, std::string>& parameters) :
     MSSOTLHiLevelTrafficLightLogic(tlcontrol, id, programID, TrafficLightType::HILVL_DETERMINISTIC, phases, step,
                                    delay, parameters) {
 
@@ -124,7 +124,7 @@ double MSDeterministicHiLevelTrafficLightLogic::getMeanSpeedForInputLanes() {
         WRITE_MESSAGE(time2string(MSNet::getInstance()->getCurrentTimeStep()) + " MSDeterministicHiLevelTrafficLightLogic::getMeanSpeedForInputLanes:: in" + i_str.str());
 #endif
     }
-    return vSpeedInTot / (double)inputLanes.size();
+    return vSpeedInTot / inputLanes.size();
 }
 
 double MSDeterministicHiLevelTrafficLightLogic::getMeanSpeedForOutputLanes() {
@@ -145,7 +145,7 @@ double MSDeterministicHiLevelTrafficLightLogic::getMeanSpeedForOutputLanes() {
         WRITE_MESSAGE(time2string(MSNet::getInstance()->getCurrentTimeStep()) + " MSDeterministicHiLevelTrafficLightLogic::getMeanSpeedForOutputLanes:: out" + i_str.str());
 #endif
     }
-    return vSpeedOutTot / (double)outputLanes.size();
+    return vSpeedOutTot / outputLanes.size();
 }
 
 void MSDeterministicHiLevelTrafficLightLogic::decidePolicy() {

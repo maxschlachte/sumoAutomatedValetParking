@@ -27,7 +27,7 @@ sumo -n net.net.xml -r routes.rou.xml -a tlsOffsets.add.xml
 # tlsCycleAdaptation.py
 
 This script modifies the duration of green phases according to Websters
-formula to best accommodate a given traffic demand. Example call:
+formula to best accomodate a given traffic demand. Example call:
 
 ```
 python tools/tlsCycleAdaptation.py -n net.net.xml -r routes.rou.xml -o newTLS.add.xml
@@ -324,32 +324,6 @@ FZ32;0;15;1;3;40;55
 FZ41;25;35;1;3;;
 ```
 
-## Example for an actuated traffic light
-
-The **actuated** setting defines a list of times (given as cycleSeconds). Each pair defines the start and end of an actuation range.
-The difference between each pair of values corresponds to the difference between *minDur* and *maxDur* and thus the possible length extension.
-
-```
-[general];;;;;;
-cycle time;60;;;;;
-key;1;;;;;
-subkey;SZP_Prio;;;;;
-offset;5;;;;;
-actuated;5;10
-[links];;;;;;
-FZ11;-474_0;;;;;
-FZ11;-474_1;;;;;
-FZ21;-472_0;;;;;
-FZ31;-468_0;;;;;
-FZ31;-468_1;;;;;
-FZ41;-470_0;;;;;
-[signal groups];;;;;;
-id;on1;off1;transOn;transOff;;
-FZ11;0;10;1;3;;
-FZ21;15;25;1;3;;
-FZ31;30;40;1;3;;
-FZ41;45;55;1;3;;
-```
 
 # buildTransitions.py
 

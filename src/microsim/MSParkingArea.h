@@ -206,7 +206,7 @@ public:
                              MSChargingSpace* chargingSpace);
 
 
-    // (qpk): method for adding subspaces to space
+    // MS_EDIT (qpk): method for adding subspaces to space
     /** @brief setter for adding a subspace to the most recent space
      *
      * @param[in] x X position of the lot center
@@ -219,10 +219,12 @@ public:
      * @param[in] charging space object if the space is a space for charging or nullpointer
      */
     virtual void addSubspace(double x, double y, double z,
-                             double width, double length,
-                             double angle, double slope,
-                             // (chs): charging space parameter in addSubspace
-                             MSChargingSpace* chargingSpace);
+                     double width, double length,
+                     double angle, double slope,
+                     // (chs): charging space parameter in addSubspace
+                     MSChargingSpace* chargingSpace);
+
+    double getFirstFreePos() const;
 
     // (qpk): declaration for method that pushes vehicles in a queue forward
     /** @brief pushes vehicles in a queue forward
@@ -310,60 +312,69 @@ protected:
     /** @struct LotSpaceDefinition
      * @brief Representation of a single lot space
      */
-    struct LotSpaceDefinition {
-        /// @brief default constructor
-        LotSpaceDefinition();
+     struct LotSpaceDefinition {
+          /// @brief default constructor
+          LotSpaceDefinition();
 
-        /// @brief parameter constructor
-        LotSpaceDefinition(int index, SUMOVehicle* vehicle, double x, double y, double z, double rotation, double slope, double width, double length);
+          /// @brief parameter constructor
+          LotSpaceDefinition(int index, SUMOVehicle* vehicle, double x, double y, double z, double rotation, double slope, double width, double length);
 
-        // (chs): constructor for spaces with charging ability
-        /// @brief parameter constructor
-        LotSpaceDefinition(int index, SUMOVehicle* vehicle, double x, double y, double z, double rotation, double slope, double width, double length, MSChargingSpace* chargingSpace);
+          // (chs): constructor for spaces with charging ability
+          /// @brief parameter constructor
+          LotSpaceDefinition(int index, SUMOVehicle* vehicle, double x, double y, double z, double rotation, double slope, double width, double length, MSChargingSpace* chargingSpace);
 
-        // (utl): remove all const identifiers to make sorting possible
-        /// @brief the running index
-        //const int index;
-        int index;
+          // (utl): remove const identifier to make sorting possible
+          /// @brief the running index
+          //const int index;
+          int index;
 
-        /// @brief The last parked vehicle or 0
-        SUMOVehicle* vehicle;
+          /// @brief The last parked vehicle or 0
+          //const SUMOVehicle* vehicle;
+          SUMOVehicle* vehicle;
 
-        /// @brief The position of the vehicle when parking in this space
-        Position position;
+          /// @brief The position of the vehicle when parking in this space
+          //const Position position;
+          Position position;
 
-        /// @brief The rotation
-        double rotation;
+          /// @brief The rotation
+          //const double rotation;
+          double rotation;
 
-        /// @brief The slope
-        double slope;
+          /// @brief The slope
+          //const double slope;
+          double slope;
 
-        /// @brief The width
-        double width;
+          /// @brief The width
+          //const double width;
+          double width;
 
-        /// @brief The length
-        double length;
+          /// @brief The length
+          //const double length;
+          double length;
 
-        /// @brief The position along the lane that the vehicle needs to reach for entering this lot
-        double endPos;
+          /// @brief The position along the lane that the vehicle needs to reach for entering this lot
+          double endPos;
 
-        ///@brief The angle between lane and lot through which a vehicle must manoeuver to enter the lot
-        double manoeuverAngle;
+          ///@brief The angle between lane and lot through which a vehicle must manoeuver to enter the lot
+          double manoeuverAngle;
 
-        ///@brief Whether the lot is on the LHS of the lane relative to the lane direction
-        bool sideIsLHS;
+          ///@brief Whether the lot is on the LHS of the lane relative to the lane direction
+          bool sideIsLHS;
 
-        // (chs): holds an charging space object if the space is a charging space
-        /// @brief Charging Space if the Lot is one, otherwise nullptr
-        MSChargingSpace* chargingSpace;
+          // (chs): holds an charging space object if the space is a charging space
+          /// @brief Charging Space if the Lot is one, otherwise nullptr
+          MSChargingSpace* chargingSpace;
 
-        // (qpk): vector list of subspaces
-        /// @brief All the spaces in this parking area
-        std::vector<LotSpaceDefinition> subspaces;
-    };
+          // (qpk): vector list of subspaces
+          /// @brief All the spaces in this parking area
+          std::vector<LotSpaceDefinition> subspaces;
 
-    // (qpk): sorting condition
-    static bool compareEndPos(LotSpaceDefinition csd1, LotSpaceDefinition csd2);
+          /// @brief Invalidated assignment operator.
+          //LotSpaceDefinition& operator=(const LotSpaceDefinition&) = delete;
+      };
+
+      // (qpk): sorting condition
+      static bool compareEndPos(LotSpaceDefinition csd1, LotSpaceDefinition csd2);
 
     /** @brief Computes the last free position on this stop
      *
@@ -376,10 +387,7 @@ protected:
     /// @brief Last free lot number (-1 no free lot)
     int myLastFreeLot;
 
-    /// @brief Stop area capacity configured via roadsideCapacity
-    int myRoadSideCapacity;
-
-    /// @brief Stop area total capacity
+    /// @brief Stop area capacity
     int myCapacity;
 
     /// @brief Whether vehicles stay on the road

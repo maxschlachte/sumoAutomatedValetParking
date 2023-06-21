@@ -213,9 +213,6 @@ struct GUIVisualizationColorSettings {
     /// @brief color for Stops
     RGBColor stopColor;
 
-    /// @brief color for Waypoints
-    RGBColor waypointColor;
-
     /// @brief color for vehicle trips
     RGBColor vehicleTripColor;
 
@@ -283,7 +280,7 @@ struct GUIVisualizationCandidateColorSettings {
 /// @brief struct for connection settings
 struct GUIVisualizationNeteditSizeSettings {
 
-    /// @brief junction bubble radius
+    /// @brief junction buuble radius
     static const double junctionBubbleRadius;
 
     /// @brief moving junction geometry point radius
@@ -363,18 +360,6 @@ struct GUIVisualizationAdditionalSettings {
 
     /// @brief connection color selected
     static const RGBColor connectionColorSelected;
-
-    /// @brief tractionSubstation size
-    static const double tractionSubstationSize;
-
-    /// @brief overhead wire color top
-    static const RGBColor overheadWireColorTop;
-
-    /// @brief overhead wire color bot
-    static const RGBColor overheadWireColorBot;
-
-    /// @brief overhead wire color selected
-    static const RGBColor overheadWireColorSelected;
 
     /// @brief arrow width
     static const double arrowWidth;
@@ -584,10 +569,7 @@ class GUIVisualizationSettings {
 
 public:
     /// @brief constructor
-    GUIVisualizationSettings(const std::string& _name, bool _netedit = false);
-
-    /// @brief copy all content from another GUIVisualizationSettings (note: DON'T USE in DrawGL functions!)
-    void copy(const GUIVisualizationSettings& s);
+    GUIVisualizationSettings(bool _netedit = false);
 
     /// @brief init default settings
     void initNeteditDefaults();
@@ -712,7 +694,7 @@ public:
     // Setting bundles for optional drawing names with size and color
     GUIVisualizationTextSettings edgeName, internalEdgeName, cwaEdgeName, streetName, edgeValue;
 
-    /// @brief flag to show or hide connectors
+    /// @brief flag to show or hidde connectors
     bool hideConnectors;
 
     /// @brief The lane exaggeration (upscale thickness)
@@ -920,19 +902,6 @@ public:
     /// @}
 
 
-    /// @name 3D visualization settings
-    /// @{
-    /// @brief whether the TLS link markers should be drawn
-    bool show3DTLSLinkMarkers;
-
-    /// @brief whether the semi-transparent domes around 3D TL models should be drawn
-    bool show3DTLSDomes;
-
-    /// @brief whether 3D TLS models should be generated automatically
-    bool generate3DTLSModels;
-    /// @}
-
-
     /// @brief Information whether the size legend shall be drawn
     bool showSizeLegend;
 
@@ -965,9 +934,6 @@ public:
 
     /// @brief flag to force draw for rectangle selection (see drawForRectangleSelection)
     bool forceDrawForRectangleSelection;
-
-    // Setting bundles for optional drawing geometry point indices
-    GUIVisualizationTextSettings geometryIndices;
 
     /**@brief whether drawing is performed in left-hand networks
      * @note used to avoid calls to OptionsCont::getOptions() in every drawgl(...) function, and
@@ -1022,11 +988,4 @@ public:
 
     /// @brief detail settings
     GUIVisualizationDetailSettings detailSettings;
-
-private:
-    /// @brief set copy constructor private
-    GUIVisualizationSettings(const GUIVisualizationSettings&) = default;
-
-    /// @brief set assignment operator private
-    GUIVisualizationSettings& operator=(const GUIVisualizationSettings&) = default;
 };

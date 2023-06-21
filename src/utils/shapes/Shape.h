@@ -25,7 +25,6 @@
 #include <map>
 #include <utils/common/Named.h>
 #include <utils/common/RGBColor.h>
-#include <utils/common/Parameterised.h>
 
 
 // ===========================================================================
@@ -49,7 +48,7 @@ public:
     static const double DEFAULT_IMG_WIDTH;
     static const double DEFAULT_IMG_HEIGHT;
     static const std::string DEFAULT_NAME;
-    static const Parameterised::Map DEFAULT_PARAMETERS;
+    static const std::map<std::string, std::string> DEFAULT_PARAMETERS;
     /// @}
 
     /** @brief Constructor

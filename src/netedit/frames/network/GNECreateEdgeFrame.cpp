@@ -19,18 +19,23 @@
 /****************************************************************************/
 #include <config.h>
 
+#include <netbuild/NBNetBuilder.h>
 #include <netedit/GNENet.h>
 #include <netedit/GNEUndoList.h>
 #include <netedit/GNEViewNet.h>
 #include <netedit/GNEViewParent.h>
 #include <netedit/changes/GNEChange_EdgeType.h>
+#include <netedit/dialogs/GNEAllowDisallow.h>
 #include <netedit/dialogs/GNESingleParametersDialog.h>
 #include <netedit/elements/network/GNEEdgeType.h>
 #include <netedit/elements/network/GNELaneType.h>
 #include <netedit/elements/network/GNEEdgeTemplate.h>
 #include <netedit/elements/network/GNELaneTemplate.h>
+#include <netimport/NITypeLoader.h>
+#include <netimport/NIXMLTypesHandler.h>
 #include <utils/gui/div/GUIDesigns.h>
 #include <utils/gui/windows/GUIAppEnum.h>
+#include <utils/options/OptionsCont.h>
 
 
 #include "GNECreateEdgeFrame.h"
@@ -67,7 +72,7 @@ FXIMPLEMENT(GNECreateEdgeFrame::LaneTypeSelector,       FXGroupBoxModule,     La
 // ---------------------------------------------------------------------------
 
 GNECreateEdgeFrame::EdgeTypeSelector::EdgeTypeSelector(GNECreateEdgeFrame* createEdgeFrameParent) :
-    FXGroupBoxModule(createEdgeFrameParent, "Template selector"),
+    FXGroupBoxModule(createEdgeFrameParent->myContentFrame, "Template selector"),
     myCreateEdgeFrameParent(createEdgeFrameParent),
     myDefaultEdgeType(new GNEEdgeType(createEdgeFrameParent)),
     myCurrentIndex(0) {
@@ -375,7 +380,7 @@ GNECreateEdgeFrame::EdgeTypeSelector::fillComboBox() {
 // ---------------------------------------------------------------------------
 
 GNECreateEdgeFrame::LaneTypeSelector::LaneTypeSelector(GNECreateEdgeFrame* createEdgeFrameParent) :
-    FXGroupBoxModule(createEdgeFrameParent, "LaneType selector"),
+    FXGroupBoxModule(createEdgeFrameParent->myContentFrame, "LaneType selector"),
     myCreateEdgeFrameParent(createEdgeFrameParent),
     myLaneIndex(0) {
     // lane types combo box
@@ -499,37 +504,6 @@ GNECreateEdgeFrame::LaneTypeSelector::onCmdAddLaneType(FXObject*, FXSelector, vo
 
 long
 GNECreateEdgeFrame::LaneTypeSelector::onCmdDeleteLaneType(FXObject*, FXSelector, void*) {
-    // check what edgeType is being edited
-    if (myCreateEdgeFrameParent->myEdgeTypeSelector->useDefaultEdgeType()) {
-        // add new lane in default edge type
-        myCreateEdgeFrameParent->myEdgeTypeSelector->getDefaultEdgeType()->removeLaneType(myLaneIndex);
-        // refresh laneTypeSelector
-        refreshLaneTypeSelector();
-        // set combo box
-        myLaneTypesComboBox->setCurrentItem(0);
-    } else if (!myCreateEdgeFrameParent->myEdgeTypeSelector->useEdgeTemplate()) {
-        // get selected
-        const auto edgeType = myCreateEdgeFrameParent->myEdgeTypeSelector->getEdgeTypeSelected();
-        if (edgeType) {
-            // create new edgeType
-            GNEEdgeType* newEdgeType = new GNEEdgeType(edgeType);
-            // create laneTypes (except current)
-            for (int i = 0; i < (int)edgeType->getLaneTypes().size(); i++) {
-                if (i != myLaneIndex) {
-                    newEdgeType->addLaneType(new GNELaneType(newEdgeType, edgeType->getLaneTypes().at(i)));
-                }
-            }
-            // remove old edgeTyp und and newEdgeType
-            myCreateEdgeFrameParent->getViewNet()->getUndoList()->begin(GUIIcon::LANE, "remove laneType");
-            myCreateEdgeFrameParent->getViewNet()->getUndoList()->add(new GNEChange_EdgeType(edgeType, false), true);
-            myCreateEdgeFrameParent->getViewNet()->getUndoList()->add(new GNEChange_EdgeType(newEdgeType, true), true);
-            myCreateEdgeFrameParent->getViewNet()->getUndoList()->end();
-            // update index
-            myLaneIndex = myLaneTypesComboBox->getNumItems() - 1;
-            // set current edgeType in selector
-            myCreateEdgeFrameParent->myEdgeTypeSelector->setCurrentEdgeType(newEdgeType);
-        }
-    }
     return 0;
 }
 
@@ -565,7 +539,7 @@ GNECreateEdgeFrame::LaneTypeSelector::updateComboBox() {
 // ---------------------------------------------------------------------------
 
 GNECreateEdgeFrame::Legend::Legend(GNECreateEdgeFrame* createEdgeFrameParent) :
-    FXGroupBoxModule(createEdgeFrameParent, "Information") {
+    FXGroupBoxModule(createEdgeFrameParent->myContentFrame, "Information") {
     // crate information
     std::ostringstream information;
     // add label for shift+click
@@ -596,11 +570,11 @@ GNECreateEdgeFrame::GNECreateEdgeFrame(FXHorizontalFrame* horizontalFrameParent,
     // create custom edge selector
     myEdgeTypeSelector = new EdgeTypeSelector(this);
     // Create edgeType parameters
-    myEdgeTypeAttributes = new GNEAttributesCreator(this);
+    myEdgeTypeAttributes = new GNEFrameAttributeModules::AttributesCreator(this);
     // lane type selector
     myLaneTypeSelector = new LaneTypeSelector(this);
     // Create laneType parameters
-    myLaneTypeAttributes = new GNEAttributesCreator(this);
+    myLaneTypeAttributes = new GNEFrameAttributeModules::AttributesCreator(this);
     // create edge selector legend
     myLegend = new Legend(this);
 }
@@ -615,10 +589,6 @@ GNECreateEdgeFrame::processClick(const Position& clickedPosition, const GNEViewN
     // first check if there is an edge template, an edge type (default or custom)
     if (!myEdgeTypeSelector->useDefaultEdgeType() && !myEdgeTypeSelector->useEdgeTemplate() && (myEdgeTypeSelector->getEdgeTypeSelected() == nullptr)) {
         WRITE_WARNING("Select either default edgeType or a custom edgeType or template");
-    } else if (!myEdgeTypeAttributes->areValuesValid()) {
-        WRITE_WARNING("Invalid edge attributes");
-    } else if (!myLaneTypeAttributes->areValuesValid()) {
-        WRITE_WARNING("Invalid lane attributes");
     } else {
         // obtain junction depending of gridEnabled
         GNEJunction* junction = nullptr;
@@ -645,7 +615,7 @@ GNECreateEdgeFrame::processClick(const Position& clickedPosition, const GNEViewN
             if (myCreateEdgeSource != junction) {
                 // may fail to prevent double edges
                 GNEEdge* newEdge = myViewNet->getNet()->createEdge(myCreateEdgeSource, junction, nullptr, myViewNet->getUndoList());
-                // check if edge was successfully created
+                // check if edge was sucesfully created
                 if (newEdge) {
                     // set parameters
                     if (myEdgeTypeSelector->useEdgeTemplate()) {
@@ -741,7 +711,7 @@ GNECreateEdgeFrame::getEdgeTypeSelector() const {
 }
 
 
-GNEAttributesCreator*
+GNEFrameAttributeModules::AttributesCreator*
 GNECreateEdgeFrame::getEdgeTypeAttributes() const {
     return myEdgeTypeAttributes;
 }
@@ -753,7 +723,7 @@ GNECreateEdgeFrame::getLaneTypeSelector() {
 }
 
 
-GNEAttributesCreator*
+GNEFrameAttributeModules::AttributesCreator*
 GNECreateEdgeFrame::getLaneTypeAttributes() const {
     return myLaneTypeAttributes;
 }

@@ -49,7 +49,6 @@
 #include <utils/shapes/PointOfInterest.h>
 #include <utils/shapes/ShapeContainer.h>
 #include <utils/xml/XMLSubSys.h>
-#include <libsumo/Helper.h>
 #include <microsim/MSNet.h>
 #include <microsim/MSVehicle.h>
 #include <microsim/MSEdge.h>
@@ -145,14 +144,6 @@ bool
 TraCIServer::wrapStringList(const std::string& /* objID */, const int /* variable */, const std::vector<std::string>& value) {
     myWrapperStorage.writeUnsignedByte(libsumo::TYPE_STRINGLIST);
     myWrapperStorage.writeStringList(value);
-    return true;
-}
-
-
-bool
-TraCIServer::wrapDoubleList(const std::string& /* objID */, const int /* variable */, const std::vector<double>& value) {
-    myWrapperStorage.writeUnsignedByte(libsumo::TYPE_DOUBLELIST);
-    myWrapperStorage.writeDoubleList(value);
     return true;
 }
 
@@ -1242,11 +1233,10 @@ TraCIServer::processSingleSubscription(const libsumo::Subscription& s, tcpip::St
             }
         }
     }
-    int length = (1 + 4) + 1 + (4 + (int)s.id.length()) + 1 + (int)outputStorage.size();
+    int length = (1 + 4) + 1 + (4 + (int)(s.id.length())) + 1 + (int)outputStorage.size();
     if (s.contextDomain > 0) {
-        length += 1 + 4;  // context domain and number of objects
+        length += 4;
     }
-    // we always write extended command length here for backward compatibility
     writeInto.writeUnsignedByte(0); // command length -> extended
     writeInto.writeInt(length);
     writeInto.writeUnsignedByte(s.commandId + 0x10);

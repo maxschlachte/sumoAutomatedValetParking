@@ -17,25 +17,17 @@ set(utils_foxtools_STAT_SRCS
    FXSevenSegment.h
    FXSingleEventThread.cpp
    FXSingleEventThread.h
-   FXStaticToolTip.cpp
-   FXStaticToolTip.h
    FXSynchQue.h
    FXSynchSet.h
    FXThreadEvent.cpp
    FXThreadEvent.h
-   FXTreeListDynamic.cpp
-   FXTreeListDynamic.h
+   FXTreeListDinamic.cpp
+   FXTreeListDinamic.h
    FXWorkerThread.h
    MFXAddEditTypedTable.cpp
    MFXAddEditTypedTable.h
-   MFXButtonTooltip.cpp
-   MFXButtonTooltip.h
    MFXCheckableButton.cpp
    MFXCheckableButton.h
-   MFXRealSpinner.cpp
-   MFXRealSpinner.h
-   MFXComboBox.cpp
-   MFXComboBox.h
    MFXEditableTable.cpp
    MFXEditableTable.h
    MFXIconComboBox.cpp

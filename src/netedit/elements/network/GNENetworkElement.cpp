@@ -33,15 +33,23 @@ GNENetworkElement::GNENetworkElement(GNENet* net, const std::string& id, GUIGlOb
                                      const std::vector<GNEEdge*>& edgeParents,
                                      const std::vector<GNELane*>& laneParents,
                                      const std::vector<GNEAdditional*>& additionalParents,
+                                     const std::vector<GNEShape*>& shapeParents,
+                                     const std::vector<GNETAZElement*>& TAZElementParents,
                                      const std::vector<GNEDemandElement*>& demandElementParents,
                                      const std::vector<GNEGenericData*>& genericDataParents) :
     GUIGlObject(type, id),
-    GNEHierarchicalElement(net, tag, junctionParents, edgeParents, laneParents, additionalParents, demandElementParents, genericDataParents),
+    GNEHierarchicalElement(net, tag, junctionParents, edgeParents, laneParents, additionalParents, shapeParents, TAZElementParents, demandElementParents, genericDataParents),
     myShapeEdited(false) {
 }
 
 
 GNENetworkElement::~GNENetworkElement() {}
+
+
+const std::string&
+GNENetworkElement::getID() const {
+    return getMicrosimID();
+}
 
 
 GUIGlObject*
@@ -59,20 +67,6 @@ GNENetworkElement::setShapeEdited(const bool value) {
 bool
 GNENetworkElement::isShapeEdited() const {
     return myShapeEdited;
-}
-
-
-bool
-GNENetworkElement::GNENetworkElement::isNetworkElementValid() const {
-    // implement in children
-    return true;
-}
-
-
-std::string
-GNENetworkElement::GNENetworkElement::getNetworkElementProblem() const {
-    // implement in children
-    return "";
 }
 
 
@@ -101,6 +95,18 @@ GNENetworkElement::getCenteringBoundary() const {
 }
 
 
+void
+GNENetworkElement::enableAttribute(SumoXMLAttr /*key*/, GNEUndoList* /*undoList*/) {
+    //
+}
+
+
+void
+GNENetworkElement::disableAttribute(SumoXMLAttr /*key*/, GNEUndoList* /*undoList*/) {
+    //
+}
+
+
 std::string
 GNENetworkElement::getPopUpID() const {
     if (myTagProperty.getTag() == SUMO_TAG_CONNECTION) {
@@ -122,6 +128,12 @@ GNENetworkElement::getHierarchyName() const {
     } else {
         return getTagStr();
     }
+}
+
+
+void
+GNENetworkElement::toogleAttribute(SumoXMLAttr /*key*/, const bool /*value*/, const int /*previousParameters*/) {
+    throw InvalidArgument("Nothing to enable");
 }
 
 /****************************************************************************/

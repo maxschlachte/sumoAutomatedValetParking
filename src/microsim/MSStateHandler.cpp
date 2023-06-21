@@ -48,7 +48,6 @@
 #include <microsim/MSNet.h>
 #include <microsim/MSVehicleTransfer.h>
 #include <microsim/MSInsertionControl.h>
-#include <microsim/MSEdgeControl.h>
 #include <microsim/MSRoute.h>
 #include <microsim/MSVehicleControl.h>
 #include <microsim/MSDriverState.h>
@@ -118,8 +117,8 @@ MSStateHandler::~MSStateHandler() {
 
 
 void
-MSStateHandler::saveState(const std::string& file, SUMOTime step, bool usePrefix) {
-    OutputDevice& out = OutputDevice::getDevice(file, usePrefix);
+MSStateHandler::saveState(const std::string& file, SUMOTime step) {
+    OutputDevice& out = OutputDevice::getDevice(file);
     out.setPrecision(OptionsCont::getOptions().getInt("save-state.precision"));
     out.writeHeader<MSEdge>(SUMO_TAG_SNAPSHOT);
     out.writeAttr("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance").writeAttr("xsi:noNamespaceSchemaLocation", "http://sumo.dlr.de/xsd/state_file.xsd");
@@ -131,13 +130,10 @@ MSStateHandler::saveState(const std::string& file, SUMOTime step, bool usePrefix
     }
     if (OptionsCont::getOptions().getBool("save-state.rng")) {
         saveRNGs(out);
-        if (!MSGlobals::gUseMesoSim) {
-            MSNet::getInstance()->getEdgeControl().saveState(out);
-        }
     }
     MSRoute::dict_saveState(out);
-    MSNet::getInstance()->getVehicleControl().saveState(out);
     MSNet::getInstance()->getInsertionControl().saveState(out);
+    MSNet::getInstance()->getVehicleControl().saveState(out);
     if (OptionsCont::getOptions().getBool("save-state.transportables")) {
         if (MSNet::getInstance()->hasPersons()) {
             out.openTag(SUMO_TAG_TRANSPORTABLES).writeAttr(SUMO_ATTR_TYPE, "person");
@@ -151,14 +147,17 @@ MSStateHandler::saveState(const std::string& file, SUMOTime step, bool usePrefix
         }
     }
     MSVehicleTransfer::getInstance()->saveState(out);
-    for (MSEdge* const edge : MSEdge::getAllEdges()) {
-        if (MSGlobals::gUseMesoSim) {
-            for (MESegment* s = MSGlobals::gMesoNet->getSegmentForEdge(*edge); s != nullptr; s = s->getNextSegment()) {
+    if (MSGlobals::gUseMesoSim) {
+        for (int i = 0; i < MSEdge::dictSize(); i++) {
+            for (MESegment* s = MSGlobals::gMesoNet->getSegmentForEdge(*MSEdge::getAllEdges()[i]); s != nullptr; s = s->getNextSegment()) {
                 s->saveState(out);
             }
-        } else {
-            for (MSLane* const lane : edge->getLanes()) {
-                lane->saveState(out);
+        }
+    } else {
+        for (int i = 0; i < MSEdge::dictSize(); i++) {
+            const std::vector<MSLane*>& lanes = MSEdge::getAllEdges()[i]->getLanes();
+            for (std::vector<MSLane*>::const_iterator it = lanes.begin(); it != lanes.end(); ++it) {
+                (*it)->saveState(out);
             }
         }
     }
@@ -214,20 +213,6 @@ MSStateHandler::myStartElement(int element, const SUMOSAXAttributes& attrs) {
             MSLane::loadRNGState(index, state);
             break;
         }
-        case SUMO_TAG_EDGECONTROL: {
-            bool ok;
-            std::list<MSLane*> activeLanes;
-            const std::vector<std::string>& laneIDs = attrs.get<std::vector<std::string> >(SUMO_ATTR_LANES, nullptr, ok, false);
-            for (const std::string& laneID : laneIDs) {
-                MSLane* lane = MSLane::dictionary(laneID);
-                if (lane == nullptr) {
-                    throw ProcessError("Unknown lane '" + laneID + "' in loaded state.");
-                }
-                activeLanes.push_back(lane);
-            }
-            MSNet::getInstance()->getEdgeControl().setActiveLanes(activeLanes);
-            break;
-        }
         case SUMO_TAG_DELAY: {
             if (myVCAttrs != nullptr) {
                 delete myVCAttrs;
@@ -236,12 +221,14 @@ MSStateHandler::myStartElement(int element, const SUMOSAXAttributes& attrs) {
             break;
         }
         case SUMO_TAG_FLOWSTATE: {
+            SUMOVehicleParameter* pars = new SUMOVehicleParameter();
+            pars->id = attrs.getString(SUMO_ATTR_ID);
             bool ok;
-            SUMOVehicleParameter* pars = SUMOVehicleParserHelper::parseFlowAttributes(SUMO_TAG_FLOWSTATE, attrs, true, true, -1, -1);
-            pars->repetitionsDone = attrs.get<int>(SUMO_ATTR_DONE, pars->id.c_str(), ok);
-            pars->repetitionTotalOffset = attrs.getOptSUMOTimeReporting(SUMO_ATTR_NEXT, pars->id.c_str(), ok, 0);
-            int index = attrs.getInt(SUMO_ATTR_INDEX);
-            MSNet::getInstance()->getInsertionControl().addFlow(pars, index);
+            if (attrs.getOpt<bool>(SUMO_ATTR_REROUTE, nullptr, ok, false)) {
+                pars->parametersSet |= VEHPARS_FORCE_REROUTE;
+            }
+            MSNet::getInstance()->getInsertionControl().addFlow(pars,
+                    attrs.getInt(SUMO_ATTR_INDEX));
             break;
         }
         case SUMO_TAG_VTYPE: {
@@ -282,13 +269,14 @@ MSStateHandler::myStartElement(int element, const SUMOSAXAttributes& attrs) {
             break;
         }
         case SUMO_TAG_VIEWSETTINGS_VEHICLES: {
-            bool ok;
-            const std::vector<std::string>& vehIDs = attrs.get<std::vector<std::string> >(SUMO_ATTR_VALUE, nullptr, ok, false);
-            if (MSGlobals::gUseMesoSim) {
-                mySegment->loadState(vehIDs, MSNet::getInstance()->getVehicleControl(), StringUtils::toLong(attrs.getString(SUMO_ATTR_TIME)) - myOffset, myQueIndex);
-            } else {
-                myCurrentLane->loadState(vehIDs, MSNet::getInstance()->getVehicleControl());
-            }
+            try {
+                const std::vector<std::string>& vehIDs = attrs.getStringVector(SUMO_ATTR_VALUE);
+                if (MSGlobals::gUseMesoSim) {
+                    mySegment->loadState(vehIDs, MSNet::getInstance()->getVehicleControl(), StringUtils::toLong(attrs.getString(SUMO_ATTR_TIME)) - myOffset, myQueIndex);
+                } else {
+                    myCurrentLane->loadState(vehIDs, MSNet::getInstance()->getVehicleControl());
+                }
+            } catch (EmptyData&) {} // attr may be empty
             myQueIndex++;
             break;
         }
@@ -313,15 +301,16 @@ MSStateHandler::myStartElement(int element, const SUMOSAXAttributes& attrs) {
             const double arrivalSpeed = attrs.get<double>(SUMO_ATTR_ARRIVALSPEED, nullptr, ok);
             const double leaveSpeed = attrs.get<double>(SUMO_ATTR_DEPARTSPEED, nullptr, ok);
             const bool setRequest = attrs.get<bool>(SUMO_ATTR_REQUEST, nullptr, ok);
+            const SUMOTime arrivalTimeBraking = attrs.get<SUMOTime>(SUMO_ATTR_ARRIVALTIMEBRAKING, nullptr, ok);
             const double arrivalSpeedBraking = attrs.get<double>(SUMO_ATTR_ARRIVALSPEEDBRAKING, nullptr, ok);
             const SUMOTime waitingTime = attrs.get<SUMOTime>(SUMO_ATTR_WAITINGTIME, nullptr, ok);
             const double dist = attrs.get<double>(SUMO_ATTR_DISTANCE, nullptr, ok);
             const double latOffset = attrs.getOpt<double>(SUMO_ATTR_POSITION_LAT, nullptr, ok, 0);
             SUMOVehicle* veh = vc.getVehicle(vehID);
-            myCurrentLink->setApproaching(veh, arrivalTime, arrivalSpeed, leaveSpeed, setRequest, arrivalSpeedBraking, waitingTime, dist, latOffset);
+            myCurrentLink->setApproaching(veh, arrivalTime, arrivalSpeed, leaveSpeed, setRequest, arrivalTimeBraking, arrivalSpeedBraking, waitingTime, dist, latOffset);
             if (!MSGlobals::gUseMesoSim) {
                 MSVehicle* microVeh = dynamic_cast<MSVehicle*>(veh);
-                microVeh->loadPreviousApproaching(myCurrentLink, setRequest, arrivalTime, arrivalSpeed, arrivalSpeedBraking, dist, leaveSpeed);
+                microVeh->loadPreviousApproaching(myCurrentLink, setRequest, arrivalTime, arrivalSpeed, arrivalTimeBraking, arrivalSpeedBraking, dist, leaveSpeed);
             }
             break;
         }
@@ -387,8 +376,10 @@ MSStateHandler::myStartElement(int element, const SUMOSAXAttributes& attrs) {
             if (phase >= tl->getPhaseNumber()) {
                 throw ProcessError("Invalid phase '" + toString(phase) + "' for traffic light '" + tlID + "'");
             }
+            const SUMOTime remaining = tl->getPhase(phase).duration - spentDuration;
+            tl->changeStepAndDuration(tlc, myTime, phase, remaining);
             // might not be set if the phase happens to match and there are multiple programs
-            tl->loadState(tlc, myTime, phase, spentDuration);
+            tl->setTrafficLightSignals(myTime - spentDuration);
             break;
         }
         default:
@@ -404,9 +395,8 @@ MSStateHandler::myEndElement(int element) {
         case SUMO_TAG_PERSON:
         case SUMO_TAG_CONTAINER: {
             MSTransportableControl& tc = (element == SUMO_TAG_PERSON ? MSNet::getInstance()->getPersonControl() : MSNet::getInstance()->getContainerControl());
-            MSTransportable* transportable = tc.get(myAttrs->getString(SUMO_ATTR_ID));
-            transportable->loadState(myAttrs->getString(SUMO_ATTR_STATE));
-            tc.fixLoadCount(transportable);
+            tc.get(myAttrs->getString(SUMO_ATTR_ID))->loadState(myAttrs->getString(SUMO_ATTR_STATE));
+            tc.fixLoadCount();
             delete myAttrs;
             myAttrs = nullptr;
             break;

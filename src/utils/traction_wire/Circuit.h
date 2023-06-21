@@ -28,18 +28,17 @@
 
 #include <vector>
 #ifdef HAVE_EIGEN
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable: 4127 4464 5031)
-#endif
 // avoid warnings in clang
 #ifdef __clang__
 #pragma clang system_header
 #endif
-#include <Eigen/Dense>
-#include <Eigen/Geometry>
-#include <Eigen/Sparse>
-#ifdef _MSC_VER
+#ifdef WIN32
+#pragma warning(push, 0)
+#endif
+#include "Eigen/Dense"
+#include "Eigen/Geometry"
+#include "Eigen/Sparse"
+#ifdef WIN32
 #pragma warning(pop)
 #endif
 #endif

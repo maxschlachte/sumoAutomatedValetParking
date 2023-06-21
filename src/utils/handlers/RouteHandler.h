@@ -37,7 +37,7 @@ public:
     RouteHandler(const std::string& filename, const bool hardFail);
 
     /// @brief Destructor
-    virtual ~RouteHandler();
+    ~RouteHandler();
 
     /// @brief begin parse attributes
     bool beginParseAttributes(SumoXMLTag tag, const SUMOSAXAttributes& attrs);
@@ -61,12 +61,12 @@ public:
     /// @brief build route
     virtual void buildRoute(const CommonXMLStructure::SumoBaseObject* sumoBaseObject, const std::string& id, SUMOVehicleClass vClass,
                             const std::vector<std::string>& edgeIDs, const RGBColor& color, const int repeat, const SUMOTime cycleTime,
-                            const Parameterised::Map& routeParameters) = 0;
+                            const std::map<std::string, std::string>& routeParameters) = 0;
 
     /// @brief build embedded route
     virtual void buildEmbeddedRoute(const CommonXMLStructure::SumoBaseObject* sumoBaseObject, const std::vector<std::string>& edgeIDs,
                                     const RGBColor& color, const int repeat, const SUMOTime cycleTime,
-                                    const Parameterised::Map& routeParameters) = 0;
+                                    const std::map<std::string, std::string>& routeParameters) = 0;
 
     /// @brief build route distribution
     virtual void buildRouteDistribution(const CommonXMLStructure::SumoBaseObject* sumoBaseObject, const std::string& id) = 0;
@@ -148,9 +148,6 @@ private:
 
     /// @brief common XML Structure
     CommonXMLStructure myCommonXMLStructure;
-
-    /// @brief write error "invalid id"
-    void writeErrorInvalidID(const SumoXMLTag tag, const std::string& id) const;
 
     /// @name parse route element attributes
     /// @{

@@ -21,6 +21,9 @@
 #include <vector>
 #include <libsumo/TraCIDefs.h>
 #include <libsumo/VehicleType.h>
+#ifndef LIBTRACI
+#include <microsim/transportables/MSTransportable.h>
+#endif
 
 
 // ===========================================================================
@@ -28,7 +31,6 @@
 // ===========================================================================
 #ifndef LIBTRACI
 class MSPerson;
-class MSStage;
 struct Reservation;
 class PositionVector;
 #endif
@@ -74,7 +76,7 @@ public:
     static void appendDrivingStage(const std::string& personID, const std::string& toEdge, const std::string& lines, const std::string& stopID = "");
     static void removeStage(const std::string& personID, int nextStageIndex);
     static void rerouteTraveltime(const std::string& personID);
-    static void moveTo(const std::string& personID, const std::string& laneID, double pos, double posLat = libsumo::INVALID_DOUBLE_VALUE);
+    static void moveTo(const std::string& personID, const std::string& edgeID, double position);
     static void moveToXY(const std::string& personID, const std::string& edgeID, const double x, const double y, double angle = libsumo::INVALID_DOUBLE_VALUE, const int keepRoute = 1, double matchThreshold = 100);
     static void remove(const std::string& personID, char reason = libsumo::REMOVE_VAPORIZED);
     static void setSpeed(const std::string& personID, double speed);

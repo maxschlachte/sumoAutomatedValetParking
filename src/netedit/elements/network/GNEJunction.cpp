@@ -37,15 +37,10 @@
 #include <utils/gui/windows/GUIAppEnum.h>
 #include <utils/options/OptionsCont.h>
 #include <utils/gui/div/GUIDesigns.h>
-#include <utils/gui/div/GUIGlobalPostDrawing.h>
-#include <netedit/GNEViewParent.h>
-#include <netedit/frames/network/GNECreateEdgeFrame.h>
-
 
 #include "GNEConnection.h"
 #include "GNEJunction.h"
 #include "GNECrossing.h"
-#include "GNEWalkingArea.h"
 
 
 // ===========================================================================
@@ -54,7 +49,7 @@
 
 GNEJunction::GNEJunction(GNENet* net, NBNode* nbn, bool loaded) :
     GNENetworkElement(net, nbn->getID(), GLO_JUNCTION, SUMO_TAG_JUNCTION,
-{}, {}, {}, {}, {}, {}),
+{}, {}, {}, {}, {}, {}, {}, {}),
 myNBNode(nbn),
 myMaxDrawingSize(1),
 myAmCreateEdgeSource(false),
@@ -62,9 +57,7 @@ myLogicStatus(loaded ? FEATURE_LOADED : FEATURE_GUESSED),
 myAmResponsible(false),
 myHasValidLogic(loaded),
 myAmTLSSelected(false),
-myColorForMissingConnections(false),
-myTesselation(nbn->getID(), "", RGBColor::MAGENTA, nbn->getShape(), false, true, 0),
-myExaggeration(1) {
+myColorForMissingConnections(false) {
     // update centering boundary without updating grid
     updateCenteringBoundary(false);
 }
@@ -84,19 +77,6 @@ GNEJunction::~GNEJunction() {
             delete crossing;
         }
     }
-    // delete all GNEWalkingArea
-    for (const auto& walkingArea : myGNEWalkingAreas) {
-        walkingArea->decRef();
-        if (walkingArea->unreferenced()) {
-            // check if remove it from Attribute Carriers
-            if (myNet->getAttributeCarriers()->getWalkingAreas().count(walkingArea) > 0) {
-                myNet->getAttributeCarriers()->deleteWalkingArea(walkingArea);
-            }
-            // show extra information for tests
-            WRITE_DEBUG("Deleting unreferenced " + walkingArea->getTagStr() + " '" + walkingArea->getID() + "' in GNEJunction destructor");
-            delete walkingArea;
-        }
-    }
     if (myAmResponsible) {
         // show extra information for tests
         WRITE_DEBUG("Deleting NBNode of '" + getID() + "' in GNEJunction destructor");
@@ -114,8 +94,6 @@ GNEJunction::getJunctionShape() const {
 void
 GNEJunction::updateGeometry() {
     updateGeometryAfterNetbuild(true);
-    // trigger rebuilding tesselation
-    myExaggeration = 2;
 }
 
 
@@ -123,11 +101,7 @@ void
 GNEJunction::updateGeometryAfterNetbuild(bool rebuildNBNodeCrossings) {
     // recalc max drawing size
     myMaxDrawingSize = MAX2(getCenteringBoundary().getWidth(), getCenteringBoundary().getHeight());
-    // rebuild crossings
     rebuildGNECrossings(rebuildNBNodeCrossings);
-    // clear walking areas
-    clearWalkingAreas();
-    // clear missing connections
     checkMissingConnections();
 }
 
@@ -227,11 +201,10 @@ GNEJunction::rebuildGNECrossings(bool rebuildNBNodeCrossings) {
                 delete crossing;
             }
         }
-        // copy retrieved (existent and created) GNECrossings to myGNECrossings
+        // copy retrieved (existent and created) GNECrossigns to myGNECrossings
         myGNECrossings = retrievedCrossings;
     }
 }
-
 
 void
 GNEJunction::mirrorXLeftHand() {
@@ -254,10 +227,10 @@ GNEJunction::getPopUpMenu(GUIMainWindow& app, GUISUMOAbstractView& parent) {
     // build selection and show parameters menu
     myNet->getViewNet()->buildSelectionACPopupEntry(ret, this);
     buildShowParamsPopupEntry(ret);
-    buildPositionCopyEntry(ret, app);
+    buildPositionCopyEntry(ret, false);
     // check if we're in supermode network
     if (myNet->getViewNet()->getEditModes().isCurrentSupermodeNetwork()) {
-        //if (parent.getVisualisationSettings().editMode != GNE_MODE_CONNECT) {
+        //if (parent.getVisualisationSettings()->editMode != GNE_MODE_CONNECT) {
         //    // XXX if joinable
         //    GUIDesigns::buildFXMenuCommand(ret, "Join adjacent edges", 0, &parent, MID_GNE_JOIN_EDGES);
         //}
@@ -307,7 +280,7 @@ GNEJunction::getPopUpMenu(GUIMainWindow& app, GUISUMOAbstractView& parent) {
         if (handlingSelection) {
             mcResetCustomShape->setText("Reset junction shapes");
         }
-        // disable mcClearConnections if junction hasn't connections
+        // disable mcClearConnections if juction hasn't connections
         if (getGNEConnections().empty()) {
             mcClearConnections->disable();
         }
@@ -315,7 +288,7 @@ GNEJunction::getPopUpMenu(GUIMainWindow& app, GUISUMOAbstractView& parent) {
         if (myNBNode->getShape().size() == 0) {
             mcResetCustomShape->disable();
         }
-        // checkIsRemovable requires turnarounds to be computed. This is ugly
+        // checkIsRemovable requiers turnarounds to be computed. This is ugly
         if ((myNBNode->getIncomingEdges().size() == 2) && (myNBNode->getOutgoingEdges().size() == 2)) {
             NBTurningDirectionsComputer::computeTurnDirectionsForNode(myNBNode, false);
         }
@@ -360,8 +333,6 @@ GNEJunction::updateCenteringBoundary(const bool updateGrid) {
     if (updateGrid) {
         myNet->addGLObjectIntoGrid(this);
     }
-    // trigger rebuilding tesselation
-    myExaggeration = 2;
 }
 
 
@@ -399,7 +370,7 @@ GNEJunction::drawGL(const GUIVisualizationSettings& s) const {
         drawBubble = true;
     }
     if ((myNBNode->getShape().area() < 4) && (mySourceCandidate || myTargetCandidate ||
-            mySpecialCandidate || myPossibleCandidate || myConflictedCandidate)) {
+            mySpecialCandidate | myPossibleCandidate || myConflictedCandidate)) {
         // force draw if this junction is a candidate
         drawBubble = true;
     }
@@ -410,7 +381,11 @@ GNEJunction::drawGL(const GUIVisualizationSettings& s) const {
         // push layer matrix
         GLHelper::pushMatrix();
         // translate to front
-        myNet->getViewNet()->drawTranslateFrontAttributeCarrier(this, GLO_JUNCTION);
+        if (myAmCreateEdgeSource) {
+            glTranslated(0, 0, GLO_TEMPORALSHAPE);
+        } else {
+            myNet->getViewNet()->drawTranslateFrontAttributeCarrier(this, GLO_JUNCTION);
+        }
         // push name
         if (s.scale * junctionExaggeration * myMaxDrawingSize < 1.) {
             // draw something simple so that selection still works
@@ -424,18 +399,18 @@ GNEJunction::drawGL(const GUIVisualizationSettings& s) const {
                 if (junctionShapeColor.alpha() != 0) {
                     // set color
                     GLHelper::setColor(junctionShapeColor);
+                    // obtain junction Shape
+                    PositionVector junctionClosedShape = myNBNode->getShape();
+                    // close junction shape
+                    junctionClosedShape.closePolygon();
                     // adjust shape to exaggeration
-                    if ((junctionExaggeration > 1 || myExaggeration > 1) && junctionExaggeration != myExaggeration) {
-                        myExaggeration = junctionExaggeration;
-                        myTesselation.setShape(myNBNode->getShape());
-                        myTesselation.getShapeRef().closePolygon();
-                        myTesselation.getShapeRef().scaleRelative(junctionExaggeration);
-                        myTesselation.myTesselation.clear();
+                    if (junctionExaggeration > 1) {
+                        junctionClosedShape.scaleRelative(junctionExaggeration);
                     }
                     // first check if inner junction polygon can be drawn
                     if (s.drawForPositionSelection) {
                         // only draw a point if mouse is around shape
-                        if (myTesselation.getShape().around(mousePosition)) {
+                        if (junctionClosedShape.around(mousePosition)) {
                             // push matrix
                             GLHelper::pushMatrix();
                             // move to mouse position
@@ -445,12 +420,12 @@ GNEJunction::drawGL(const GUIVisualizationSettings& s) const {
                             // pop matrix
                             GLHelper::popMatrix();
                         }
-                    } else if ((s.scale * junctionExaggeration * myMaxDrawingSize) >= 40) {
-                        // draw shape with high detail
-                        myTesselation.drawTesselation(myTesselation.getShape());
-                    } else {
+                    } else if ((s.scale * junctionExaggeration * myMaxDrawingSize) < 40.) {
                         // draw shape
-                        GLHelper::drawFilledPoly(myTesselation.getShape(), true);
+                        GLHelper::drawFilledPoly(junctionClosedShape, true);
+                    } else {
+                        // draw shape with high detail
+                        GLHelper::drawFilledPolyTesselated(junctionClosedShape, true);
                     }
                     // draw shape points only in Network supemode
                     if (myShapeEdited && s.drawMovingGeometryPoint(junctionExaggeration, s.neteditSizeSettings.junctionGeometryPointRadius) && myNet->getViewNet()->getEditModes().isCurrentSupermodeNetwork()) {
@@ -533,16 +508,30 @@ GNEJunction::drawGL(const GUIVisualizationSettings& s) const {
             myNet->getPathManager()->drawJunctionPathElements(s, this);
             // draw lock icon
             GNEViewNetHelper::LockIcon::drawLockIcon(this, getType(), getPositionInView(), 1);
-            // draw dotted contours
-            drawDottedContours(s, drawShape, drawBubble, junctionExaggeration, bubbleRadius);
+            // check if dotted contour has to be drawn
+            if (myNet->getViewNet()->isAttributeCarrierInspected(this)) {
+                if (drawShape) {
+                    GUIDottedGeometry::drawDottedContourClosedShape(GUIDottedGeometry::DottedContourType::INSPECT, s, myNBNode->getShape(),
+                            (junctionExaggeration >= 1) ? junctionExaggeration : 1);
+                }
+                if (drawBubble) {
+                    GUIDottedGeometry::drawDottedContourCircle(GUIDottedGeometry::DottedContourType::INSPECT, s, myNBNode->getCenter(), s.neteditSizeSettings.junctionBubbleRadius,
+                            (junctionExaggeration >= 1) ? junctionExaggeration : 1);
+                }
+            }
+            // check if dotted contour has to be drawn
+            if ((myNet->getViewNet()->getFrontAttributeCarrier() == this)) {
+                if (drawShape) {
+                    GUIDottedGeometry::drawDottedContourClosedShape(GUIDottedGeometry::DottedContourType::FRONT, s, myNBNode->getShape(),
+                            (junctionExaggeration >= 1) ? junctionExaggeration : 1);
+                }
+                if (drawBubble) {
+                    GUIDottedGeometry::drawDottedContourCircle(GUIDottedGeometry::DottedContourType::FRONT, s, myNBNode->getCenter(), s.neteditSizeSettings.junctionBubbleRadius,
+                            (junctionExaggeration >= 1) ? junctionExaggeration : 1);
+                }
+            }
         }
     }
-}
-
-
-void
-GNEJunction::updateGLObject() {
-    updateGeometry();
 }
 
 
@@ -637,18 +626,12 @@ GNEJunction::getGNECrossings() const {
 }
 
 
-const std::vector<GNEWalkingArea*>&
-GNEJunction::getGNEWalkingAreas() const {
-    return myGNEWalkingAreas;
-}
-
-
 std::vector<GNEConnection*>
 GNEJunction::getGNEConnections() const {
     std::vector<GNEConnection*> connections;
-    for (const auto& incomingEdge : myGNEIncomingEdges) {
-        for (const auto& connection : incomingEdge->getGNEConnections()) {
-            connections.push_back(connection);
+    for (const auto& i : myGNEIncomingEdges) {
+        for (const auto& j : i->getGNEConnections()) {
+            connections.push_back(j);
         }
     }
     return connections;
@@ -864,13 +847,13 @@ GNEJunction::invalidateTLS(GNEUndoList* undoList, const NBConnection& deletedCon
                 if (addedConnection.getTLIndex() == NBConnection::InvalidTlIndex) {
                     // custom tl indices of crossings might become invalid upon recomputation so we must save them
                     // however, they could remain valid so we register a change but keep them at their old value
-                    for (const auto& crossing : myGNECrossings) {
-                        const std::string oldValue = crossing->getAttribute(SUMO_ATTR_TLLINKINDEX);
-                        undoList->add(new GNEChange_Attribute(crossing, SUMO_ATTR_TLLINKINDEX, toString(NBConnection::InvalidTlIndex)), true);
-                        undoList->add(new GNEChange_Attribute(crossing, SUMO_ATTR_TLLINKINDEX, oldValue), true);
-                        const std::string oldValue2 = crossing->getAttribute(SUMO_ATTR_TLLINKINDEX2);
-                        undoList->add(new GNEChange_Attribute(crossing, SUMO_ATTR_TLLINKINDEX2, toString(NBConnection::InvalidTlIndex)), true);
-                        undoList->add(new GNEChange_Attribute(crossing, SUMO_ATTR_TLLINKINDEX2, oldValue2), true);
+                    for (GNECrossing* c : myGNECrossings) {
+                        const std::string oldValue = c->getAttribute(SUMO_ATTR_TLLINKINDEX);
+                        undoList->add(new GNEChange_Attribute(c, SUMO_ATTR_TLLINKINDEX, toString(NBConnection::InvalidTlIndex)), true);
+                        undoList->add(new GNEChange_Attribute(c, SUMO_ATTR_TLLINKINDEX, oldValue), true);
+                        const std::string oldValue2 = c->getAttribute(SUMO_ATTR_TLLINKINDEX2);
+                        undoList->add(new GNEChange_Attribute(c, SUMO_ATTR_TLLINKINDEX2, toString(NBConnection::InvalidTlIndex)), true);
+                        undoList->add(new GNEChange_Attribute(c, SUMO_ATTR_TLLINKINDEX2, oldValue2), true);
                     }
                 }
                 NBLoadedSUMOTLDef* repl = new NBLoadedSUMOTLDef(*tlDef, *tlDef->getLogic());
@@ -879,11 +862,11 @@ GNEJunction::invalidateTLS(GNEUndoList* undoList, const NBConnection& deletedCon
                 replacementDef = repl;
             } else {
                 // recompute crossing indices along with everything else
-                for (const auto& crossing : myGNECrossings) {
-                    const std::string oldValue = crossing->getAttribute(SUMO_ATTR_TLLINKINDEX);
-                    undoList->add(new GNEChange_Attribute(crossing, SUMO_ATTR_TLLINKINDEX, toString(NBConnection::InvalidTlIndex)), true);
-                    const std::string oldValue2 = crossing->getAttribute(SUMO_ATTR_TLLINKINDEX2);
-                    undoList->add(new GNEChange_Attribute(crossing, SUMO_ATTR_TLLINKINDEX2, toString(NBConnection::InvalidTlIndex)), true);
+                for (GNECrossing* c : myGNECrossings) {
+                    const std::string oldValue = c->getAttribute(SUMO_ATTR_TLLINKINDEX);
+                    undoList->add(new GNEChange_Attribute(c, SUMO_ATTR_TLLINKINDEX, toString(NBConnection::InvalidTlIndex)), true);
+                    const std::string oldValue2 = c->getAttribute(SUMO_ATTR_TLLINKINDEX2);
+                    undoList->add(new GNEChange_Attribute(c, SUMO_ATTR_TLLINKINDEX2, toString(NBConnection::InvalidTlIndex)), true);
                 }
                 replacementDef = new NBOwnTLDef(newID, tlDef->getOffset(), tlDef->getType());
                 replacementDef->setProgramID(tlDef->getProgramID());
@@ -958,33 +941,6 @@ GNEJunction::retrieveGNECrossing(NBNode::Crossing* NBNodeCrossing, bool createIf
 }
 
 
-GNEWalkingArea*
-GNEJunction::retrieveGNEWalkingArea(const std::string& NBNodeWalkingAreaID, bool createIfNoExist) {
-    // iterate over all walkingArea
-    for (const auto& walkingArea : myGNEWalkingAreas) {
-        // if found, return it
-        if (walkingArea->getID() == NBNodeWalkingAreaID) {
-            return walkingArea;
-        }
-    }
-    if (createIfNoExist) {
-        // create new GNEWalkingArea
-        GNEWalkingArea* createdGNEWalkingArea = new GNEWalkingArea(this, NBNodeWalkingAreaID);
-        // show extra information for tests
-        WRITE_DEBUG("Created " + createdGNEWalkingArea->getTagStr() + " '" + createdGNEWalkingArea->getID() + "' in retrieveGNEWalkingArea()");
-        // update geometry after creating
-        createdGNEWalkingArea->updateGeometry();
-        // add it in Network
-        myNet->addGLObjectIntoGrid(createdGNEWalkingArea);
-        // add it in attributeCarriers
-        myNet->getAttributeCarriers()->insertWalkingArea(createdGNEWalkingArea);
-        return createdGNEWalkingArea;
-    } else {
-        return nullptr;
-    }
-}
-
-
 void
 GNEJunction::markConnectionsDeprecated(bool includingNeighbours) {
     // only it's needed to mark the connections of incoming edges
@@ -999,104 +955,11 @@ GNEJunction::markConnectionsDeprecated(bool includingNeighbours) {
 }
 
 
-void
-GNEJunction::setJunctionType(const std::string& value, GNEUndoList* undoList) {
-    undoList->begin(GUIIcon::JUNCTION, "change " + getTagStr() + " type");
-    if (NBNode::isTrafficLight(SUMOXMLDefinitions::NodeTypes.get(value))) {
-        if (getNBNode()->isTLControlled() &&
-                // if switching changing from or to traffic_light_right_on_red we need to remove the old plan
-                (getNBNode()->getType() == SumoXMLNodeType::TRAFFIC_LIGHT_RIGHT_ON_RED
-                 || SUMOXMLDefinitions::NodeTypes.get(value) == SumoXMLNodeType::TRAFFIC_LIGHT_RIGHT_ON_RED)
-           ) {
-            // make a copy because we will modify the original
-            const std::set<NBTrafficLightDefinition*> copyOfTls = myNBNode->getControllingTLS();
-            for (const auto& TLS : copyOfTls) {
-                undoList->add(new GNEChange_TLS(this, TLS, false), true);
-            }
-        }
-        if (!getNBNode()->isTLControlled()) {
-            // create new traffic light
-            undoList->add(new GNEChange_TLS(this, nullptr, true), true);
-        }
-    } else if (getNBNode()->isTLControlled()) {
-        // delete old traffic light
-        // make a copy because we will modify the original
-        const std::set<NBTrafficLightDefinition*> copyOfTls = myNBNode->getControllingTLS();
-        for (const auto& TLS : copyOfTls) {
-            undoList->add(new GNEChange_TLS(this, TLS, false, false), true);
-            const std::vector<NBNode*> copyOfNodes = TLS->getNodes(); // make a copy!
-            for (const auto& node : copyOfNodes) {
-                GNEJunction* sharing = myNet->getAttributeCarriers()->retrieveJunction(node->getID());
-                sharing->invalidateTLS(undoList);
-            }
-        }
-    }
-    // must be the final step, otherwise we do not know which traffic lights to remove via GNEChange_TLS
-    undoList->add(new GNEChange_Attribute(this, SUMO_ATTR_TYPE, value), true);
-    for (const auto& crossing : myGNECrossings) {
-        undoList->add(new GNEChange_Attribute(crossing, SUMO_ATTR_TLLINKINDEX, "-1"), true);
-        undoList->add(new GNEChange_Attribute(crossing, SUMO_ATTR_TLLINKINDEX2, "-1"), true);
-    }
-    undoList->end();
-}
-
-
-double
-GNEJunction::getMaxDrawingSize() const {
-    return myMaxDrawingSize;
-}
-
-
-void
-GNEJunction::clearWalkingAreas() {
-    // delete non retrieved GNEWalkingAreas (we don't need to extract if from Tree two times)
-    for (const auto& walkingArea : myGNEWalkingAreas) {
-        walkingArea->decRef();
-        // check if walkingArea is selected
-        if (walkingArea->isAttributeCarrierSelected()) {
-            walkingArea->unselectAttributeCarrier();
-        }
-        // remove it from inspected ACS
-        myNet->getViewNet()->removeFromAttributeCarrierInspected(walkingArea);
-        // remove it from net
-        myNet->removeGLObjectFromGrid(walkingArea);
-        // remove it from attributeCarriers
-        myNet->getAttributeCarriers()->deleteWalkingArea(walkingArea);
-        if (walkingArea->unreferenced()) {
-            // show extra information for tests
-            WRITE_DEBUG("Deleting unreferenced " + walkingArea->getTagStr() + " in rebuildGNEWalkingAreas()");
-            delete walkingArea;
-        }
-    }
-    myGNEWalkingAreas.clear();
-}
-
-
-void
-GNEJunction::rebuildGNEWalkingAreas() {
-    // first clear GNEWalkingAreas
-    clearWalkingAreas();
-    // iterate over NBNode::WalkingAreas of GNEJunction
-    for (const auto& walkingArea : myNBNode->getWalkingAreas()) {
-        // retrieve existent GNEWalkingArea, or create it
-        GNEWalkingArea* retrievedGNEWalkingArea = retrieveGNEWalkingArea(walkingArea.id, true);
-        // include reference to created GNEWalkingArea
-        retrievedGNEWalkingArea->incRef();
-        // update geometry of retrieved walkingArea
-        retrievedGNEWalkingArea->updateGeometry();
-        // update boundary
-        retrievedGNEWalkingArea->updateCenteringBoundary(false);
-        // add in walkingAreas
-        myGNEWalkingAreas.push_back(retrievedGNEWalkingArea);
-    }
-}
-
-
 std::string
 GNEJunction::getAttribute(SumoXMLAttr key) const {
     switch (key) {
         case SUMO_ATTR_ID:
-            return getMicrosimID();
+            return getID();
         case SUMO_ATTR_POSITION:
             return toString(myNBNode->getPosition());
         case SUMO_ATTR_TYPE:
@@ -1137,11 +1000,11 @@ GNEJunction::getAttribute(SumoXMLAttr key) const {
             for (const auto& i : myGNEIncomingEdges) {
                 for (const auto& j : i->getGNEConnections()) {
                     if (j->getNBEdgeConnection().keepClear) {
-                        return True;
+                        return toString(true);
                     }
                 }
             }
-            return False;
+            return toString(false);
         case SUMO_ATTR_RIGHT_OF_WAY:
             return SUMOXMLDefinitions::RightOfWayValues.getString(myNBNode->getRightOfWay());
         case SUMO_ATTR_FRINGE:
@@ -1187,8 +1050,38 @@ GNEJunction::setAttribute(SumoXMLAttr key, const std::string& value, GNEUndoList
             undoList->end();
             break;
         case SUMO_ATTR_TYPE: {
-            // set junction type
-            setJunctionType(value, undoList);
+            undoList->begin(GUIIcon::JUNCTION, "change " + getTagStr() + " type");
+            if (NBNode::isTrafficLight(SUMOXMLDefinitions::NodeTypes.get(value))) {
+                if (getNBNode()->isTLControlled() &&
+                        // if switching changing from or to traffic_light_right_on_red we need to remove the old plan
+                        (getNBNode()->getType() == SumoXMLNodeType::TRAFFIC_LIGHT_RIGHT_ON_RED
+                         || SUMOXMLDefinitions::NodeTypes.get(value) == SumoXMLNodeType::TRAFFIC_LIGHT_RIGHT_ON_RED)
+                   ) {
+                    // make a copy because we will modify the original
+                    const std::set<NBTrafficLightDefinition*> copyOfTls = myNBNode->getControllingTLS();
+                    for (const auto& TLS : copyOfTls) {
+                        undoList->add(new GNEChange_TLS(this, TLS, false), true);
+                    }
+                }
+                if (!getNBNode()->isTLControlled()) {
+                    // create new traffic light
+                    undoList->add(new GNEChange_TLS(this, nullptr, true), true);
+                }
+            } else if (getNBNode()->isTLControlled()) {
+                // delete old traffic light
+                // make a copy because we will modify the original
+                const std::set<NBTrafficLightDefinition*> copyOfTls = myNBNode->getControllingTLS();
+                for (const auto& TLS : copyOfTls) {
+                    undoList->add(new GNEChange_TLS(this, TLS, false, false), true);
+                }
+            }
+            // must be the final step, otherwise we do not know which traffic lights to remove via GNEChange_TLS
+            undoList->add(new GNEChange_Attribute(this, key, value), true);
+            for (const auto& crossing : myGNECrossings) {
+                undoList->add(new GNEChange_Attribute(crossing, SUMO_ATTR_TLLINKINDEX, "-1"), true);
+                undoList->add(new GNEChange_Attribute(crossing, SUMO_ATTR_TLLINKINDEX2, "-1"), true);
+            }
+            undoList->end();
             break;
         }
         case SUMO_ATTR_TLTYPE: {
@@ -1375,7 +1268,7 @@ GNEJunction::isAttributeComputed(SumoXMLAttr key) const {
 }
 
 
-const Parameterised::Map&
+const std::map<std::string, std::string>&
 GNEJunction::getACParametersMap() const {
     return myNBNode->getParametersMap();
 }
@@ -1413,10 +1306,6 @@ GNEJunction::drawJunctionChildren(const GUIVisualizationSettings& s) const {
     for (const auto& crossing : myGNECrossings) {
         crossing->drawGL(s);
     }
-    // draw walkingAreas
-    for (const auto& walkingArea : myGNEWalkingAreas) {
-        walkingArea->drawGL(s);
-    }
     // draw connections and route elements connections (Only for incoming edges)
     for (const auto& incomingEdge : myGNEIncomingEdges) {
         for (const auto& connection : incomingEdge->getGNEConnections()) {
@@ -1427,92 +1316,6 @@ GNEJunction::drawJunctionChildren(const GUIVisualizationSettings& s) const {
     for (const auto& demandElement : getChildDemandElements()) {
         if (!demandElement->getTagProperty().isPlacedInRTree()) {
             demandElement->drawGL(s);
-        }
-    }
-}
-
-
-void
-GNEJunction::drawDottedContours(const GUIVisualizationSettings& s, const bool drawShape, const bool drawBubble, const double junctionExaggeration, const double bubbleRadius) const {
-    // check if dotted contour has to be drawn
-    if (myNet->getViewNet()->isAttributeCarrierInspected(this)) {
-        if (drawBubble) {
-            GUIDottedGeometry::drawDottedContourCircle(GUIDottedGeometry::DottedContourType::INSPECT, s, myNBNode->getCenter(), s.neteditSizeSettings.junctionBubbleRadius,
-                    (junctionExaggeration >= 1) ? junctionExaggeration : 1);
-        }
-        if (drawShape) {
-            GUIDottedGeometry::drawDottedContourClosedShape(GUIDottedGeometry::DottedContourType::INSPECT, s, myNBNode->getShape(),
-                    (junctionExaggeration >= 1) ? junctionExaggeration : 1);
-        }
-    }
-    // check if dotted contour has to be drawn
-    if ((myNet->getViewNet()->getFrontAttributeCarrier() == this)) {
-        if (drawBubble) {
-            GUIDottedGeometry::drawDottedContourCircle(GUIDottedGeometry::DottedContourType::FRONT, s, myNBNode->getCenter(), s.neteditSizeSettings.junctionBubbleRadius,
-                    (junctionExaggeration >= 1) ? junctionExaggeration : 1);
-        }
-        if (drawShape) {
-            GUIDottedGeometry::drawDottedContourClosedShape(GUIDottedGeometry::DottedContourType::FRONT, s, myNBNode->getShape(),
-                    (junctionExaggeration >= 1) ? junctionExaggeration : 1);
-        }
-    }
-    // draw dotted contours regarding create edge mode
-    if (myAmCreateEdgeSource) {
-        if (drawBubble) {
-            GUIDottedGeometry::drawDottedContourCircle(GUIDottedGeometry::DottedContourType::GREEN, s, myNBNode->getCenter(), s.neteditSizeSettings.junctionBubbleRadius,
-                    (junctionExaggeration >= 1) ? junctionExaggeration : 1);
-        }
-        if (drawShape) {
-            GUIDottedGeometry::drawDottedContourClosedShape(GUIDottedGeometry::DottedContourType::GREEN, s, myNBNode->getShape(),
-                    (junctionExaggeration >= 1) ? junctionExaggeration : 1);
-        }
-    } else if ((gPostDrawing.markedNode == nullptr) && myNet->getViewNet()->getEditModes().isCurrentSupermodeNetwork() &&
-               (myNet->getViewNet()->getEditModes().networkEditMode == NetworkEditMode::NETWORK_CREATE_EDGE)) {
-        // calculate distance squared
-        const double bubbleDistance = (bubbleRadius * bubbleRadius);
-        // get dotted contour type
-        const auto dottedContourType = myNet->getViewNet()->getViewParent()->getCreateEdgeFrame()->getJunctionSource() ? GUIDottedGeometry::DottedContourType::MAGENTA : GUIDottedGeometry::DottedContourType::GREEN;
-        // draw bubble
-        if (drawBubble && myNet->getViewNet()->getPositionInformation().distanceSquaredTo2D(myNBNode->getPosition()) <= bubbleDistance) {
-            // mark this node
-            gPostDrawing.markedNode = this;
-            // draw dotted contour
-            GUIDottedGeometry::drawDottedContourCircle(dottedContourType, s, myNBNode->getCenter(), s.neteditSizeSettings.junctionBubbleRadius,
-                    (junctionExaggeration >= 1) ? junctionExaggeration : 1);
-        } else if (drawShape && myNBNode->getShape().around(myNet->getViewNet()->getPositionInformation())) {
-            // mark this node
-            gPostDrawing.markedNode = this;
-            // draw dotted contour
-            GUIDottedGeometry::drawDottedContourClosedShape(dottedContourType, s, myNBNode->getShape(),
-                    (junctionExaggeration >= 1) ? junctionExaggeration : 1);
-        }
-    }
-    // draw dotted contours regarding inspect vehicles over junctions
-    const auto& inspectedACs = myNet->getViewNet()->getInspectedAttributeCarriers();
-    if ((inspectedACs.size() == 1) &&
-            ((inspectedACs.front()->getTagProperty().getTag() == GNE_TAG_TRIP_JUNCTIONS) ||
-             (inspectedACs.front()->getTagProperty().getTag() == GNE_TAG_FLOW_JUNCTIONS))) {
-        // get vehicle
-        const auto vehicle = myNet->getAttributeCarriers()->retrieveDemandElement(inspectedACs.front());
-        // check parent junctions
-        if (vehicle->getParentJunctions().front() == this) {
-            if (drawBubble) {
-                GUIDottedGeometry::drawDottedContourCircle(GUIDottedGeometry::DottedContourType::GREEN, s, myNBNode->getCenter(), s.neteditSizeSettings.junctionBubbleRadius,
-                        (junctionExaggeration >= 1) ? junctionExaggeration : 1);
-            }
-            if (drawShape) {
-                GUIDottedGeometry::drawDottedContourClosedShape(GUIDottedGeometry::DottedContourType::GREEN, s, myNBNode->getShape(),
-                        (junctionExaggeration >= 1) ? junctionExaggeration : 1);
-            }
-        } else if (vehicle->getParentJunctions().back() == this) {
-            if (drawBubble) {
-                GUIDottedGeometry::drawDottedContourCircle(GUIDottedGeometry::DottedContourType::MAGENTA, s, myNBNode->getCenter(), s.neteditSizeSettings.junctionBubbleRadius,
-                        (junctionExaggeration >= 1) ? junctionExaggeration : 1);
-            }
-            if (drawShape) {
-                GUIDottedGeometry::drawDottedContourClosedShape(GUIDottedGeometry::DottedContourType::MAGENTA, s, myNBNode->getShape(),
-                        (junctionExaggeration >= 1) ? junctionExaggeration : 1);
-            }
         }
     }
 }
@@ -1751,10 +1554,6 @@ GNEJunction::moveJunctionGeometry(const Position& pos, const bool updateEdgeBoun
             affectedEdges.insert(junctionDestinyEdge);
         }
     }
-    // reset walking areas of affected edges
-    for (const auto& affectedJunction : affectedJunctions) {
-        affectedJunction->clearWalkingAreas();
-    }
     // Iterate over affected Edges
     for (const auto& affectedEdge : affectedEdges) {
         // update edge boundaries
@@ -1785,7 +1584,11 @@ GNEJunction::setColor(const GUIVisualizationSettings& s, bool bubble) const {
     if (drawUsingSelectColor() && scheme != 1) {
         color = s.colorSettings.selectionColor;
     }
-    // overwrite color if we're in data mode
+    // set special color if we're creating a new edge
+    if (myAmCreateEdgeSource) {
+        color = RGBColor::GREEN;
+    }
+    // overwritte color if we're in data mode
     if (myNet->getViewNet()->getEditModes().isCurrentSupermodeData()) {
         color = s.junctionColorer.getScheme().getColor(6);
     }

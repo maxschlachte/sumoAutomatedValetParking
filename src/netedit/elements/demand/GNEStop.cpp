@@ -25,14 +25,11 @@
 #include <netedit/changes/GNEChange_Attribute.h>
 #include <netedit/changes/GNEChange_EnableAttribute.h>
 #include <netedit/frames/common/GNEMoveFrame.h>
-#include <netedit/frames/demand/GNEStopFrame.h>
-#include <netedit/frames/GNEDemandSelector.h>
 #include <utils/gui/div/GLHelper.h>
 #include <utils/gui/globjects/GLIncludes.h>
 #include <utils/vehicle/SUMORouteHandler.h>
 
 #include "GNEStop.h"
-
 
 // ===========================================================================
 // member method definitions
@@ -40,77 +37,42 @@
 
 GNEStop::GNEStop(SumoXMLTag tag, GNENet* net) :
     GNEDemandElement("", net, GLO_STOP, tag, GNEPathManager::PathElement::Options::DEMAND_ELEMENT,
-{}, {}, {}, {}, {}, {}),
-myCreationIndex(myNet->getAttributeCarriers()->getStopIndex()) {
+{}, {}, {}, {}, {}, {}, {}, {}) {
     // reset default values
     resetDefaultValues();
-    // enable parking for stops in parkin)gAreas
-    if ((tag == SUMO_TAG_STOP_PARKINGAREA) || (tag == GNE_TAG_WAYPOINT_PARKINGAREA)) {
-        parametersSet |= STOP_PARKING_SET;
-    }
-    // set flags
-    parking = (parametersSet & STOP_PARKING_SET);
-    // set waypoint speed
-    myTagProperty.isWaypoint() ? parametersSet |= STOP_SPEED_SET : parametersSet &= ~STOP_SPEED_SET;
 }
 
 
 GNEStop::GNEStop(SumoXMLTag tag, GNENet* net, GNEDemandElement* stopParent, GNEAdditional* stoppingPlace, const SUMOVehicleParameter::Stop& stopParameter) :
     GNEDemandElement(stopParent, net, GLO_STOP, tag, GNEPathManager::PathElement::Options::DEMAND_ELEMENT,
-{}, {}, {}, {stoppingPlace}, {stopParent}, {}),
-SUMOVehicleParameter::Stop(stopParameter),
-myCreationIndex(myNet->getAttributeCarriers()->getStopIndex()) {
+{}, {}, {}, {stoppingPlace}, {}, {}, {stopParent}, {}),
+SUMOVehicleParameter::Stop(stopParameter) {
     // enable parking for stops in parkingAreas
-    if ((tag == SUMO_TAG_STOP_PARKINGAREA) || (tag == GNE_TAG_WAYPOINT_PARKINGAREA)) {
-        parametersSet |= STOP_PARKING_SET;
+    if (tag == SUMO_TAG_STOP_PARKINGAREA) {
+        parking = true;
+        toogleAttribute(SUMO_ATTR_PARKING, parking, -1);
+    } else {
+        // set parking flag
+        parking = ((parametersSet & STOP_PARKING_SET) != 0);
     }
-    // set flags
-    parking = (parametersSet & STOP_PARKING_SET);
-    // set tripID and line
-    (stopParameter.tripId.size() > 0) ? parametersSet |= STOP_TRIP_ID_SET : parametersSet &= ~STOP_TRIP_ID_SET;
-    (stopParameter.line.size() > 0) ? parametersSet |= STOP_LINE_SET : parametersSet &= ~STOP_LINE_SET;
-    stopParameter.onDemand ? parametersSet |= STOP_ONDEMAND_SET : parametersSet &= ~STOP_ONDEMAND_SET;
-    // set waypoint speed
-    myTagProperty.isWaypoint() ? parametersSet |= STOP_SPEED_SET : parametersSet &= ~STOP_SPEED_SET;
 }
 
 
-GNEStop::GNEStop(SumoXMLTag tag, GNENet* net, GNEDemandElement* stopParent, GNELane* lane, const SUMOVehicleParameter::Stop& stopParameter) :
-    GNEDemandElement(stopParent, net, GLO_STOP, tag, GNEPathManager::PathElement::Options::DEMAND_ELEMENT,
-{}, {}, {lane}, {}, {stopParent}, {}),
-SUMOVehicleParameter::Stop(stopParameter),
-myCreationIndex(myNet->getAttributeCarriers()->getStopIndex()) {
-    // set flags
-    parking = (parametersSet & STOP_PARKING_SET);
-    // set tripID and line
-    (stopParameter.tripId.size() > 0) ? parametersSet |= STOP_TRIP_ID_SET : parametersSet &= ~STOP_TRIP_ID_SET;
-    (stopParameter.line.size() > 0) ? parametersSet |= STOP_LINE_SET : parametersSet &= ~STOP_LINE_SET;
-    stopParameter.onDemand ? parametersSet |= STOP_ONDEMAND_SET : parametersSet &= ~STOP_ONDEMAND_SET;
-    // set waypoint speed
-    myTagProperty.isWaypoint() ? parametersSet |= STOP_SPEED_SET : parametersSet &= ~STOP_SPEED_SET;
+GNEStop::GNEStop(GNENet* net, GNEDemandElement* stopParent, GNELane* lane, const SUMOVehicleParameter::Stop& stopParameter) :
+    GNEDemandElement(stopParent, net, GLO_STOP, SUMO_TAG_STOP_LANE, GNEPathManager::PathElement::Options::DEMAND_ELEMENT,
+{}, {}, {lane}, {}, {}, {}, {stopParent}, {}),
+SUMOVehicleParameter::Stop(stopParameter) {
+    // set parking flag
+    parking = ((parametersSet & STOP_PARKING_SET) != 0);
 }
 
 
 GNEStop::GNEStop(SumoXMLTag tag, GNENet* net, GNEDemandElement* stopParent, GNEEdge* edge, const SUMOVehicleParameter::Stop& stopParameter) :
     GNEDemandElement(stopParent, net, GLO_STOP, tag, GNEPathManager::PathElement::Options::DEMAND_ELEMENT,
-{}, {edge}, {}, {}, {stopParent}, {}),
-SUMOVehicleParameter::Stop(stopParameter),
-myCreationIndex(myNet->getAttributeCarriers()->getStopIndex()) {
-    // enable parking for stops in parkingAreas
-    if ((tag == SUMO_TAG_STOP_PARKINGAREA) || (tag == GNE_TAG_WAYPOINT_PARKINGAREA)) {
-        parametersSet |= STOP_PARKING_SET;
-    }
-    // set flags
-    parking = (parametersSet & STOP_PARKING_SET);
-    triggered = (parametersSet & STOP_TRIGGER_SET);
-    containerTriggered = (parametersSet & STOP_CONTAINER_TRIGGER_SET);
-    joinTriggered = (parametersSet & STOP_JOIN_SET);
-    // set tripID and line
-    (stopParameter.tripId.size() > 0) ? parametersSet |= STOP_TRIP_ID_SET : parametersSet &= ~STOP_TRIP_ID_SET;
-    (stopParameter.line.size() > 0) ? parametersSet |= STOP_LINE_SET : parametersSet &= ~STOP_LINE_SET;
-    stopParameter.onDemand ? parametersSet |= STOP_ONDEMAND_SET : parametersSet &= ~STOP_ONDEMAND_SET;
-    // set waypoint speed
-    myTagProperty.isWaypoint() ? parametersSet |= STOP_SPEED_SET : parametersSet &= ~STOP_SPEED_SET;
+{}, {edge}, {}, {}, {}, {}, {stopParent}, {}),
+SUMOVehicleParameter::Stop(stopParameter) {
+    // set parking flag
+    parking = ((parametersSet & STOP_PARKING_SET) != 0);
 }
 
 
@@ -122,7 +84,7 @@ GNEStop::getMoveOperation() {
     if ((myTagProperty.getTag() == GNE_TAG_STOPPERSON_EDGE) || (myTagProperty.getTag() == GNE_TAG_STOPCONTAINER_EDGE)) {
         // return move operation for additional placed over shape
         return new GNEMoveOperation(this, getParentEdges().front()->getLanes().front(), endPos, false);
-    } else if ((myTagProperty.getTag() == SUMO_TAG_STOP_LANE) || (myTagProperty.getTag() == GNE_TAG_WAYPOINT_LANE)) {
+    } else if (myTagProperty.getTag() == SUMO_TAG_STOP_LANE) {
         // get allow change lane
         const bool allowChangeLane = myNet->getViewNet()->getViewParent()->getMoveFrame()->getCommonModeOptions()->getAllowChangeLane();
         // fist check if we're moving only extremes
@@ -332,24 +294,9 @@ GNEStop::getVClass() const {
 const RGBColor&
 GNEStop::getColor() const {
     if (getTagProperty().isPersonPlan() || getTagProperty().isContainerPlan()) {
-        return myNet->getViewNet()->getVisualisationSettings().colorSettings.stopPersonColor;
-    } else if (myNet->getViewNet()->getInspectedAttributeCarriers().size() > 0) {
-        // get inspected AC
-        const auto AC = myNet->getViewNet()->getInspectedAttributeCarriers().front();
-        // check if is a route or a vehicle
-        if ((AC->getTagProperty().isRoute() || AC->getTagProperty().isVehicle()) && (AC != getParentDemandElements().front())) {
-            return RGBColor::GREY;
-        }
-    } else if (myNet->getViewNet()->getViewParent()->getStopFrame()->shown()) {
-        if (myNet->getViewNet()->getViewParent()->getStopFrame()->getStopParentSelector()->getCurrentDemandElement() != getParentDemandElements().front()) {
-            return RGBColor::GREY;
-        }
-    }
-    // return default color
-    if (myTagProperty.isWaypoint()) {
-        return myNet->getViewNet()->getVisualisationSettings().colorSettings.waypointColor;
-    } else {
         return myNet->getViewNet()->getVisualisationSettings().colorSettings.stopColor;
+    } else {
+        return myNet->getViewNet()->getVisualisationSettings().colorSettings.stopPersonColor;
     }
 }
 
@@ -540,8 +487,6 @@ GNEStop::getLastPathLane() const {
 std::string
 GNEStop::getAttribute(SumoXMLAttr key) const {
     switch (key) {
-        case SUMO_ATTR_ID:
-            return getMicrosimID();
         case SUMO_ATTR_DURATION:
             if (isAttributeEnabled(key)) {
                 return time2string(duration);
@@ -561,44 +506,31 @@ GNEStop::getAttribute(SumoXMLAttr key) const {
                 return "";
             }
         case SUMO_ATTR_TRIGGERED:
-            if ((parametersSet & STOP_TRIGGER_SET) == false) {
-                return "false";
+            if (triggered && containerTriggered) {
+                return "join";
             } else if (triggered) {
                 return "person";
             } else if (containerTriggered) {
                 return "container";
             } else {
-                return "join";
-            }
-        case SUMO_ATTR_EXPECTED:
-            if ((parametersSet & STOP_TRIGGER_SET) == false) {
-                return "";
-            } else if (triggered) {
-                return toString(awaitedPersons);
-            } else if (containerTriggered) {
-                return toString(awaitedContainers);
-            } else {
-                return "";
-            }
-        case SUMO_ATTR_PERMITTED:
-            return toString(permitted);
-        case SUMO_ATTR_PARKING:
-            if (parametersSet & STOP_PARKING_SET) {
-                return "true";
-            } else {
                 return "false";
             }
+        case SUMO_ATTR_EXPECTED:
+            if (isAttributeEnabled(key)) {
+                return toString(awaitedPersons);
+            } else {
+                return "";
+            }
+        case SUMO_ATTR_PARKING:
+            return toString(parking);
         case SUMO_ATTR_ACTTYPE:
             return actType;
         case SUMO_ATTR_TRIP_ID:
-            return tripId;
-        case SUMO_ATTR_LINE:
-            return line;
-        case SUMO_ATTR_ONDEMAND:
-            return toString(onDemand);
-        // only for waypoints
-        case SUMO_ATTR_SPEED:
-            return toString(speed);
+            if (isAttributeEnabled(key)) {
+                return tripId;
+            } else {
+                return "";
+            }
         // specific of Stops over stoppingPlaces
         case SUMO_ATTR_BUS_STOP:
         case SUMO_ATTR_CONTAINER_STOP:
@@ -628,22 +560,6 @@ GNEStop::getAttribute(SumoXMLAttr key) const {
             return toString(isAttributeCarrierSelected());
         case GNE_ATTR_PARENT:
             return getParentDemandElements().front()->getID();
-        case SUMO_ATTR_INDEX: {
-            // extract all stops of demandElement parent
-            std::vector<GNEDemandElement*> stops;
-            for (const auto& parent : getParentDemandElements().front()->getChildDemandElements()) {
-                if (parent->getTagProperty().isStop()) {
-                    stops.push_back(parent);
-                }
-            }
-            // find index in stops
-            for (int i = 0; i < (int)stops.size(); i++) {
-                if (stops.at(i) == this) {
-                    return toString(i);
-                }
-            }
-            return "invalid index";
-        }
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
@@ -666,8 +582,6 @@ GNEStop::getAttributeDouble(SumoXMLAttr key) const {
             } else {
                 return endPos;
             }
-        case SUMO_ATTR_INDEX: // for writting sorted
-            return (double)myCreationIndex;
         default:
             throw InvalidArgument(getTagStr() + " doesn't have a double attribute of type '" + toString(key) + "'");
     }
@@ -712,14 +626,9 @@ GNEStop::setAttribute(SumoXMLAttr key, const std::string& value, GNEUndoList* un
         case SUMO_ATTR_EXTENSION:
         case SUMO_ATTR_TRIGGERED:
         case SUMO_ATTR_EXPECTED:
-        case SUMO_ATTR_PERMITTED:
         case SUMO_ATTR_PARKING:
         case SUMO_ATTR_ACTTYPE:
         case SUMO_ATTR_TRIP_ID:
-        case SUMO_ATTR_LINE:
-        case SUMO_ATTR_ONDEMAND:
-        // only for waypoints
-        case SUMO_ATTR_SPEED:
         // specific of Stops over stoppingPlaces
         case SUMO_ATTR_CHARGING_STATION:
         case SUMO_ATTR_PARKING_AREA:
@@ -730,7 +639,6 @@ GNEStop::setAttribute(SumoXMLAttr key, const std::string& value, GNEUndoList* un
         case SUMO_ATTR_POSITION_LAT:
         //
         case GNE_ATTR_SELECTED:
-        case GNE_ATTR_PARENT:
             undoList->changeAttribute(new GNEChange_Attribute(this, key, value));
             break;
         // special case for person plans
@@ -851,32 +759,12 @@ GNEStop::isValid(SumoXMLAttr key, const std::string& value) {
                 }
                 return true;
             }
-        case SUMO_ATTR_PERMITTED: {
-            const std::vector<std::string> expectedValues = parse<std::vector<std::string> >(value);
-            for (const auto& expectedValue : expectedValues) {
-                if (!SUMOXMLDefinitions::isValidVehicleID(expectedValue)) {
-                    return false;
-                }
-            }
-            return true;
-        }
         case SUMO_ATTR_PARKING:
             return canParse<bool>(value);
         case SUMO_ATTR_ACTTYPE:
             return true;
         case SUMO_ATTR_TRIP_ID:
             return SUMOXMLDefinitions::isValidVehicleID(value);
-        case SUMO_ATTR_LINE:
-            return true;
-        case SUMO_ATTR_ONDEMAND:
-            return canParse<bool>(value);
-        // only for waypoints
-        case SUMO_ATTR_SPEED:
-            if (canParse<double>(value)) {
-                return (parse<double>(value) >= 0);
-            } else {
-                return false;
-            }
         // specific of Stops over stoppingPlaces
         case SUMO_ATTR_BUS_STOP:
             return (myNet->getAttributeCarriers()->retrieveAdditional(SUMO_TAG_BUS_STOP, value, false) != nullptr);
@@ -925,14 +813,6 @@ GNEStop::isValid(SumoXMLAttr key, const std::string& value) {
         //
         case GNE_ATTR_SELECTED:
             return canParse<bool>(value);
-        case GNE_ATTR_PARENT:
-            if (myNet->getAttributeCarriers()->retrieveDemandElement(SUMO_TAG_PERSON, value, false) != nullptr) {
-                return true;
-            } else if (myNet->getAttributeCarriers()->retrieveDemandElement(SUMO_TAG_PERSONFLOW, value, false) != nullptr) {
-                return true;
-            } else {
-                return false;
-            }
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
@@ -947,7 +827,7 @@ GNEStop::enableAttribute(SumoXMLAttr key, GNEUndoList* undoList) {
         case SUMO_ATTR_EXTENSION:
         case SUMO_ATTR_EXPECTED:
         case SUMO_ATTR_EXPECTED_CONTAINERS:
-            undoList->add(new GNEChange_EnableAttribute(this, key, true), true);
+            undoList->add(new GNEChange_EnableAttribute(this, key, true));
             break;
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
@@ -963,7 +843,7 @@ GNEStop::disableAttribute(SumoXMLAttr key, GNEUndoList* undoList) {
         case SUMO_ATTR_EXTENSION:
         case SUMO_ATTR_EXPECTED:
         case SUMO_ATTR_EXPECTED_CONTAINERS:
-            undoList->add(new GNEChange_EnableAttribute(this, key, false), true);
+            undoList->add(new GNEChange_EnableAttribute(this, key, false));
             break;
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
@@ -988,14 +868,10 @@ GNEStop::isAttributeEnabled(SumoXMLAttr key) const {
             return (parametersSet & STOP_EXTENSION_SET) != 0;
         case SUMO_ATTR_EXPECTED:
             return (parametersSet & STOP_TRIGGER_SET) != 0;
+        case SUMO_ATTR_EXPECTED_CONTAINERS:
+            return (parametersSet & STOP_CONTAINER_TRIGGER_SET) != 0;
         case SUMO_ATTR_PARKING:
-            if (myTagProperty.getTag() == SUMO_TAG_STOP_PARKINGAREA) {
-                return false;
-            } else if (myTagProperty.getTag() == GNE_TAG_WAYPOINT_PARKINGAREA) {
-                return false;
-            } else {
-                return true;
-            }
+            return (myTagProperty.getTag() != SUMO_TAG_STOP_PARKINGAREA);
         default:
             return true;
     }
@@ -1011,26 +887,16 @@ GNEStop::getPopUpID() const {
 std::string
 GNEStop::getHierarchyName() const {
     if (getParentAdditionals().size() > 0) {
-        if (getParentAdditionals().front()->getTagProperty().getTag() == SUMO_TAG_BUS_STOP) {
-            return "BusStop: " + getParentAdditionals().front()->getID();
-        } else if (getParentAdditionals().front()->getTagProperty().getTag() == SUMO_TAG_CONTAINER_STOP) {
-            return "containerStop: " + getParentAdditionals().front()->getID();
-        } else if (getParentAdditionals().front()->getTagProperty().getTag() == SUMO_TAG_CHARGING_STATION) {
-            return "chargingStation: " + getParentAdditionals().front()->getID();
-        } else {
-            return "parkingArea: " + getParentAdditionals().front()->getID();
-        }
+        return getTagProperty().getTagStr() + " stop: " + getParentAdditionals().front()->getTagStr();
     } else if (getParentEdges().size() > 0) {
-        return "edge: " + getParentEdges().front()->getID();
-    } else if (getParentLanes().size() > 0) {
-        return "lane: " + getParentLanes().front()->getID();
+        return getTagProperty().getTagStr() + " stop: edge";
     } else {
-        return "";
+        return getTagProperty().getTagStr() + " stop: lane";
     }
 }
 
 
-const Parameterised::Map&
+const std::map<std::string, std::string>&
 GNEStop::getACParametersMap() const {
     return getParametersMap();
 }
@@ -1084,13 +950,6 @@ GNEStop::canDrawVehicleStop() const {
         return true;
     } else if (myNet->getViewNet()->getDemandViewOptions().showAllTrips()) {
         return true;
-    } else if ((getParentDemandElements().front()->getTagProperty().getTag() == GNE_TAG_VEHICLE_WITHROUTE) ||
-               (getParentDemandElements().front()->getTagProperty().getTag() == GNE_TAG_FLOW_WITHROUTE)) {
-        if (myNet->getViewNet()->isAttributeCarrierInspected(getParentDemandElements().front()->getChildDemandElements().front())) {
-            return true;
-        } else {
-            return false;
-        }
     } else {
         return false;
     }
@@ -1099,9 +958,8 @@ GNEStop::canDrawVehicleStop() const {
 
 void
 GNEStop::drawVehicleStop(const GUIVisualizationSettings& s, const double exaggeration) const {
-    ;
     // declare value to save stop color
-    const RGBColor stopColor = drawUsingSelectColor() ? s.colorSettings.selectedRouteColor : getColor();
+    const RGBColor stopColor = drawUsingSelectColor() ? s.colorSettings.selectedRouteColor : s.colorSettings.stopColor;
     // get lane
     const auto& stopLane = getParentLanes().size() > 0 ? getParentLanes().front() : nullptr;
     // get lane width
@@ -1145,19 +1003,11 @@ GNEStop::drawVehicleStop(const GUIVisualizationSettings& s, const double exagger
             GLHelper::drawBoxLine(Position(0, 1), 0, 2, 1);
         } else if (s.drawDetail(s.detailSettings.stopsText, exaggeration)) {
             // draw "S" symbol
-            GLHelper::drawText(myTagProperty.isWaypoint() ? "W" : "S", Position(), .1, 2.8, stopColor, 180);
-            // move to subtitle position
+            GLHelper::drawText("S", Position(), .1, 2.8, stopColor);
+            // move to subtitle positin
             glTranslated(0, 1.4, 0);
             // draw subtitle depending of tag
             GLHelper::drawText("lane", Position(), .1, 1, stopColor, 180);
-            // check if draw index
-            if (drawIndex()) {
-                // move to index position
-                glTranslated(-2.1, -2.4, 0);
-                glRotated(-90, 0, 0, 1);
-                // draw index
-                GLHelper::drawText(getAttribute(SUMO_ATTR_INDEX), Position(), .1, 1, stopColor, 180);
-            }
         }
         // pop detail matrix
         GLHelper::popMatrix();
@@ -1166,24 +1016,6 @@ GNEStop::drawVehicleStop(const GUIVisualizationSettings& s, const double exagger
     } else {
         // Draw the area using shape, shapeRotations, shapeLengths and value of exaggeration taked from stoppingPlace parent
         GUIGeometry::drawGeometry(s, myNet->getViewNet()->getPositionInformation(), myDemandElementGeometry, width);
-        // only draw text if isn't being drawn for selecting
-        if (s.drawDetail(s.detailSettings.stopsText, exaggeration) && drawIndex()) {
-            // Add a detail matrix
-            GLHelper::pushMatrix();
-            // move to geometry front
-            glTranslated(myDemandElementGeometry.getShape().back().x(), myDemandElementGeometry.getShape().back().y(), 0.1);
-            // rotate
-            if (myDemandElementGeometry.getShapeRotations().size() > 0) {
-                glRotated(myDemandElementGeometry.getShapeRotations().back(), 0, 0, 1);
-            }
-            // move to index position
-            glTranslated(-1.4, exaggeration * 0.5, 0.1);
-            glRotated(-90, 0, 0, 1);
-            // draw index
-            GLHelper::drawText(getAttribute(SUMO_ATTR_INDEX), Position(), .1, 1, stopColor, 180);
-        }
-        // pop detail matrix
-        GLHelper::popMatrix();
     }
     // pop layer matrix
     GLHelper::popMatrix();
@@ -1330,21 +1162,6 @@ GNEStop::drawStopPersonOverBusStop(const GUIVisualizationSettings& s, const doub
     }
 }
 
-
-bool
-GNEStop::drawIndex() const {
-    // get stop frame
-    const auto stopFrame = myNet->getViewNet()->getViewParent()->getStopFrame();
-    // check conditions
-    if (myNet->getViewNet()->isAttributeCarrierInspected(getParentDemandElements().front())) {
-        return true;
-    } else if (stopFrame->shown() && (stopFrame->getStopParentSelector()->getCurrentDemandElement() == getParentDemandElements().front())) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
 // ===========================================================================
 // private
 // ===========================================================================
@@ -1354,115 +1171,63 @@ GNEStop::setAttribute(SumoXMLAttr key, const std::string& value) {
     switch (key) {
         case SUMO_ATTR_DURATION:
             if (value.empty()) {
-                toggleAttribute(key, false);
+                toogleAttribute(key, false, -1);
             } else {
-                toggleAttribute(key, true);
+                toogleAttribute(key, true, -1);
                 duration = string2time(value);
             }
             break;
         case SUMO_ATTR_UNTIL:
             if (value.empty()) {
-                toggleAttribute(key, false);
+                toogleAttribute(key, false, -1);
             } else {
-                toggleAttribute(key, true);
+                toogleAttribute(key, true, -1);
                 until = string2time(value);
             }
             break;
         case SUMO_ATTR_EXTENSION:
             if (value.empty()) {
-                toggleAttribute(key, false);
+                toogleAttribute(key, false, -1);
             } else {
-                toggleAttribute(key, true);
+                toogleAttribute(key, true, -1);
                 extension = string2time(value);
             }
             break;
         case SUMO_ATTR_TRIGGERED:
-            // reset all flags
-            triggered = false;
-            containerTriggered = false;
-            joinTriggered = false;
-            // disable all flags
-            parametersSet &= ~STOP_JOIN_SET;
-            parametersSet &= ~STOP_TRIGGER_SET;
-            parametersSet &= ~STOP_EXPECTED_SET;
-            parametersSet &= ~STOP_CONTAINER_TRIGGER_SET;
-            parametersSet &= ~STOP_EXPECTED_CONTAINERS_SET;
-            // check value
-            if (value == "person") {
-                parametersSet |= STOP_TRIGGER_SET;
+            if (value == "join") {
                 triggered = true;
-                if (awaitedPersons.size() > 0) {
-                    parametersSet |= STOP_EXPECTED_SET;
-                }
-            } else if (value == "container") {
-                parametersSet |= STOP_TRIGGER_SET;
-                parametersSet |= STOP_CONTAINER_TRIGGER_SET;
                 containerTriggered = true;
-                if (awaitedPersons.size() > 0) {
-                    parametersSet |= STOP_EXPECTED_CONTAINERS_SET;
-                }
-            } else if (value == "join") {
-                parametersSet |= STOP_TRIGGER_SET;
-                joinTriggered = true;
+            } else if ((value == "person") || (value == "true")) {
+                triggered = true;
+                containerTriggered = false;
+            } else if (value == "container") {
+                triggered = false;
+                containerTriggered = true;
+            } else {
+                triggered = false;
+                containerTriggered = false;
             }
+            toogleAttribute(SUMO_ATTR_TRIGGERED, triggered, -1);
+            toogleAttribute(SUMO_ATTR_EXPECTED, (awaitedPersons.size() > 0), -1);
             break;
         case SUMO_ATTR_EXPECTED:
-            if (triggered) {
-                awaitedPersons = parse<std::set<std::string> >(value);
-                if (awaitedPersons.size() > 0) {
-                    parametersSet |= STOP_EXPECTED_SET;
-                } else {
-                    parametersSet &= ~STOP_EXPECTED_SET;
-                }
-            } else if (containerTriggered) {
-                awaitedContainers = parse<std::set<std::string> >(value);
-                if (awaitedContainers.size() > 0) {
-                    parametersSet |= STOP_EXPECTED_CONTAINERS_SET;
-                } else {
-                    parametersSet &= ~STOP_EXPECTED_CONTAINERS_SET;
-                }
-            }
-            break;
-        case SUMO_ATTR_PERMITTED:
-            if (value.empty()) {
-                parametersSet &= ~STOP_PERMITTED_SET;
-            } else {
-                parametersSet |= STOP_PERMITTED_SET;
-                permitted = parse<std::set<std::string> >(value);
-            }
+            awaitedPersons = parse<std::set<std::string> >(value);
+            toogleAttribute(SUMO_ATTR_EXPECTED, (awaitedPersons.size() > 0), -1);
             break;
         case SUMO_ATTR_PARKING:
-            if (parse<bool>(value)) {
-                parametersSet |= STOP_PARKING_SET;
-            } else {
-                parametersSet &= ~STOP_PARKING_SET;
-            }
-            // set flag
-            parking = ((parametersSet & STOP_PARKING_SET) != 0);
+            parking = parse<bool>(value);
+            toogleAttribute(key, parking, -1);
             break;
         case SUMO_ATTR_ACTTYPE:
             actType = value;
             break;
         case SUMO_ATTR_TRIP_ID:
-            tripId = value;
-            toggleAttribute(key, (value.size() > 0));
-            break;
-        case SUMO_ATTR_LINE:
-            line = value;
-            toggleAttribute(key, (value.size() > 0));
-            break;
-        case SUMO_ATTR_ONDEMAND:
-            if (parse<bool>(value)) {
-                parametersSet |= STOP_ONDEMAND_SET;
+            if (value.empty()) {
+                toogleAttribute(key, false, -1);
             } else {
-                parametersSet &= ~STOP_ONDEMAND_SET;
+                toogleAttribute(key, true, -1);
+                tripId = value;
             }
-            // set flag
-            onDemand = ((parametersSet & STOP_ONDEMAND_SET) != 0);
-            break;
-        // only for waypoints
-        case SUMO_ATTR_SPEED:
-            speed = parse<double>(value);
             break;
         // specific of Stops over stoppingPlaces
         case SUMO_ATTR_BUS_STOP:
@@ -1505,11 +1270,11 @@ GNEStop::setAttribute(SumoXMLAttr key, const std::string& value) {
             break;
         case SUMO_ATTR_POSITION_LAT:
             if (value.empty()) {
+                toogleAttribute(key, false, -1);
                 posLat = INVALID_DOUBLE;
-                parametersSet &= ~STOP_POSLAT_SET;
             } else {
+                toogleAttribute(key, true, -1);
                 posLat = parse<double>(value);
-                parametersSet |= STOP_POSLAT_SET;
             }
             break;
         //
@@ -1520,14 +1285,6 @@ GNEStop::setAttribute(SumoXMLAttr key, const std::string& value) {
                 unselectAttributeCarrier();
             }
             break;
-        case GNE_ATTR_PARENT:
-            if (myNet->getAttributeCarriers()->retrieveDemandElement(SUMO_TAG_PERSON, value, false) != nullptr) {
-                replaceDemandElementParent(SUMO_TAG_PERSON, value, 0);
-            } else if (myNet->getAttributeCarriers()->retrieveDemandElement(SUMO_TAG_PERSONFLOW, value, false) != nullptr) {
-                replaceDemandElementParent(SUMO_TAG_PERSONFLOW, value, 0);
-            }
-            updateGeometry();
-            break;
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
@@ -1535,7 +1292,7 @@ GNEStop::setAttribute(SumoXMLAttr key, const std::string& value) {
 
 
 void
-GNEStop::toggleAttribute(SumoXMLAttr key, const bool value) {
+GNEStop::toogleAttribute(SumoXMLAttr key, const bool value, const int /*previousParameters*/) {
     switch (key) {
         case SUMO_ATTR_DURATION:
             if (value) {
@@ -1558,25 +1315,32 @@ GNEStop::toggleAttribute(SumoXMLAttr key, const bool value) {
                 parametersSet &= ~STOP_EXTENSION_SET;
             }
             break;
-        case SUMO_ATTR_TRIP_ID:
+        case SUMO_ATTR_TRIGGERED:
             if (value) {
-                parametersSet |= STOP_TRIP_ID_SET;
+                parametersSet |= STOP_TRIGGER_SET;
             } else {
-                parametersSet &= ~STOP_TRIP_ID_SET;
+                parametersSet &= ~STOP_TRIGGER_SET;
             }
             break;
-        case SUMO_ATTR_LINE:
+        case SUMO_ATTR_EXPECTED:
             if (value) {
-                parametersSet |= STOP_LINE_SET;
+                parametersSet |= STOP_EXPECTED_SET;
             } else {
-                parametersSet &= ~STOP_LINE_SET;
+                parametersSet &= ~STOP_EXPECTED_SET;
             }
             break;
-        case SUMO_ATTR_ONDEMAND:
+        case SUMO_ATTR_PARKING:
             if (value) {
-                parametersSet |= STOP_ONDEMAND_SET;
+                parametersSet |= STOP_PARKING_SET;
             } else {
-                parametersSet &= ~STOP_ONDEMAND_SET;
+                parametersSet &= ~STOP_PARKING_SET;
+            }
+            break;
+        case SUMO_ATTR_POSITION_LAT:
+            if (value) {
+                parametersSet |= STOP_POSLAT_SET;
+            } else {
+                parametersSet &= ~STOP_POSLAT_SET;
             }
             break;
         default:

@@ -93,15 +93,20 @@ class Colorgen:
     def get_value(self, opt, index):
         if opt == 'random':
             return random.random()
-        if opt == 'cycle':
+        elif opt == 'cycle':
             # the 255 below is intentional to get all color values when cycling long enough
             self.cycle[index] = (self.cycle[index] + self.cycleOffset) % 255
             return self.cycle[index] / 255.0
-        if opt == 'distinct':
+        elif opt == 'cycle':
+            # the 255 below is intentional to get all color values when cycling long enough
+            self.cycle[index] = (self.cycle[index] + self.cycleOffset) % 255
+            return self.cycle[index] / 255.0
+        elif opt == 'distinct':
             if index == 0:
                 self.distinctIndex = (self.distinctIndex + 1) % len(self.DISTINCT)
             return self.DISTINCT[self.distinctIndex][index]
-        return float(opt)
+        else:
+            return float(opt)
 
     def floatTuple(self):
         """return color as a tuple of floats each in [0,1]"""
@@ -239,32 +244,3 @@ def parseTime(t, factor=1):
 def parseBool(val):
     # see data/xsd/baseTypes:boolType
     return val in ["true", "True", "x", "1", "yes", "on"]
-
-
-def getFlowNumber(flow):
-    """interpret number of vehicles from a flow parsed by sumolib.xml.parse"""
-    if flow.number is not None:
-        return int(flow.number)
-    if flow.end is not None:
-        duration = parseTime(flow.end) - parseTime(flow.begin)
-        period = 0
-        if flow.period is not None:
-            if 'exp' in flow.period:
-                # use expecte value
-                period = 1 / float(flow.period[4:-2])
-            else:
-                period = float(flow.period)
-        for attr in ['perHour', 'vehsPerHour']:
-            if flow.hasAttribute(attr):
-                period = 3600 / float(flow.getAttributes(attr))
-        if period > 0:
-            return math.ceil(duration / period)
-        else:
-            return 1
-
-
-def intIfPossible(val):
-    if int(val) == val:
-        return int(val)
-    else:
-        return val

@@ -232,9 +232,7 @@ public:
     MSE2Collector(const std::string& id,
                   DetectorUsage usage, MSLane* lane, double startPos, double endPos, double length,
                   SUMOTime haltingTimeThreshold, double haltingSpeedThreshold, double jamDistThreshold,
-                  const std::string& vTypes,
-                  const std::string& nextEdges,
-                  int detectPersons);
+                  const std::string& vTypes, int detectPersons);
 
 
     /** @brief Constructor with a sequence of lanes and given start and end position on the first and last lanes
@@ -252,9 +250,7 @@ public:
     MSE2Collector(const std::string& id,
                   DetectorUsage usage, std::vector<MSLane*> lanes, double startPos, double endPos,
                   SUMOTime haltingTimeThreshold, double haltingSpeedThreshold, double jamDistThreshold,
-                  const std::string& vTypes,
-                  const std::string& nextEdges,
-                  int detectPersons);
+                  const std::string& vTypes, int detectPersons);
 
 
     /// @brief Destructor
@@ -519,16 +515,8 @@ public:
     virtual void setVisible(bool /*show*/) {};
 
     /** @brief Remove all vehicles before quick-loading state */
-    virtual void clearState(SUMOTime step);
+    virtual void clearState();
 
-    /** @brief Persistently overrides the number of vehicles on top of the detector
-     * Setting a negative value removes the override
-    */
-    void overrideVehicleNumber(int num);
-
-    double getOverrideVehNumber() const {
-        return myOverrideVehNumber;
-    }
 private:
 
     /** @brief checks whether the vehicle stands in a jam
@@ -784,9 +772,6 @@ private:
     int myCurrentHaltingsNumber;
     /// @}
 
-
-    /// @brief stores the overriden (via Traci) number of vehicles on detector
-    int myOverrideVehNumber;
 
 private:
     /// @brief Invalidated copy constructor.

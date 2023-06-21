@@ -182,8 +182,8 @@ public:
      * @param[in] inComment Whether -- in input shall be converted to &#45;&#45; (semantically equivalent but allowed in XML comments)
      */
     void writeConfiguration(std::ostream& os, const bool filled,
-                            const bool complete, const bool addComments, const std::string& relativeTo = "",
-                            const bool forceRelative = false, const bool inComment = false) const;
+                            const bool complete, const bool addComments,
+                            const bool inComment = false) const;
 
 
     /** @brief Writes the xml schema for the configuration
@@ -305,6 +305,13 @@ public:
      * @exception InvalidArgument If the named option is not known
      */
     bool isSet(const std::string& name, bool failOnNonExistant = true) const;
+
+
+    /** @brief Marks the option as unset
+     * @param[in] name The name of the option to check
+     * @param[in] failOnNonExistant Whether asking for an unregistered option should trigger an exception
+     */
+    void unSet(const std::string& name, bool failOnNonExistant = true) const;
 
 
     /** @brief Returns the information whether the named option has still the default value
@@ -556,7 +563,7 @@ public:
      * @see reportDoubleSetting
      * @see Option::set(const std::string &)
      */
-    bool set(const std::string& name, const std::string& value, const bool append = false);
+    bool set(const std::string& name, const std::string& value);
 
     /** @brief Sets the given value for the named option as new default value
      *

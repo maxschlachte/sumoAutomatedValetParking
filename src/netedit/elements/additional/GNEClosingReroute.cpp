@@ -32,8 +32,9 @@
 
 GNEClosingReroute::GNEClosingReroute(GNENet* net) :
     GNEAdditional("", net, GLO_REROUTER_CLOSINGREROUTE, SUMO_TAG_CLOSING_REROUTE, "",
-{}, {}, {}, {}, {}, {}),
-myClosedEdge(nullptr),
+{}, {}, {}, {}, {}, {}, {}, {},
+std::map<std::string, std::string>()),
+    myClosedEdge(nullptr),
 myPermissions(0) {
     // reset default values
     resetDefaultValues();
@@ -42,7 +43,8 @@ myPermissions(0) {
 
 GNEClosingReroute::GNEClosingReroute(GNEAdditional* rerouterIntervalParent, GNEEdge* closedEdge, SVCPermissions permissions) :
     GNEAdditional(rerouterIntervalParent->getNet(), GLO_REROUTER_CLOSINGREROUTE, SUMO_TAG_CLOSING_REROUTE, "",
-{}, {}, {}, {rerouterIntervalParent}, {}, {}),
+{}, {}, {}, {rerouterIntervalParent}, {}, {}, {}, {},
+std::map<std::string, std::string>()),
 myClosedEdge(closedEdge),
 myPermissions(permissions) {
     // update boundary of rerouter parent
@@ -127,7 +129,7 @@ std::string
 GNEClosingReroute::getAttribute(SumoXMLAttr key) const {
     switch (key) {
         case SUMO_ATTR_ID:
-            return getMicrosimID();
+            return getID();
         case SUMO_ATTR_EDGE:
             return myClosedEdge->getID();
         case SUMO_ATTR_ALLOW:
@@ -147,12 +149,6 @@ GNEClosingReroute::getAttribute(SumoXMLAttr key) const {
 double
 GNEClosingReroute::getAttributeDouble(SumoXMLAttr key) const {
     throw InvalidArgument(getTagStr() + " doesn't have a double attribute of type '" + toString(key) + "'");
-}
-
-
-const Parameterised::Map&
-GNEClosingReroute::getACParametersMap() const {
-    return PARAMETERS_EMPTY;
 }
 
 
@@ -186,9 +182,17 @@ GNEClosingReroute::isValid(SumoXMLAttr key, const std::string& value) {
             return canParseVehicleClasses(value);
         case SUMO_ATTR_DISALLOW:
             return canParseVehicleClasses(value);
+        case GNE_ATTR_SELECTED:
+            return Parameterised::areParametersValid(value);
         default:
             throw InvalidArgument(getTagStr() + " doesn't have an attribute of type '" + toString(key) + "'");
     }
+}
+
+
+bool
+GNEClosingReroute::isAttributeEnabled(SumoXMLAttr /* key */) const {
+    return true;
 }
 
 

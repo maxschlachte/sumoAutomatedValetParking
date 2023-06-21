@@ -110,7 +110,7 @@ public:
     MSSwarmTrafficLightLogic(MSTLLogicControl& tlcontrol, const std::string& id,
                              const std::string& programID, const Phases& phases, int step,
                              SUMOTime delay,
-                             const Parameterised::Map& parameters);
+                             const std::map<std::string, std::string>& parameters);
 
     ~MSSwarmTrafficLightLogic();
 
@@ -342,14 +342,14 @@ protected:
             sum_avg_tmp += phero_values[i];
         }
 
-        const double mean = sum_avg_tmp / (double)phero_values.size();
+        double mean = sum_avg_tmp / phero_values.size();
 
         double sum_dev_tmp = 0;
         for (int i = 0; i < (int)phero_values.size(); i++) {
             sum_dev_tmp += pow(phero_values[i] - mean, 2);
         }
 
-        const double deviation = sqrt(sum_dev_tmp / (double)phero_values.size());
+        double deviation = sqrt(sum_dev_tmp / phero_values.size());
 
         scaleFactorDispersionIn = getPheroMaxVal() / deviation;
     }
@@ -368,7 +368,7 @@ protected:
         for (int i = 0; i < (int)phero_values.size(); i++) {
             sum_avg_tmp += phero_values[i];
         }
-        const double mean = sum_avg_tmp / (double)phero_values.size();
+        double mean = sum_avg_tmp / phero_values.size();
 
         double sum_dev_tmp = 0;
 
@@ -376,7 +376,7 @@ protected:
             sum_dev_tmp += pow(phero_values[i] - mean, 2);
         }
 
-        const double deviation = sqrt(sum_dev_tmp / (double)phero_values.size());
+        double deviation = sqrt(sum_dev_tmp / phero_values.size());
 
         scaleFactorDispersionOut = getPheroMaxVal() / deviation;
     }
@@ -430,7 +430,7 @@ protected:
     std::map<std::string, std::vector<int> > m_laneIndexMap;
     std::string getLaneLightState(const std::string& laneId);
 //	store the last message logged. if equal do not log it again
-    Parameterised::Map m_pheroLevelLog;
+    std::map<std::string, std::string> m_pheroLevelLog;
 
     //derivative
     std::map<std::string, CircularBuffer<double>* > m_meanSpeedHistory;
