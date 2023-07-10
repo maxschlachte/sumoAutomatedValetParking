@@ -26,7 +26,7 @@ Queue Parking
 
 In the case of queue parking, vehicles are parked in queues without the parking space of each vehicle being accessible by means of a lane. At the start of the queue there is a lane for entering the queue and at its end there is a lane for exiting. Traditionally this parking layout is only used for case in which vehicles arrive and leave around the same time (e.g. parking for big events with a fixed starting and end time or on ferries). Highly automated vehicles offer a new use case for the layout, since reparking while the driver is not present is possible.
 
-<p align="center"><img width=80% src="https://raw.githubusercontent.com/maxschlachte/sumoAutomatedValetParking/img_queueparking.png"></p>
+![plot](./img_queueparking.png)
 
 
 Charge optimization
