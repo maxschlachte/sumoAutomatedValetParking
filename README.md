@@ -50,7 +50,7 @@ This fork can be installed in the same way, by cloning and compiling the repo:
 
 ```
 git clone --recursive https://github.com/maxschlachte/sumoAutomatedValetParking
-sudo apt-get install cmake python g++ libxerces-c-dev libfox-1.6-dev libgdal-dev libproj-dev libgl2ps-dev swig
+sudo apt-get install git cmake python3 g++ libxerces-c-dev libfox-1.6-dev libgdal-dev libproj-dev libgl2ps-dev python3-dev swig default-jdk maven libeigen3-dev
 cd <SUMO_DIR> # please insert the correct directory name here
 export SUMO_HOME="$PWD"
 mkdir build/cmake-build && cd build/cmake-build
